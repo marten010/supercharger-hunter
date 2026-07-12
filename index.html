@@ -67,7 +67,6 @@
   .muted { color: var(--muted); font-size: 12px; }
   #startinfo { font-size: 12px; color: var(--green); margin-top: 4px; min-height: 16px; }
   #reloadbtn {
-    position: fixed; top: 10px; right: 10px; z-index: 1200;
     width: 40px; height: 40px; border-radius: 50%;
     background: var(--panel); color: var(--text); border: 1px solid var(--border);
     font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px #0008;
@@ -178,13 +177,13 @@
       <button class="small" id="exp-json">Backup JSON</button>
       <button class="small" id="imp-json">Herstel backup</button>
     </div>
+    <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync-link bezochte locaties (voor je andere apparaat)</button>
     <input type="file" id="imp-file" accept=".json" style="display:none">
     <div id="overrides-box" style="margin-top:8px"></div>
     <div class="muted" style="margin-top:8px">Bezoek-status wordt lokaal opgeslagen in je browser. Maak regelmatig een backup.</div>
   </section>
 </div>
 <div id="map"></div>
-<button id="reloadbtn" title="Ververs de app (reset route-instellingen)" onclick="location.reload(true)">↻</button>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="data.js"></script>
@@ -208,6 +207,20 @@ const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
 }).addTo(map);
+
+// ververs-knop als kaart-knop rechtsonder (blokkeert zo geen popup-kruisjes)
+const ReloadControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: () => {
+    const btn = L.DomUtil.create('button', '');
+    btn.id = 'reloadbtn';
+    btn.innerHTML = '↻';
+    btn.title = 'Ververs de app (reset route-instellingen)';
+    btn.onclick = () => location.reload();
+    return btn;
+  }
+});
+map.addControl(new ReloadControl());
 
 const markers = new Map();
 function markerStyle(s) {
@@ -885,6 +898,40 @@ if (location.hash.startsWith('#r=')) {
   }
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
 }
+
+// ---------- sync-link: bezochte locaties overzetten tussen apparaten ----------
+// Codeert de volledige bezocht-status als bitmasker in een link. Openen op het
+// andere apparaat neemt alle vinkjes over (samenvoegen: er verdwijnt nooit iets).
+document.getElementById('sync-link').onclick = () => {
+  const bits = new Uint8Array(Math.ceil(SITES.length / 8));
+  for (const s of SITES) if (isVisited(s)) bits[s.id >> 3] |= 1 << (s.id & 7);
+  const b64 = btoa(String.fromCharCode(...bits)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const url = location.origin + location.pathname + '#v=' + b64;
+  if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Sync-link gekopieerd! Open hem op je andere apparaat om alle vinkjes over te nemen.'));
+  else prompt('Kopieer deze sync-link:', url);
+};
+if (location.hash.startsWith('#v=')) {
+  if (localStorage.getItem('sc_imported_visited') !== location.hash) {
+    try {
+      const raw = atob(location.hash.slice(3).replace(/-/g, '+').replace(/_/g, '/'));
+      let nieuw = 0;
+      for (const s of SITES) {
+        const aan = (raw.charCodeAt(s.id >> 3) >> (s.id & 7)) & 1;
+        if (aan && !isVisited(s)) { overrides[s.id] = true; nieuw++; }
+      }
+      if (nieuw) saveOverrides();
+      localStorage.setItem('sc_imported_visited', location.hash);
+      setTimeout(() => alert(nieuw ? nieuw + ' bezochte locatie(s) overgenomen van je andere apparaat. Nieuwe stand: ' + SITES.filter(isVisited).length : 'Alles was al gelijk — geen nieuwe vinkjes.'), 400);
+    } catch (e) { console.warn('Kon sync-link niet lezen', e); }
+  }
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+}
+
+// als een sync- of routelink binnenkomt terwijl de app al open staat,
+// herlaad dan zodat de importlogica hierboven hem verwerkt
+window.addEventListener('hashchange', () => {
+  if (location.hash.startsWith('#v=') || location.hash.startsWith('#r=')) location.reload();
+});
 
 // ---------- export / import ----------
 document.getElementById('exp-csv').onclick = () => {

@@ -165,6 +165,12 @@
   </section>
 
   <section>
+    <h2>Opgeslagen routes</h2>
+    <button class="small" id="saveroute">💾 Bewaar huidige route</button>
+    <div id="savedlist" style="margin-top:8px"></div>
+  </section>
+
+  <section>
     <h2>Data</h2>
     <div class="row">
       <button class="small" id="exp-csv">Exporteer CSV</button>
@@ -758,6 +764,111 @@ function renderDays(chargeMin, speed) {
 document.getElementById('p-plan').onclick = () => planRoute(false);
 document.getElementById('p-clear').onclick = () => { plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
 
+// ---------- opgeslagen routes ----------
+// Bewust wél permanent opgeslagen (net als bezocht-status): een bewaarde route
+// is een bewuste keuze en moet een paginaverversing overleven.
+const LS_ROUTES = 'sc_saved_routes_v1';
+let savedRoutes = [];
+try { savedRoutes = JSON.parse(localStorage.getItem(LS_ROUTES)) || []; } catch (e) {}
+const saveRoutesStore = () => localStorage.setItem(LS_ROUTES, JSON.stringify(savedRoutes));
+
+// compacte representatie: alleen coördinaten; bij laden worden de locaties
+// teruggezocht in de actuele lijst (robuust tegen ververste data.js)
+function routeToData(name) {
+  return {
+    name,
+    created: new Date().toISOString().slice(0, 10),
+    days: plannedDays.map(d => ({
+      start: { lat: +(+d.start.lat).toFixed(5), lng: +(+d.start.lng).toFixed(5), name: d.start.name || d.start.label || 'start' },
+      stops: d.stops.map(s => [+s.lat.toFixed(5), +s.lng.toFixed(5)]),
+      end: d.endPoint ? { lat: +(+d.endPoint.lat).toFixed(5), lng: +(+d.endPoint.lng).toFixed(5), name: d.endPoint.name || 'punt' } : null,
+      back: !!d.back,
+    })),
+  };
+}
+function resolveSite(pt) {
+  let best = null, bd = Infinity;
+  for (const s of SITES) { const dd = hav({ lat: pt[0], lng: pt[1] }, s); if (dd < bd) { bd = dd; best = s; } }
+  return bd < 1 ? best : null;   // binnen 1 km
+}
+function loadRoute(r) {
+  const speed = +document.getElementById('p-speed').value;
+  const factor = +document.getElementById('p-factor').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  plannedDays = r.days.map(d => {
+    const stops = d.stops.map(resolveSite).filter(Boolean);
+    if (!stops.length) return null;
+    let km = 0, prev = d.start;
+    for (const s of stops) { km += hav(prev, s) * factor; prev = s; }
+    if (d.end) km += hav(prev, d.end) * factor;
+    return { stops, km, min: km / speed * 60 + stops.length * chargeMin, start: d.start, endPoint: d.end, back: !!d.back };
+  }).filter(Boolean);
+  drawRoute();
+  renderDays(chargeMin, speed);
+}
+function routeLink(r) {
+  const json = JSON.stringify(r);
+  const b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return location.origin + location.pathname + '#r=' + b64;
+}
+function renderSavedRoutes() {
+  const el = document.getElementById('savedlist');
+  if (!savedRoutes.length) { el.innerHTML = '<span class="muted">Nog geen routes bewaard. Plan een route en klik "Bewaar huidige route". Via 🔗 stuur je hem naar je telefoon.</span>'; return; }
+  el.innerHTML = '';
+  savedRoutes.forEach((r, i) => {
+    const stops = r.days.reduce((a, d) => a + d.stops.length, 0);
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `
+      <div class="info"><b>${r.name}</b><span>${r.days.length} dagen · ${stops} stops · ${r.created}</span></div>
+      <button class="small" data-a="load" title="Route laden">▶</button>
+      <button class="small" data-a="link" title="Deelbare link kopiëren">🔗</button>
+      <button class="small" data-a="del" title="Verwijderen">✕</button>`;
+    row.querySelector('[data-a=load]').onclick = () => loadRoute(r);
+    row.querySelector('[data-a=link]').onclick = () => {
+      const url = routeLink(r);
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Link gekopieerd! Stuur hem naar je telefoon (WhatsApp/AirDrop/mail) en open hem daar.'));
+      else prompt('Kopieer deze link:', url);
+    };
+    row.querySelector('[data-a=del]').onclick = () => {
+      if (!confirm(`Route "${r.name}" verwijderen?`)) return;
+      savedRoutes.splice(i, 1);
+      saveRoutesStore();
+      renderSavedRoutes();
+    };
+    el.appendChild(row);
+  });
+}
+document.getElementById('saveroute').onclick = () => {
+  if (!plannedDays.length) { alert('Plan of laad eerst een route.'); return; }
+  const name = prompt('Naam voor deze route:', 'Trip ' + new Date().toISOString().slice(0, 10));
+  if (!name) return;
+  savedRoutes.push(routeToData(name));
+  saveRoutesStore();
+  renderSavedRoutes();
+};
+// gedeelde route via link openen: opslaan op dit apparaat en direct laden.
+// De sessie-markering zorgt dat dit maar één keer gebeurt: daarna geldt
+// ook met de link in de adresbalk gewoon "verversen = schone lei".
+if (location.hash.startsWith('#r=')) {
+  if (localStorage.getItem('sc_imported_route') !== location.hash) {
+    try {
+      const b64 = location.hash.slice(3).replace(/-/g, '+').replace(/_/g, '/');
+      const r = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      if (r && r.days) {
+        r.name = r.name || 'Gedeelde route';
+        if (!savedRoutes.some(x => JSON.stringify(x.days) === JSON.stringify(r.days))) {
+          savedRoutes.push(r);
+          saveRoutesStore();
+        }
+        localStorage.setItem('sc_imported_route', location.hash);
+        setTimeout(() => loadRoute(r), 100);
+      }
+    } catch (e) { console.warn('Kon gedeelde route niet lezen', e); }
+  }
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+}
+
 // ---------- export / import ----------
 document.getElementById('exp-csv').onclick = () => {
   const lines = ['Site Name;Country;GPS;Visited'];
@@ -894,6 +1005,7 @@ refreshMarkers();
 renderOverrides();
 renderManual();
 renderOvernights();
+renderSavedRoutes();
 </script>
 </body>
 </html>

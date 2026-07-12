@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14171c">
+<title>Supercharger Hunter 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --text: #e8eaed;
+    --muted: #9aa3af; --accent: #e82127; --green: #2ecc71; --blue: #3b82f6;
+    --border: #333a45;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  #sidebar { width: 380px; min-width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  #map { flex: 1; background: #0e1116; }
+  h1 { font-size: 18px; padding: 14px 16px 4px; }
+  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat { background: var(--panel2); border-radius: 8px; padding: 8px 10px; text-align: center; }
+  .stat b { font-size: 20px; display: block; }
+  .stat span { font-size: 11px; color: var(--muted); }
+  .progressbar { height: 8px; background: var(--panel2); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b6b); }
+  label { font-size: 12px; color: var(--muted); display: block; margin: 8px 0 3px; }
+  input, select, button { font: inherit; }
+  input[type=text], input[type=number], select {
+    width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button.primary {
+    width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+    padding: 9px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px;
+  }
+  button.primary:hover { filter: brightness(1.1); }
+  button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  button.small:hover { background: #303845; }
+  #countrylist { max-height: 180px; overflow-y: auto; font-size: 13px; }
+  .crow { display: flex; justify-content: space-between; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+  .crow:hover { background: var(--panel2); }
+  .crow.active { background: #33240f; }
+  .crow .pct { color: var(--muted); font-size: 12px; }
+  #daylist { font-size: 13px; }
+  .day { background: var(--panel2); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .day h3 { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .day .meta { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .day ol { padding-left: 18px; color: var(--muted); font-size: 12px; max-height: 130px; overflow-y: auto; }
+  .day a { color: var(--blue); font-size: 12px; text-decoration: none; margin-right: 10px; }
+  .exbtn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 3px; }
+  .exbtn:hover { color: var(--accent); }
+  .day a:hover { text-decoration: underline; }
+  .legend { font-size: 12px; color: var(--muted); display: flex; gap: 14px; margin-top: 6px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+  .leaflet-popup-content { font-size: 13px; }
+  .leaflet-popup-content b { font-size: 14px; }
+  .leaflet-popup-content button { margin-top: 6px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  #startinfo { font-size: 12px; color: var(--green); margin-top: 4px; min-height: 16px; }
+  #nearbylist { font-size: 13px; }
+  .nrow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  .nrow .info { flex: 1; min-width: 0; }
+  .nrow .info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nrow .info span { font-size: 11px; color: var(--muted); }
+  .nrow button { flex-shrink: 0; }
+  #mobiletabs { display: none; }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #map { order: 1; flex: 1; min-height: 0; }
+    #sidebar { order: 2; width: 100%; min-width: 0; height: 45vh; border-right: 0; border-top: 1px solid var(--border); }
+    #sidebar.collapsed { height: 52px; overflow: hidden; }
+    #mobiletabs { display: block; position: sticky; top: 0; background: var(--panel); z-index: 10; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+    #mobiletabs button { width: 100%; }
+    h1 { display: none; }
+    button.small, button.primary { padding: 10px 12px; font-size: 14px; }
+    input[type=text], input[type=number], select { padding: 10px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>⚡ Supercharger Hunter 2026
+    <span class="sub">Tesla Supercharger-wedstrijd · Europa</span>
+  </h1>
+
+  <div id="mobiletabs"><button class="small" id="sb-toggle">▼ Paneel inklappen</button></div>
+
+  <section>
+    <h2>Onderweg</h2>
+    <button class="primary" id="nearby-btn" style="margin-top:0">📍 Dichtstbijzijnde onbezochte</button>
+    <div id="nearbylist"></div>
+  </section>
+
+  <section>
+    <div class="statgrid">
+      <div class="stat"><b id="st-visited">0</b><span>bezocht</span></div>
+      <div class="stat"><b id="st-todo">0</b><span>te gaan</span></div>
+      <div class="stat"><b id="st-target">700</b><span>doel</span></div>
+    </div>
+    <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--green)"></span>bezocht</span>
+      <span><span class="dot" style="background:var(--accent)"></span>te bezoeken</span>
+      <span><span class="dot" style="background:var(--blue)"></span>route</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Filter</h2>
+    <input type="text" id="search" placeholder="Zoek locatie of plaats…">
+    <label>Status</label>
+    <select id="f-status">
+      <option value="all">Alles</option>
+      <option value="todo" selected>Nog te bezoeken</option>
+      <option value="visited">Bezocht</option>
+    </select>
+    <label>Landen (klik om te filteren, voortgang per land)</label>
+    <div id="countrylist"></div>
+  </section>
+
+  <section>
+    <h2>Dagroute-planner</h2>
+    <div class="muted">Startpunt: klik op de kaart met <b>Shift</b> ingedrukt, of kies een locatie-popup → "Start hier".</div>
+    <div id="startinfo"></div>
+    <div class="row">
+      <div><label>Dagen</label><input type="number" id="p-days" value="5" min="1" max="25"></div>
+      <div><label>Uur/dag</label><input type="number" id="p-hours" value="12" min="4" max="16"></div>
+      <div><label>Min/stop</label><input type="number" id="p-charge" value="8" min="3" max="45"></div>
+    </div>
+    <div class="row">
+      <div><label>Gem. snelheid (km/u)</label><input type="number" id="p-speed" value="85" min="50" max="120"></div>
+      <div><label>Wegfactor</label><input type="number" id="p-factor" value="1.25" step="0.05" min="1" max="1.6"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text)">
+      <input type="checkbox" id="p-loop"> Eindig weer bij startpunt (lus)
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text)">
+      <input type="checkbox" id="p-view"> Alleen binnen huidige kaartweergave
+    </label>
+    <label>Beperk tot landen (leeg = alle, gebruik landenfilter hierboven)</label>
+    <label>Eigen overnachtingen (optioneel; met lus aan keert de laatste dag terug naar start)</label>
+    <div id="overnightlist" class="muted"></div>
+    <div id="excludedinfo" class="muted" style="margin-top:4px"></div>
+    <button class="primary" id="p-plan">Plan route</button>
+    <button class="small" id="p-clear" style="margin-top:6px">Wis route</button>
+  </section>
+
+  <section>
+    <h2>Eigen route</h2>
+    <div id="manuallist"></div>
+  </section>
+
+  <section>
+    <h2>Geplande dagen</h2>
+    <div id="daylist" class="muted">Nog geen route gepland.</div>
+  </section>
+
+  <section>
+    <h2>Data</h2>
+    <div class="row">
+      <button class="small" id="exp-csv">Exporteer CSV</button>
+      <button class="small" id="exp-json">Backup JSON</button>
+      <button class="small" id="imp-json">Herstel backup</button>
+    </div>
+    <input type="file" id="imp-file" accept=".json" style="display:none">
+    <div id="overrides-box" style="margin-top:8px"></div>
+    <div class="muted" style="margin-top:8px">Bezoek-status wordt lokaal opgeslagen in je browser. Maak regelmatig een backup.</div>
+  </section>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script>
+// ---------- state ----------
+const LS_KEY = 'sc_visited_overrides_v1';
+let overrides = {};
+try { overrides = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) {}
+const isVisited = s => (s.id in overrides) ? overrides[s.id] : s.visited;
+const saveOverrides = () => localStorage.setItem(LS_KEY, JSON.stringify(overrides));
+
+let activeCountries = new Set();   // leeg = alle
+let searchTerm = '';
+let statusFilter = 'todo';
+let startPoint = null;             // {lat, lng, label}
+let routeLayers = [];
+let plannedDays = [];
+
+// ---------- kaart ----------
+const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+
+const markers = new Map();
+function markerStyle(s) {
+  return {
+    radius: 7,
+    fillColor: isVisited(s) ? '#2ecc71' : '#e82127',
+    color: '#0008', weight: 2, fillOpacity: 0.9
+  };
+}
+function popupHtml(s) {
+  const v = isVisited(s);
+  return `<b>${s.name}</b><br>
+    ${s.address}, ${s.city}<br>
+    <span style="color:#9aa3af">${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
+    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span><br>
+    <button class="small" onclick="toggleVisited(${s.id})">${v ? 'Markeer als niet bezocht' : '✔ Markeer als bezocht'}</button>
+    <button class="small" onclick="setStartFromSite(${s.id})">Start hier</button>
+    <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Uit eigen route' : '➕ In eigen route'}</button>
+    <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht hier</button>
+    ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Weer meenemen in planning' : '🚫 Sla over in planning'}</button>` : ''}
+    <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" style="display:block;margin-top:4px;color:#3b82f6">Open in Google Maps</a>`;
+}
+for (const s of SITES) {
+  const m = L.circleMarker([s.lat, s.lng], markerStyle(s)).bindPopup(() => popupHtml(s));
+  markers.set(s.id, m);
+}
+
+function siteMatchesFilter(s) {
+  if (activeCountries.size && !activeCountries.has(s.country)) return false;
+  if (statusFilter === 'todo' && isVisited(s)) return false;
+  if (statusFilter === 'visited' && !isVisited(s)) return false;
+  if (searchTerm && !(s.name + ' ' + s.city).toLowerCase().includes(searchTerm)) return false;
+  return true;
+}
+function refreshMarkers() {
+  for (const s of SITES) {
+    const m = markers.get(s.id);
+    const show = siteMatchesFilter(s);
+    if (show && !map.hasLayer(m)) m.addTo(map);
+    if (!show && map.hasLayer(m)) map.removeLayer(m);
+    if (show) m.setStyle(markerStyle(s));
+  }
+  refreshStats();
+}
+
+window.toggleVisited = function(id) {
+  const s = SITES[id];
+  overrides[id] = !isVisited(s);
+  if (overrides[id] === s.visited) delete overrides[id];
+  saveOverrides();
+  markers.get(id).setPopupContent(popupHtml(s));
+  refreshMarkers();
+  renderOverrides();
+};
+
+// overzicht van handmatige wijzigingen t.o.v. het databestand
+function renderOverrides() {
+  const el = document.getElementById('overrides-box');
+  const ids = Object.keys(overrides);
+  if (!ids.length) { el.innerHTML = '<span class="muted">Geen handmatige wijzigingen t.o.v. het databestand.</span>'; return; }
+  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Handmatig gewijzigd (${ids.length}):</b></div>`;
+  for (const id of ids) {
+    const s = SITES[id];
+    if (!s) continue;
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `
+      <div class="info"><b>${s.name}</b><span>nu: ${overrides[id] ? '✔ bezocht' : '✘ niet bezocht'} (bestand zegt: ${s.visited ? 'bezocht' : 'niet bezocht'})</span></div>
+      <button class="small" title="Wijziging ongedaan maken" data-undo="${id}">↩</button>`;
+    row.querySelector('[data-undo]').onclick = () => {
+      delete overrides[id];
+      saveOverrides();
+      markers.get(s.id).setPopupContent(popupHtml(s));
+      refreshMarkers();
+      renderOverrides();
+    };
+    el.appendChild(row);
+  }
+}
+window.setStartFromSite = function(id) {
+  const s = SITES[id];
+  setStart(s.lat, s.lng, s.name);
+  map.closePopup();
+};
+
+map.on('click', e => {
+  if (e.originalEvent.shiftKey) setStart(e.latlng.lat, e.latlng.lng, 'Eigen punt');
+});
+
+let startMarker = null;
+function setStart(lat, lng, label) {
+  startPoint = { lat, lng, label };
+  if (startMarker) map.removeLayer(startMarker);
+  startMarker = L.marker([lat, lng]).addTo(map).bindTooltip('Start: ' + label);
+  document.getElementById('startinfo').textContent = '📍 Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+}
+setStart(51.9225, 4.4792, 'Rotterdam (thuis)');
+
+// ---------- statistieken & landenlijst ----------
+function refreshStats() {
+  const visited = SITES.filter(isVisited).length;
+  document.getElementById('st-visited').textContent = visited;
+  document.getElementById('st-todo').textContent = SITES.length - visited;
+  document.getElementById('st-bar').style.width = Math.min(100, visited / 700 * 100) + '%';
+}
+function buildCountryList() {
+  const per = {};
+  for (const s of SITES) {
+    per[s.country] = per[s.country] || { total: 0, visited: 0 };
+    per[s.country].total++;
+    if (isVisited(s)) per[s.country].visited++;
+  }
+  const el = document.getElementById('countrylist');
+  el.innerHTML = '';
+  Object.entries(per).sort((a, b) => b[1].total - a[1].total).forEach(([c, v]) => {
+    const div = document.createElement('div');
+    div.className = 'crow' + (activeCountries.has(c) ? ' active' : '');
+    div.innerHTML = `<span>${c}</span><span class="pct">${v.visited}/${v.total}</span>`;
+    div.onclick = () => {
+      activeCountries.has(c) ? activeCountries.delete(c) : activeCountries.add(c);
+      buildCountryList(); refreshMarkers();
+    };
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refreshMarkers(); });
+document.getElementById('f-status').addEventListener('change', e => { statusFilter = e.target.value; refreshMarkers(); });
+
+// ---------- routeplanner ----------
+const R = 6371;
+function hav(a, b) {
+  const dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// handmatig uitgesloten van planning — bewust niet opgeslagen:
+// een paginaverversing begint met een schone lei
+const excluded = new Set();
+localStorage.removeItem('sc_excluded_v1'); // opruimen van eerdere experimentele opslag
+let planBounds = null;        // kaartbegrenzing van de laatste expliciete planactie
+
+// eigen overnachtingen: nacht 1 = einde van dag 1, enz.
+let overnights = [];
+window.setOvernight = function(id) {
+  overnights.push(SITES[id]);
+  renderOvernights();
+  map.closePopup();
+};
+// overslaan/weer meenemen via de marker-popup; herberekent een bestaande route direct
+window.excludeSite = function(id) {
+  if (excluded.has(id)) excluded.delete(id); else excluded.add(id);
+  renderExcluded();
+  markers.get(id).setPopupContent(popupHtml(SITES[id]));
+  map.closePopup();
+  if (plannedDays.length) planRoute(true);
+};
+function renderOvernights() {
+  const el = document.getElementById('overnightlist');
+  if (!overnights.length) {
+    el.innerHTML = 'Klik een marker aan en kies "🌙 Overnacht hier" — de eerste keuze wordt nacht 1, de tweede nacht 2, enz.';
+    return;
+  }
+  el.innerHTML = '';
+  overnights.forEach((o, i) => {
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `<div class="info"><b>Nacht ${i+1}: ${o.name}</b></div><button class="small" title="Verwijderen">✕</button>`;
+    row.querySelector('button').onclick = () => {
+      overnights.splice(i, 1);
+      renderOvernights();
+      if (plannedDays.length) planRoute(true);
+    };
+    el.appendChild(row);
+  });
+}
+function renderExcluded() {
+  const el = document.getElementById('excludedinfo');
+  if (!excluded.size) { el.innerHTML = ''; return; }
+  el.innerHTML = `🚫 ${excluded.size} locatie(s) uitgesloten van planning · <a href="#" id="ex-reset" style="color:var(--blue)">herstel alles</a>`;
+  document.getElementById('ex-reset').onclick = e => {
+    e.preventDefault();
+    excluded.clear();
+    renderExcluded();
+    if (plannedDays.length) planRoute(true);
+  };
+}
+
+function planRoute(reuseBounds = false) {
+  const days = +document.getElementById('p-days').value;
+  const hours = +document.getElementById('p-hours').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  const speed = +document.getElementById('p-speed').value;
+  const factor = +document.getElementById('p-factor').value;
+  const loop = document.getElementById('p-loop').checked;
+
+  let pool = SITES.filter(s => !isVisited(s) && !excluded.has(s.id));
+  if (activeCountries.size) pool = pool.filter(s => activeCountries.has(s.country));
+  if (document.getElementById('p-view').checked) {
+    if (!reuseBounds || !planBounds) planBounds = map.getBounds();
+    pool = pool.filter(s => planBounds.contains([s.lat, s.lng]));
+  }
+  if (!pool.length) { alert('Geen onbezochte locaties binnen het filter.'); return; }
+  pool = pool.slice(); // kopie
+
+  const dayBudgetMin = hours * 60;
+  plannedDays = [];
+  // pure lus (zonder eigen overnachtingen): plan als gesloten ronde
+  if (loop && !overnights.length) {
+    planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor);
+    drawRoute();
+    renderDays(chargeMin, speed);
+    return;
+  }
+  // lus met een overnachting voor elke nacht: segmenten gezamenlijk optimaliseren
+  if (loop && overnights.length >= days - 1) {
+    planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor);
+    drawRoute();
+    renderDays(chargeMin, speed);
+    return;
+  }
+  let cur = { lat: startPoint.lat, lng: startPoint.lng };
+
+  for (let d = 0; d < days && pool.length; d++) {
+    // gewenste overnachting ná deze dag; bij een lus eindigt de laatste dag bij het startpunt
+    const homeEnd = loop && d === days - 1;
+    const nightly = overnights[d] || (homeEnd ? { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' } : null);
+    const stops = [];
+    let usedMin = 0, distKm = 0;
+    while (pool.length) {
+      // dichtstbijzijnde volgende
+      let bi = 0, bd = Infinity;
+      for (let i = 0; i < pool.length; i++) {
+        const dd = hav(cur, pool[i]);
+        if (dd < bd) { bd = dd; bi = i; }
+      }
+      const legKm = bd * factor;
+      const legMin = legKm / speed * 60 + chargeMin;
+      // bij een eigen overnachting: rijtijd naar de slaapplek reserveren
+      const backMin = nightly ? hav(pool[bi], nightly) * factor / speed * 60 : 0;
+      if (usedMin + legMin + backMin > dayBudgetMin) break;
+      usedMin += legMin; distKm += legKm;
+      cur = pool[bi];
+      stops.push(pool[bi]);
+      pool.splice(bi, 1);
+    }
+    if (!stops.length) break;
+    // 2-opt verbetering binnen de dag (vaste start; vast eind bij eigen overnachting)
+    const prevDay = plannedDays[d-1];
+    const dayStart = d === 0 ? startPoint : (prevDay.endPoint || prevDay.stops[prevDay.stops.length-1]);
+    if (nightly) twoOptEnds(stops, dayStart, nightly);
+    else twoOpt(stops, dayStart, factor);
+    // herbereken tijd/afstand na 2-opt
+    let km = 0, prev = dayStart;
+    for (const s of stops) { km += hav(prev, s) * factor; prev = s; }
+    if (nightly) km += hav(prev, nightly) * factor;
+    const min = km / speed * 60 + stops.length * chargeMin;
+    plannedDays.push({ stops, km, min, start: dayStart, endPoint: nightly, back: homeEnd && !overnights[d] });
+    cur = nightly || stops[stops.length - 1];
+  }
+  // opraap-ronde: overgeslagen locaties alsnog op het goedkoopste punt invoegen
+  // zolang het dagbudget het toelaat (vangt "rijdt er langs maar stopt niet" af)
+  for (const day of plannedDays) {
+    let changed = true;
+    while (changed && pool.length) {
+      changed = false;
+      const pts = day.endPoint ? [day.start, ...day.stops, day.endPoint] : [day.start, ...day.stops];
+      let best = null;
+      for (let p = 0; p < pool.length; p++) {
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
+          if (!best || extra < best.extra) best = { p, i, extra };
+        }
+      }
+      if (best) {
+        const extraMin = best.extra / speed * 60 + chargeMin;
+        if (day.min + extraMin <= dayBudgetMin) {
+          day.stops.splice(best.i, 0, pool[best.p]);
+          day.km += best.extra;
+          day.min += extraMin;
+          pool.splice(best.p, 1);
+          changed = true;
+        }
+      }
+    }
+  }
+  drawRoute();
+  renderDays(chargeMin, speed);
+}
+
+function twoOpt(stops, start, factor) {
+  const pts = [start, ...stops];
+  let improved = true, guard = 0;
+  while (improved && guard++ < 60) {
+    improved = false;
+    for (let i = 1; i < pts.length - 1; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const a = pts[i-1], b = pts[i], c = pts[j], d = pts[j+1];
+        const before = hav(a, b) + (d ? hav(c, d) : 0);
+        const after = hav(a, c) + (d ? hav(b, d) : 0);
+        if (after < before - 0.01) {
+          let lo = i, hi = j;
+          while (lo < hi) { [pts[lo], pts[hi]] = [pts[hi], pts[lo]]; lo++; hi--; }
+          improved = true;
+        }
+      }
+    }
+  }
+  stops.length = 0;
+  stops.push(...pts.slice(1));
+}
+
+// 2-opt met vaste start én vast eindpunt (voor dagen met een eigen overnachting)
+function twoOptEnds(stops, start, end) {
+  const pts = [start, ...stops, end];
+  let improved = true, guard = 0;
+  while (improved && guard++ < 60) {
+    improved = false;
+    for (let i = 1; i < pts.length - 2; i++) {
+      for (let j = i + 1; j < pts.length - 1; j++) {
+        if (hav(pts[i-1], pts[j]) + hav(pts[i], pts[j+1]) < hav(pts[i-1], pts[i]) + hav(pts[j], pts[j+1]) - 0.01) {
+          let lo = i, hi = j;
+          while (lo < hi) { [pts[lo], pts[hi]] = [pts[hi], pts[lo]]; lo++; hi--; }
+          improved = true;
+        }
+      }
+    }
+  }
+  stops.length = 0;
+  stops.push(...pts.slice(1, -1));
+}
+
+// Lus-planning: één grote gesloten ronde (heen- en terugweg via verschillende
+// corridors), daarna opgeknipt in dagen — zo hebben ook terugrij-dagen bezoeken.
+function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
+  const totalBudget = days * dayBudgetMin;
+  const tour = [];
+  let cur = startPoint, used = 0;
+  while (pool.length) {
+    let bi = -1, bd = Infinity, bs = Infinity;
+    for (let i = 0; i < pool.length; i++) {
+      const dd = hav(cur, pool[i]);
+      const sc = dd + 0.45 * hav(pool[i], startPoint);   // zwaartekracht rond start
+      if (sc < bs) { bs = sc; bd = dd; bi = i; }
+    }
+    const legMin = bd * factor / speed * 60 + chargeMin;
+    const backMin = hav(pool[bi], startPoint) * factor / speed * 60;
+    if (used + legMin + backMin > totalBudget) break;
+    used += legMin;
+    cur = pool[bi];
+    tour.push(pool[bi]);
+    pool.splice(bi, 1);
+  }
+  if (!tour.length) { alert('Er past geen lus binnen het tijdbudget.'); return; }
+  twoOptClosed(tour);
+  // opraap-ronde over de hele ronde binnen het totaalbudget
+  const tourTime = () => {
+    let km = 0, prev = startPoint;
+    for (const s of tour) { km += hav(prev, s) * factor; prev = s; }
+    km += hav(prev, startPoint) * factor;
+    return km / speed * 60 + tour.length * chargeMin;
+  };
+  let changed = true;
+  while (changed && pool.length) {
+    changed = false;
+    const pts = [startPoint, ...tour, startPoint];
+    let best = null;
+    for (let p = 0; p < pool.length; p++)
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
+        if (!best || extra < best.extra) best = { p, i, extra };
+      }
+    if (best && tourTime() + best.extra / speed * 60 + chargeMin <= totalBudget) {
+      tour.splice(best.i, 0, pool[best.p]);
+      pool.splice(best.p, 1);
+      changed = true;
+    }
+  }
+  // opknippen in dagen (overnachten waar de dag vol zit)
+  let day = { stops: [], km: 0, min: 0, start: startPoint };
+  let prev = startPoint;
+  for (let t = 0; t < tour.length; t++) {
+    const s = tour[t];
+    const legKm = hav(prev, s) * factor;
+    const legMin = legKm / speed * 60 + chargeMin;
+    const isLastDay = plannedDays.length === days - 1;
+    const backMin = isLastDay ? hav(s, startPoint) * factor / speed * 60 : 0;
+    if (day.min + legMin + backMin > dayBudgetMin && day.stops.length) {
+      if (isLastDay) break;               // laatste dag zit vol: rest vervalt
+      plannedDays.push(day);
+      day = { stops: [], km: 0, min: 0, start: prev };
+      t--;                                 // zelfde stop opnieuw beoordelen op de nieuwe dag
+      continue;
+    }
+    day.stops.push(s);
+    day.km += legKm;
+    day.min += legMin;
+    prev = s;
+  }
+  const backKm = hav(prev, startPoint) * factor;
+  day.km += backKm;
+  day.min += backKm / speed * 60;
+  day.back = true;
+  day.endPoint = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' };
+  if (day.stops.length) plannedDays.push(day);
+}
+
+// Lus mét eigen overnachtingen: de ronde wordt opgedeeld in segmenten
+// (start→nacht1, nacht1→nacht2, …, laatste nacht→start) en alle locaties worden
+// via goedkoopste-invoeging verdeeld over het segment waar ze het beste passen.
+// Zo gaan corridor-locaties naar de terugweg als dat efficiënter is.
+function planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
+  const home = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' };
+  const bounds = [home, ...overnights.slice(0, days - 1), home];
+  const segs = [];
+  for (let d = 0; d < bounds.length - 1; d++) {
+    const a = bounds[d], b = bounds[d+1];
+    const baseKm = hav(a, b) * factor;
+    segs.push({ a, b, stops: [], km: baseKm, min: baseKm / speed * 60 });
+  }
+  // goedkoopste-invoeging over alle segmenten, binnen het dagbudget per segment
+  let changed = true;
+  while (changed && pool.length) {
+    changed = false;
+    let best = null;
+    for (let p = 0; p < pool.length; p++) {
+      for (let g = 0; g < segs.length; g++) {
+        const seg = segs[g];
+        const pts = [seg.a, ...seg.stops, seg.b];
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
+          const extraMin = extra / speed * 60 + chargeMin;
+          if (seg.min + extraMin <= dayBudgetMin && (!best || extra < best.extra)) best = { p, g, i, extra, extraMin };
+        }
+      }
+    }
+    if (best) {
+      const seg = segs[best.g];
+      seg.stops.splice(best.i, 0, pool[best.p]);
+      seg.km += best.extra;
+      seg.min += best.extraMin;
+      pool.splice(best.p, 1);
+      changed = true;
+    }
+  }
+  // 2-opt-polijst per segment (vaste eindpunten) en tijden herberekenen
+  segs.forEach((seg, d) => {
+    if (seg.stops.length > 2) twoOptEnds(seg.stops, seg.a, seg.b);
+    let km = 0, prev = seg.a;
+    for (const s of seg.stops) { km += hav(prev, s) * factor; prev = s; }
+    km += hav(prev, seg.b) * factor;
+    plannedDays.push({
+      stops: seg.stops, km,
+      min: km / speed * 60 + seg.stops.length * chargeMin,
+      start: seg.a, endPoint: seg.b,
+      back: d === segs.length - 1,
+    });
+  });
+}
+
+// 2-opt op een gesloten ronde die begint en eindigt bij het startpunt
+function twoOptClosed(tour) {
+  const pts = [startPoint, ...tour];
+  const n = pts.length;
+  let improved = true, guard = 0;
+  while (improved && guard++ < 80) {
+    improved = false;
+    for (let i = 1; i < n - 1; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = pts[i-1], b = pts[i], c = pts[j], d = pts[(j+1) % n];
+        if (hav(a, c) + hav(b, d) < hav(a, b) + hav(c, d) - 0.01) {
+          let lo = i, hi = j;
+          while (lo < hi) { [pts[lo], pts[hi]] = [pts[hi], pts[lo]]; lo++; hi--; }
+          improved = true;
+        }
+      }
+    }
+  }
+  tour.length = 0;
+  tour.push(...pts.slice(1));
+}
+
+const dayColors = ['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6','#eab308','#8b5cf6',
+                   '#22d3ee','#fb7185','#4ade80','#fbbf24','#c084fc','#38bdf8','#fda4af','#a3e635','#fcd34d','#818cf8',
+                   '#67e8f9','#fda4af','#86efac','#fde047','#d8b4fe'];
+
+function drawRoute() {
+  routeLayers.forEach(l => map.removeLayer(l));
+  routeLayers = [];
+  plannedDays.forEach((day, i) => {
+    const pts = [[day.start.lat, day.start.lng], ...day.stops.map(s => [s.lat, s.lng])];
+    if (day.endPoint) pts.push([day.endPoint.lat, day.endPoint.lng]);
+    const line = L.polyline(pts, { color: dayColors[i % dayColors.length], weight: 3, opacity: 0.85 }).addTo(map);
+    routeLayers.push(line);
+    day.stops.forEach((s, j) => {
+      const badge = L.marker([s.lat, s.lng], {
+        icon: L.divIcon({ className: '', html: `<div style="background:${dayColors[i % dayColors.length]};color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
+      }).bindPopup(() => popupHtml(s)).addTo(map);
+      routeLayers.push(badge);
+    });
+  });
+  if (routeLayers.length) map.fitBounds(L.featureGroup(routeLayers.filter(l => l instanceof L.Polyline)).getBounds().pad(0.1));
+}
+
+function gmapsLinks(day) {
+  // Google Maps ondersteunt ~10 waypoints per link
+  const pts = [day.start, ...day.stops];
+  if (day.endPoint) pts.push(day.endPoint);
+  const links = [];
+  for (let i = 0; i + 1 < pts.length; i += 9) {
+    const chunk = pts.slice(i, i + 10);
+    const origin = `${chunk[0].lat},${chunk[0].lng}`;
+    const dest = `${chunk[chunk.length-1].lat},${chunk[chunk.length-1].lng}`;
+    const wps = chunk.slice(1, -1).map(p => `${p.lat},${p.lng}`).join('|');
+    links.push(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${wps ? '&waypoints=' + encodeURIComponent(wps) : ''}&travelmode=driving`);
+  }
+  return links;
+}
+
+function renderDays(chargeMin, speed) {
+  const el = document.getElementById('daylist');
+  if (!plannedDays.length) { el.innerHTML = '<span class="muted">Nog geen route gepland.</span>'; return; }
+  el.innerHTML = '';
+  let totKm = 0, totStops = 0;
+  plannedDays.forEach((day, i) => {
+    totKm += day.km; totStops += day.stops.length;
+    const div = document.createElement('div');
+    div.className = 'day';
+    const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps deel ${j+1}</a>`).join('');
+    div.innerHTML = `
+      <h3><span style="color:${dayColors[i % dayColors.length]}">● Dag ${i+1}</span><span>${day.stops.length} stops</span></h3>
+      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)<br>
+        Start: ${day.start.name || day.start.label || 'startpunt'} · ${day.back ? '🏁 eindigt weer bij startpunt' : (day.endPoint ? '🌙 overnachten: ' + (day.endPoint.name || 'eigen punt') + ' (eigen keuze)' : '🌙 overnachten: ' + day.stops[day.stops.length-1].name)}</div>
+      <div>${links}</div>
+      <ol>${day.stops.map(s => `<li>${s.name} <button class="exbtn" data-ex="${s.id}" title="Uitsluiten en route herberekenen">✕</button></li>`).join('')}</ol>`;
+    el.appendChild(div);
+  });
+  el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
+    excluded.add(+b.dataset.ex);
+    renderExcluded();
+    planRoute(true);
+  });
+  const sum = document.createElement('div');
+  sum.className = 'muted';
+  sum.style.marginBottom = '8px';
+  const kwhRit = Math.round(totKm * 0.16);
+  const kwhReg = totStops * 2;
+  sum.innerHTML = `<b style="color:var(--text)">Totaal: ${totStops} nieuwe locaties, ${Math.round(totKm)} km</b><br>
+    Registratie-laden: ${kwhReg} kWh (2 kWh/stop) · rijverbruik ±${kwhRit} kWh<br>
+    Kosten ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0,40 · bulk €0,35/kWh)`;
+  el.prepend(sum);
+}
+
+document.getElementById('p-plan').onclick = () => planRoute(false);
+document.getElementById('p-clear').onclick = () => { plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
+
+// ---------- export / import ----------
+document.getElementById('exp-csv').onclick = () => {
+  const lines = ['Site Name;Country;GPS;Visited'];
+  for (const s of SITES) lines.push(`"${s.name}";${s.country};"${s.lat}, ${s.lng}";${isVisited(s) ? 'Yes' : 'No'}`);
+  download('supercharger-status.csv', lines.join('\n'));
+};
+document.getElementById('exp-json').onclick = () => {
+  download('supercharger-backup.json', JSON.stringify({ exported: new Date().toISOString(), overrides }));
+};
+document.getElementById('imp-json').onclick = () => document.getElementById('imp-file').click();
+document.getElementById('imp-file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  f.text().then(t => {
+    try {
+      const data = JSON.parse(t);
+      overrides = data.overrides || {};
+      saveOverrides();
+      buildCountryList(); refreshMarkers(); renderOverrides();
+      alert('Backup hersteld.');
+    } catch (err) { alert('Ongeldig backup-bestand.'); }
+  });
+});
+function download(name, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
+  a.download = name;
+  a.click();
+}
+
+// ---------- onderweg: dichtstbijzijnde onbezochte ----------
+let lastPos = null;
+document.getElementById('nearby-btn').onclick = () => {
+  const el = document.getElementById('nearbylist');
+  el.innerHTML = '<div class="muted" style="padding:6px 0">GPS-locatie ophalen…</div>';
+  if (!navigator.geolocation) { el.innerHTML = '<div class="muted">Geen GPS beschikbaar in deze browser.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    map.setView([lastPos.lat, lastPos.lng], 10);
+    renderNearby();
+  }, err => {
+    el.innerHTML = `<div class="muted">GPS mislukt (${err.message}). Let op: locatie werkt alleen via https of localhost.</div>`;
+  }, { enableHighAccuracy: true, timeout: 10000 });
+};
+function renderNearby() {
+  if (!lastPos) return;
+  const el = document.getElementById('nearbylist');
+  const nearest = SITES.filter(s => !isVisited(s))
+    .map(s => ({ s, d: hav(lastPos, s) }))
+    .sort((a, b) => a.d - b.d).slice(0, 12);
+  el.innerHTML = '';
+  for (const { s, d } of nearest) {
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `
+      <div class="info"><b>${s.name}</b><span>${d.toFixed(1)} km hemelsbreed · ${s.stalls ?? '?'} stalls ${s.version || ''}</span></div>
+      <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving')">🧭</button>
+      <button class="small" data-id="${s.id}">✔</button>`;
+    row.querySelector('[data-id]').onclick = () => { toggleVisited(s.id); renderNearby(); };
+    el.appendChild(row);
+  }
+}
+
+// ---------- eigen route (handmatige volgorde) ----------
+let manualRoute = [];   // site-ids in de door jou gekozen volgorde
+let manualLayers = [];
+window.routeAdd = function(id) {
+  const i = manualRoute.indexOf(id);
+  if (i >= 0) manualRoute.splice(i, 1); else manualRoute.push(id);
+  markers.get(id).setPopupContent(popupHtml(SITES[id]));
+  renderManual();
+};
+function renderManual() {
+  const el = document.getElementById('manuallist');
+  manualLayers.forEach(l => map.removeLayer(l)); manualLayers = [];
+  if (!manualRoute.length) {
+    el.innerHTML = '<span class="muted">Klik markers aan en kies "➕ In eigen route" om zelf een volgorde samen te stellen. De route start bij je startpunt.</span>';
+    return;
+  }
+  // stippellijn + nummers op de kaart
+  const pts = [[startPoint.lat, startPoint.lng], ...manualRoute.map(id => [SITES[id].lat, SITES[id].lng])];
+  manualLayers.push(L.polyline(pts, { color: '#2ecc71', weight: 3, opacity: 0.9, dashArray: '6 6' }).addTo(map));
+  manualRoute.forEach((id, j) => {
+    manualLayers.push(L.marker([SITES[id].lat, SITES[id].lng], {
+      icon: L.divIcon({ className: '', html: `<div style="background:#2ecc71;color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
+    }).bindPopup(() => popupHtml(SITES[id])).addTo(map));
+  });
+  // totalen op basis van de planner-instellingen
+  const factor = +document.getElementById('p-factor').value;
+  const speed = +document.getElementById('p-speed').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  let km = 0, prev = startPoint;
+  for (const id of manualRoute) { km += hav(prev, SITES[id]) * factor; prev = SITES[id]; }
+  const min = km / speed * 60 + manualRoute.length * chargeMin;
+  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">${manualRoute.length} stops · ${Math.round(km)} km · ${(min/60).toFixed(1)} u</b></div>`;
+  manualRoute.forEach((id, j) => {
+    const s = SITES[id];
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `<div class="info"><b>${j+1}. ${s.name}</b></div>
+      <button class="small" data-a="up" title="Eerder in de route">↑</button>
+      <button class="small" data-a="down" title="Later in de route">↓</button>
+      <button class="small" data-a="del" title="Verwijderen">✕</button>`;
+    row.querySelector('[data-a=up]').onclick = () => { if (j > 0) { [manualRoute[j-1], manualRoute[j]] = [manualRoute[j], manualRoute[j-1]]; renderManual(); } };
+    row.querySelector('[data-a=down]').onclick = () => { if (j < manualRoute.length - 1) { [manualRoute[j+1], manualRoute[j]] = [manualRoute[j], manualRoute[j+1]]; renderManual(); } };
+    row.querySelector('[data-a=del]').onclick = () => { manualRoute.splice(j, 1); markers.get(id).setPopupContent(popupHtml(s)); renderManual(); };
+    el.appendChild(row);
+  });
+  const btns = document.createElement('div');
+  btns.className = 'row';
+  btns.style.marginTop = '6px';
+  btns.innerHTML = `<button class="small" id="mr-opt">Optimaliseer</button><button class="small" id="mr-maps">Maps-links</button><button class="small" id="mr-clear">Wis</button>`;
+  el.appendChild(btns);
+  document.getElementById('mr-opt').onclick = () => {
+    const stops = manualRoute.map(id => SITES[id]);
+    twoOpt(stops, startPoint, 1);
+    manualRoute = stops.map(s => s.id);
+    renderManual();
+  };
+  document.getElementById('mr-maps').onclick = () => {
+    gmapsLinks({ start: startPoint, stops: manualRoute.map(id => SITES[id]) }).forEach(u => window.open(u, '_blank'));
+  };
+  document.getElementById('mr-clear').onclick = () => {
+    const old = manualRoute.slice();
+    manualRoute = [];
+    old.forEach(id => markers.get(id).setPopupContent(popupHtml(SITES[id])));
+    renderManual();
+  };
+}
+
+// ---------- mobiel paneel ----------
+const sb = document.getElementById('sidebar');
+document.getElementById('sb-toggle').onclick = function() {
+  sb.classList.toggle('collapsed');
+  this.textContent = sb.classList.contains('collapsed') ? '▲ Paneel uitklappen' : '▼ Paneel inklappen';
+  setTimeout(() => map.invalidateSize(), 50);
+};
+
+// ---------- init ----------
+buildCountryList();
+refreshMarkers();
+renderOverrides();
+renderManual();
+renderOvernights();
+</script>
+</body>
+</html>

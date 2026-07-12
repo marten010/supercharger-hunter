@@ -1,0 +1,10 @@
+*.xlsx
+.claude/
+node_modules/
+*.tmp
+analyze.js
+inspect2.js
+loops.js
+reconcile.js
+trips.js
+convert.js

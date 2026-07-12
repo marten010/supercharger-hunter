@@ -71,14 +71,10 @@
   .nrow .info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nrow .info span { font-size: 11px; color: var(--muted); }
   .nrow button { flex-shrink: 0; }
-  #mobiletabs { display: none; }
   @media (max-width: 768px) {
     body { flex-direction: column; }
-    #map { order: 1; flex: 1; min-height: 0; }
-    #sidebar { order: 2; width: 100%; min-width: 0; height: 45vh; border-right: 0; border-top: 1px solid var(--border); }
-    #sidebar.collapsed { height: 52px; overflow: hidden; }
-    #mobiletabs { display: block; position: sticky; top: 0; background: var(--panel); z-index: 10; padding: 10px 16px; border-bottom: 1px solid var(--border); }
-    #mobiletabs button { width: 100%; }
+    #map { order: 1; flex: none; height: 40vh; min-height: 220px; }
+    #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
     h1 { display: none; }
     button.small, button.primary { padding: 10px 12px; font-size: 14px; }
     input[type=text], input[type=number], select { padding: 10px; font-size: 16px; }
@@ -90,8 +86,6 @@
   <h1>⚡ Supercharger Hunter 2026
     <span class="sub">Tesla Supercharger-wedstrijd · Europa</span>
   </h1>
-
-  <div id="mobiletabs"><button class="small" id="sb-toggle">▼ Paneel inklappen</button></div>
 
   <section>
     <h2>Onderweg</h2>
@@ -885,14 +879,6 @@ function renderManual() {
     renderManual();
   };
 }
-
-// ---------- mobiel paneel ----------
-const sb = document.getElementById('sidebar');
-document.getElementById('sb-toggle').onclick = function() {
-  sb.classList.toggle('collapsed');
-  this.textContent = sb.classList.contains('collapsed') ? '▲ Paneel uitklappen' : '▼ Paneel inklappen';
-  setTimeout(() => map.invalidateSize(), 50);
-};
 
 // ---------- init ----------
 buildCountryList();

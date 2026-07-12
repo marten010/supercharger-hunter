@@ -56,6 +56,7 @@
   .day a { color: var(--blue); font-size: 12px; text-decoration: none; margin-right: 10px; }
   .exbtn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 3px; }
   .exbtn:hover { color: var(--accent); }
+  .day ol li.done { text-decoration: line-through; color: var(--green); opacity: 0.7; }
   .day a:hover { text-decoration: underline; }
   .legend { font-size: 12px; color: var(--muted); display: flex; gap: 14px; margin-top: 6px; }
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
@@ -260,6 +261,7 @@ window.toggleVisited = function(id) {
   markers.get(id).setPopupContent(popupHtml(s));
   refreshMarkers();
   renderOverrides();
+  if (plannedDays.length) renderDays();   // doorstreping + volgende-stop-knop bijwerken
 };
 
 // overzicht van handmatige wijzigingen t.o.v. het databestand
@@ -742,7 +744,7 @@ function renderDays(chargeMin, speed) {
       <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)<br>
         Start: ${day.start.name || day.start.label || 'startpunt'} · ${day.back ? '🏁 eindigt weer bij startpunt' : (day.endPoint ? '🌙 overnachten: ' + (day.endPoint.name || 'eigen punt') + ' (eigen keuze)' : '🌙 overnachten: ' + day.stops[day.stops.length-1].name)}</div>
       <div>${links}</div>
-      <ol>${day.stops.map(s => `<li>${s.name} <button class="exbtn" data-ex="${s.id}" title="Uitsluiten en route herberekenen">✕</button></li>`).join('')}</ol>`;
+      <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name} <button class="exbtn" data-ex="${s.id}" title="Uitsluiten en route herberekenen">✕</button></li>`).join('')}</ol>`;
     el.appendChild(div);
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
@@ -755,10 +757,25 @@ function renderDays(chargeMin, speed) {
   sum.style.marginBottom = '8px';
   const kwhRit = Math.round(totKm * 0.16);
   const kwhReg = totStops * 2;
-  sum.innerHTML = `<b style="color:var(--text)">Totaal: ${totStops} nieuwe locaties, ${Math.round(totKm)} km</b><br>
+  const gedaan = plannedDays.flatMap(d => d.stops).filter(isVisited).length;
+  sum.innerHTML = `<b style="color:var(--text)">Totaal: ${totStops} locaties (${gedaan} ✔ afgevinkt), ${Math.round(totKm)} km</b><br>
     Registratie-laden: ${kwhReg} kWh (2 kWh/stop) · rijverbruik ±${kwhRit} kWh<br>
     Kosten ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0,40 · bulk €0,35/kWh)`;
   el.prepend(sum);
+  // in de auto: één knop naar de eerstvolgende onbezochte stop van de route
+  const next = plannedDays.flatMap(d => d.stops).find(s => !isVisited(s));
+  const nav = document.createElement('button');
+  nav.className = 'primary';
+  nav.style.marginTop = '0';
+  nav.style.marginBottom = '8px';
+  if (next) {
+    nav.textContent = `🧭 Volgende stop: ${next.name}`;
+    nav.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${next.lat},${next.lng}&travelmode=driving`, '_blank');
+  } else {
+    nav.textContent = '🎉 Alle stops van deze route afgevinkt!';
+    nav.disabled = true;
+  }
+  el.prepend(nav);
 }
 
 document.getElementById('p-plan').onclick = () => planRoute(false);

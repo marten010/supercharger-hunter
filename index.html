@@ -481,7 +481,7 @@ function renderExcluded() {
   };
 }
 
-function planRoute(reuseBounds = false) {
+function planRoute(reuseBounds = false, fixedPool = null) {
   const days = +document.getElementById('p-days').value;
   const hours = +document.getElementById('p-hours').value;
   const chargeMin = +document.getElementById('p-charge').value;
@@ -489,14 +489,19 @@ function planRoute(reuseBounds = false) {
   const factor = +document.getElementById('p-factor').value;
   const loop = document.getElementById('p-loop').checked;
 
-  let pool = SITES.filter(s => !isVisited(s) && !excluded.has(s.id));
-  if (activeCountries.size) pool = pool.filter(s => activeCountries.has(s.country));
-  if (document.getElementById('p-view').checked) {
-    if (!reuseBounds || !planBounds) planBounds = map.getBounds();
-    pool = pool.filter(s => planBounds.contains([s.lat, s.lng]));
+  let pool;
+  if (fixedPool) {
+    pool = fixedPool.slice();   // vaste selectie: optimaliseren zonder toe te voegen
+  } else {
+    pool = SITES.filter(s => !isVisited(s) && !excluded.has(s.id));
+    if (activeCountries.size) pool = pool.filter(s => activeCountries.has(s.country));
+    if (document.getElementById('p-view').checked) {
+      if (!reuseBounds || !planBounds) planBounds = map.getBounds();
+      pool = pool.filter(s => planBounds.contains([s.lat, s.lng]));
+    }
+    if (!pool.length) { alert('Geen onbezochte locaties binnen het filter.'); return; }
+    pool = pool.slice(); // kopie
   }
-  if (!pool.length) { alert('Geen onbezochte locaties binnen het filter.'); return; }
-  pool = pool.slice(); // kopie
 
   const dayBudgetMin = hours * 60;
   plannedDays = [];
@@ -933,20 +938,12 @@ function addStopToRoute(id) {
   renderDays();
 }
 
-// volgorde van de huidige route opnieuw optimaliseren — zelfde stops,
-// niets erbij, niets eraf; per dag de kortste volgorde zoeken
+// de huidige route opnieuw optimaal plannen — zelfde stops, niets erbij,
+// niets eraf; volgorde én dagindeling worden volledig opnieuw bepaald
 function optimizeCurrentRoute() {
-  for (let d = 0; d < plannedDays.length; d++) {
-    const day = plannedDays[d];
-    if (d > 0) day.start = plannedDays[d-1].endPoint || plannedDays[d-1].stops[plannedDays[d-1].stops.length - 1];
-    if (day.stops.length > 2) {
-      if (day.endPoint) twoOptEnds(day.stops, day.start, day.endPoint);
-      else twoOpt(day.stops, day.start, 1);
-    }
-    recomputeDay(day);
-  }
-  drawRoute();
-  renderDays();
+  const pool = plannedDays.flatMap(d => d.stops);
+  if (!pool.length) return;
+  planRoute(true, pool);
 }
 
 // stop handmatig eerder/later in de route zetten; over een dagrens heen

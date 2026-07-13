@@ -180,12 +180,14 @@
     <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync-link bezochte locaties (voor je andere apparaat)</button>
     <input type="file" id="imp-file" accept=".json" style="display:none">
     <div id="overrides-box" style="margin-top:8px"></div>
-    <div class="muted" style="margin-top:8px">Bezoek-status wordt lokaal opgeslagen in je browser. Maak regelmatig een backup.</div>
+    <div id="syncstatus" class="muted" style="margin-top:8px">☁️ Sync: verbinden…</div>
+    <div class="muted" style="margin-top:8px">Bezoek-status synchroniseert live tussen al je apparaten. De JSON-backup blijft als extra vangnet.</div>
   </section>
 </div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="data.js"></script>
 <script>
 // ---------- state ----------
@@ -275,6 +277,7 @@ window.toggleVisited = function(id) {
   refreshMarkers();
   renderOverrides();
   if (plannedDays.length) renderDays();   // doorstreping + volgende-stop-knop bijwerken
+  pushVisit(s);                            // direct naar de cloud (live-sync)
 };
 
 // overzicht van handmatige wijzigingen t.o.v. het databestand
@@ -933,6 +936,85 @@ window.addEventListener('hashchange', () => {
   if (location.hash.startsWith('#v=') || location.hash.startsWith('#r=')) location.reload();
 });
 
+// ---------- cloud-sync (Supabase): live tussen laptop en telefoon ----------
+const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
+let supa = null;
+
+function setSyncStatus(txt) {
+  const el = document.getElementById('syncstatus');
+  if (el) el.textContent = txt;
+}
+
+// cloud-rijen toepassen op de lokale status (cloud is leidend)
+function applyCloud(rows) {
+  let changed = false;
+  for (const r of rows || []) {
+    const s = keyToSite.get(r.site_key);
+    if (!s) continue;
+    if (isVisited(s) !== r.visited) {
+      if (r.visited === s.visited) delete overrides[s.id];
+      else overrides[s.id] = r.visited;
+      markers.get(s.id).setPopupContent(popupHtml(s));
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveOverrides();
+    refreshMarkers();
+    buildCountryList();
+    renderOverrides();
+    if (plannedDays.length) renderDays();
+    if (lastPos) renderNearby();
+  }
+}
+
+// één vinkje direct naar de cloud (bij offline: localStorage bewaart het,
+// en de eerstvolgende keer dat de app laadt wordt het alsnog gepusht)
+async function pushVisit(s) {
+  if (!supa) return;
+  try {
+    await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: new Date().toISOString() });
+  } catch (e) { setSyncStatus('☁️ Sync: offline (wijziging staat lokaal klaar)'); }
+}
+
+async function initSync() {
+  try {
+    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    // 1. lokale (nog niet gesynchroniseerde) wijzigingen eerst naar de cloud
+    const localRows = Object.entries(overrides)
+      .filter(([id]) => SITES[id])
+      .map(([id, v]) => ({ site_key: siteKey(SITES[id]), visited: v }));
+    if (localRows.length) await supa.from('visits').upsert(localRows);
+    // 2. volledige cloud-status ophalen en toepassen
+    const { data, error } = await supa.from('visits').select('site_key, visited');
+    if (error) throw error;
+    applyCloud(data);
+    setSyncStatus(`☁️ Sync actief · ${(data || []).length} wijziging(en) in de cloud`);
+    // 3. live meeluisteren: vinkje op het andere apparaat verschijnt hier direct
+    supa.channel('visits-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, payload => {
+        if (payload.new) applyCloud([payload.new]);
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') setSyncStatus('☁️ Live-sync actief');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('☁️ Sync actief (live-verbinding herstelt…)');
+      });
+    // vangnet: bij terugkeer naar de app (telefoon uit slaapstand) opnieuw ophalen
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && supa) {
+        const { data: d2 } = await supa.from('visits').select('site_key, visited');
+        applyCloud(d2);
+      }
+    });
+  } catch (e) {
+    setSyncStatus('☁️ Sync niet beschikbaar — lokaal opslaan werkt gewoon');
+    console.warn('Sync-fout:', e);
+  }
+}
+
 // ---------- export / import ----------
 document.getElementById('exp-csv').onclick = () => {
   const lines = ['Site Name;Country;GPS;Visited'];
@@ -1070,6 +1152,7 @@ renderOverrides();
 renderManual();
 renderOvernights();
 renderSavedRoutes();
+initSync();
 </script>
 </body>
 </html>

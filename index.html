@@ -64,6 +64,12 @@
   .leaflet-popup-content { font-size: 13px; }
   .leaflet-popup-content b { font-size: 14px; }
   .leaflet-popup-content button { margin-top: 6px; }
+  .gmapslink {
+    display: block; margin-top: 8px; background: var(--blue); color: #fff !important;
+    text-align: center; padding: 8px 10px; border-radius: 6px;
+    text-decoration: none; font-weight: 600; font-size: 13px;
+  }
+  .gmapslink:active { filter: brightness(1.15); }
   .muted { color: var(--muted); font-size: 12px; }
   #startinfo { font-size: 12px; color: var(--green); margin-top: 4px; min-height: 16px; }
   #reloadbtn {
@@ -96,6 +102,7 @@
     .stat b { font-size: 24px; }
     .stat span { font-size: 12px; }
     #lastvisit { font-size: 12px !important; }
+    .gmapslink { padding: 13px 10px; font-size: 16px; }
   }
 </style>
 </head>
@@ -271,7 +278,7 @@ function popupHtml(s) {
       <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht</button>
       ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Meenemen' : '🚫 Overslaan'}</button>` : ''}
     </div>
-    <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" style="display:block;margin-top:6px;color:#3b82f6">🧭 Open in Google Maps</a>`;
+    <a class="gmapslink" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank">🧭 Open in Google Maps</a>`;
 }
 for (const s of SITES) {
   const m = L.circleMarker([s.lat, s.lng], markerStyle(s)).bindPopup(() => popupHtml(s), POPUP_OPTS);

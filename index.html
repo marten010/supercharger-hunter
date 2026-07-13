@@ -281,6 +281,7 @@ function popupHtml(s) {
       <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Niet bezocht' : '✔ Bezocht'}</button>
       <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
       <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Uit route' : '➕ Route'}</button>
+      ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? '✕ Uit dagplanning' : '➕ In dagplanning'}</button>` : ''}
       <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht</button>
       ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Meenemen' : '🚫 Overslaan'}</button>` : ''}
     </div>
@@ -870,26 +871,65 @@ function renderDays(chargeMin, speed) {
   el.prepend(nav);
 }
 
-// één stop uit de huidige route halen zónder de rest te wijzigen
-function removeStopFromRoute(id) {
+// dag opnieuw doorrekenen op basis van de huidige planner-instellingen
+function recomputeDay(day) {
   const speed = +document.getElementById('p-speed').value;
   const factor = +document.getElementById('p-factor').value;
   const chargeMin = +document.getElementById('p-charge').value;
+  let km = 0, prev = day.start;
+  for (const s of day.stops) { km += hav(prev, s) * factor; prev = s; }
+  if (day.endPoint) km += hav(prev, day.endPoint) * factor;
+  day.km = km;
+  day.min = km / speed * 60 + day.stops.length * chargeMin;
+}
+
+// één stop uit de huidige route halen zónder de rest te wijzigen
+function removeStopFromRoute(id) {
   for (const day of plannedDays) {
     const i = day.stops.findIndex(s => s.id === id);
     if (i < 0) continue;
     day.stops.splice(i, 1);
-    let km = 0, prev = day.start;
-    for (const s of day.stops) { km += hav(prev, s) * factor; prev = s; }
-    if (day.endPoint) km += hav(prev, day.endPoint) * factor;
-    day.km = km;
-    day.min = km / speed * 60 + day.stops.length * chargeMin;
+    recomputeDay(day);
     break;
   }
   plannedDays = plannedDays.filter(d => d.stops.length);
   drawRoute();
-  renderDays(chargeMin, speed);
+  renderDays();
 }
+
+// één losse bestemming toevoegen op het goedkoopste punt in de bestaande route
+function addStopToRoute(id) {
+  const s = SITES[id];
+  const factor = +document.getElementById('p-factor').value;
+  excluded.delete(id);
+  renderExcluded();
+  let best = null;
+  plannedDays.forEach((day, di) => {
+    const pts = day.endPoint ? [day.start, ...day.stops, day.endPoint] : [day.start, ...day.stops];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const extra = (hav(pts[i], s) + hav(s, pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
+      if (!best || extra < best.extra) best = { di, i, extra };
+    }
+    if (!day.endPoint) {   // ook simpelweg achteraan de dag kunnen plakken
+      const extra = hav(pts[pts.length - 1], s) * factor;
+      if (!best || extra < best.extra) best = { di, i: pts.length - 1, extra };
+    }
+  });
+  if (!best) return;
+  const day = plannedDays[best.di];
+  day.stops.splice(best.i, 0, s);
+  recomputeDay(day);
+  drawRoute();
+  renderDays();
+}
+
+// popup-knop: losse bestemming toevoegen aan / verwijderen uit de dagplanning
+window.routePlanToggle = function(id) {
+  const inRoute = plannedDays.some(d => d.stops.some(x => x.id === id));
+  if (inRoute) removeStopFromRoute(id); else addStopToRoute(id);
+  markers.get(id).setPopupContent(popupHtml(SITES[id]));
+  map.closePopup();
+};
 
 document.getElementById('p-plan').onclick = () => planRoute(false);
 document.getElementById('p-clear').onclick = () => { plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };

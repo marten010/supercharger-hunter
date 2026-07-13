@@ -83,8 +83,19 @@
     #map { order: 1; flex: none; height: 40vh; min-height: 220px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
     h1 { display: none; }
-    button.small, button.primary { padding: 10px 12px; font-size: 14px; }
+    button.small, button.primary { padding: 10px 12px; font-size: 15px; }
     input[type=text], input[type=number], select { padding: 10px; font-size: 16px; }
+    /* grotere letters op telefoonschermen */
+    section, #countrylist, #daylist, #nearbylist { font-size: 15px; }
+    .crow { font-size: 15px; padding: 6px 4px; }
+    .nrow .info b { font-size: 15px; }
+    .nrow .info span, .crow .pct, .day .meta, .day ol, .muted, label { font-size: 13px; }
+    .day h3 { font-size: 15px; }
+    .day a { font-size: 14px; }
+    .day ol { max-height: 180px; }
+    .stat b { font-size: 24px; }
+    .stat span { font-size: 12px; }
+    #lastvisit { font-size: 12px !important; }
   }
 </style>
 </head>
@@ -107,6 +118,7 @@
       <div class="stat"><b id="st-target">700</b><span>doel</span></div>
     </div>
     <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
+    <div id="lastvisit" class="muted" style="margin-top:6px; font-size:11px;"></div>
     <div class="legend">
       <span><span class="dot" style="background:var(--green)"></span>bezocht</span>
       <span><span class="dot" style="background:var(--accent)"></span>te bezoeken</span>
@@ -270,7 +282,10 @@ function refreshMarkers() {
 
 window.toggleVisited = function(id) {
   const s = SITES[id];
-  overrides[id] = !isVisited(s);
+  const wordtBezocht = !isVisited(s);
+  if (!confirm(`${s.name}\n${wordtBezocht ? 'Markeren als BEZOCHT?' : 'Terugzetten naar NIET bezocht?'}`)) return;
+  if (wordtBezocht) setLastVisit(s.name, new Date().toISOString());
+  overrides[id] = wordtBezocht;
   if (overrides[id] === s.visited) delete overrides[id];
   saveOverrides();
   markers.get(id).setPopupContent(popupHtml(s));
@@ -322,6 +337,23 @@ function setStart(lat, lng, label) {
   document.getElementById('startinfo').textContent = '📍 Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 }
 setStart(51.9225, 4.4792, 'Rotterdam (thuis)');
+
+// ---------- laatst bezochte locatie ----------
+const LS_LAST = 'sc_last_visit_v1';
+let lastVisit = null;
+try { lastVisit = JSON.parse(localStorage.getItem(LS_LAST)); } catch (e) {}
+function setLastVisit(name, at) {
+  if (lastVisit && at <= lastVisit.at) return;   // alleen recenter
+  lastVisit = { name, at };
+  localStorage.setItem(LS_LAST, JSON.stringify(lastVisit));
+  renderLastVisit();
+}
+function renderLastVisit() {
+  const el = document.getElementById('lastvisit');
+  if (!el || !lastVisit) return;
+  const d = new Date(lastVisit.at);
+  el.textContent = `Laatst bezocht: ${lastVisit.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+}
 
 // ---------- statistieken & landenlijst ----------
 function refreshStats() {
@@ -954,6 +986,7 @@ function applyCloud(rows) {
   for (const r of rows || []) {
     const s = keyToSite.get(r.site_key);
     if (!s) continue;
+    if (r.visited && r.updated_at) setLastVisit(s.name, r.updated_at);
     if (isVisited(s) !== r.visited) {
       if (r.visited === s.visited) delete overrides[s.id];
       else overrides[s.id] = r.visited;
@@ -989,7 +1022,7 @@ async function initSync() {
       .map(([id, v]) => ({ site_key: siteKey(SITES[id]), visited: v }));
     if (localRows.length) await supa.from('visits').upsert(localRows);
     // 2. volledige cloud-status ophalen en toepassen
-    const { data, error } = await supa.from('visits').select('site_key, visited');
+    const { data, error } = await supa.from('visits').select('site_key, visited, updated_at');
     if (error) throw error;
     applyCloud(data);
     setSyncStatus(`☁️ Sync actief · ${(data || []).length} wijziging(en) in de cloud`);
@@ -1005,7 +1038,7 @@ async function initSync() {
     // vangnet: bij terugkeer naar de app (telefoon uit slaapstand) opnieuw ophalen
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' && supa) {
-        const { data: d2 } = await supa.from('visits').select('site_key, visited');
+        const { data: d2 } = await supa.from('visits').select('site_key, visited, updated_at');
         applyCloud(d2);
       }
     });
@@ -1152,6 +1185,7 @@ renderOverrides();
 renderManual();
 renderOvernights();
 renderSavedRoutes();
+renderLastVisit();
 initSync();
 </script>
 </body>

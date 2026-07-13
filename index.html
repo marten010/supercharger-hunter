@@ -156,8 +156,8 @@
       <div><label>Min/stop</label><input type="number" id="p-charge" value="8" min="3" max="45"></div>
     </div>
     <div class="row">
-      <div><label>Gem. snelheid (km/u)</label><input type="number" id="p-speed" value="85" min="50" max="120"></div>
-      <div><label>Wegfactor</label><input type="number" id="p-factor" value="1.25" step="0.05" min="1" max="1.6"></div>
+      <div><label>Gem. snelheid (km/u)</label><input type="number" id="p-speed" value="65" min="50" max="120"></div>
+      <div><label>Wegfactor</label><input type="number" id="p-factor" value="1.3" step="0.05" min="1" max="1.6"></div>
     </div>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text)">
       <input type="checkbox" id="p-loop"> Eindig weer bij startpunt (lus)
@@ -794,6 +794,8 @@ function drawRoute() {
     const pts = [[day.start.lat, day.start.lng], ...day.stops.map(s => [s.lat, s.lng])];
     if (day.endPoint) pts.push([day.endPoint.lat, day.endPoint.lng]);
     const line = L.polyline(pts, { color: dayColors[i % dayColors.length], weight: 3, opacity: 0.85 }).addTo(map);
+    day._line = line;
+    day.road = false;
     routeLayers.push(line);
     day.stops.forEach((s, j) => {
       const badge = L.marker([s.lat, s.lng], {
@@ -803,6 +805,36 @@ function drawRoute() {
     });
   });
   if (routeLayers.length) map.fitBounds(L.featureGroup(routeLayers.filter(l => l instanceof L.Polyline)).getBounds().pad(0.1));
+  fetchRoadGeometry();
+}
+
+// echte weggeometrie + rijtijden per dag ophalen (OSRM / OpenStreetMap).
+// Async verfijning: de rechte lijnen worden vervangen zodra de data binnen is;
+// bij een storing blijven de rechte lijnen gewoon staan.
+let roadToken = 0;
+async function fetchRoadGeometry() {
+  const token = ++roadToken;
+  const chargeMin = +document.getElementById('p-charge').value;
+  for (const day of plannedDays) {
+    const pts = [day.start, ...day.stops];
+    if (day.endPoint) pts.push(day.endPoint);
+    if (pts.length < 2 || pts.length > 90) continue;
+    const coords = pts.map(p => `${(+p.lng).toFixed(5)},${(+p.lat).toFixed(5)}`).join(';');
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`);
+      if (!res.ok) throw new Error('OSRM ' + res.status);
+      const data = await res.json();
+      if (token !== roadToken) return;   // er is inmiddels een nieuwe route
+      const r = data.routes && data.routes[0];
+      if (!r) continue;
+      day.km = r.distance / 1000;
+      day.min = r.duration / 60 * 1.08 + day.stops.length * chargeMin;  // + marge voor tanken/afritten
+      day.road = true;
+      if (day._line) day._line.setLatLngs(r.geometry.coordinates.map(c => [c[1], c[0]]));
+    } catch (e) { /* stil terugvallen op hemelsbrede lijnen */ }
+    await new Promise(r2 => setTimeout(r2, 350));   // netjes voor de gratis dienst
+  }
+  if (token === roadToken && plannedDays.length) renderDays();
 }
 
 function gmapsLinks(day) {
@@ -832,7 +864,7 @@ function renderDays(chargeMin, speed) {
     const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps deel ${j+1}</a>`).join('');
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Dag ${i+1}</span><span>${day.stops.length} stops</span></h3>
-      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)<br>
+      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)${day.road ? ' · 🛣️ echte wegen' : ' · hemelsbreed'}<br>
         Start: ${day.start.name || day.start.label || 'startpunt'} · ${day.back ? '🏁 eindigt weer bij startpunt' : (day.endPoint ? '🌙 overnachten: ' + (day.endPoint.name || 'eigen punt') + ' (eigen keuze)' : '🌙 overnachten: ' + day.stops[day.stops.length-1].name)}</div>
       <div>${links}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}

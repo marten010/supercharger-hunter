@@ -237,6 +237,21 @@ const ReloadControl = L.Control.extend({
 map.addControl(new ReloadControl());
 
 const markers = new Map();
+// popup altijd volledig in beeld: kaart verschuift zelf zodat de marker iets
+// onder het midden ligt en de popup de ruimte erboven krijgt
+const POPUP_OPTS = { autoPan: false, maxWidth: 280 };
+// popup altijd volledig in beeld: na het renderen de werkelijke popuphoogte
+// meten en de kaart in één stap (zonder animatie) exact goed zetten
+map.on('popupopen', e => {
+  const el = e.popup.getElement();
+  const h = (el && el.offsetHeight) || 250;
+  const size = map.getSize();
+  const anker = map.latLngToContainerPoint(e.popup.getLatLng());
+  const doelY = Math.min(size.y - 20, h + 30);   // anker net onder de popup
+  map.panBy([anker.x - size.x / 2, anker.y - doelY], { animate: false });
+});
+window.addEventListener('resize', () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 400);   // maat corrigeren na eerste layout (iPhone)
 function markerStyle(s) {
   return {
     radius: 7,
@@ -247,18 +262,19 @@ function markerStyle(s) {
 function popupHtml(s) {
   const v = isVisited(s);
   return `<b>${s.name}</b><br>
-    ${s.address}, ${s.city}<br>
-    <span style="color:#9aa3af">${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
-    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span><br>
-    <button class="small" onclick="toggleVisited(${s.id})">${v ? 'Markeer als niet bezocht' : '✔ Markeer als bezocht'}</button>
-    <button class="small" onclick="setStartFromSite(${s.id})">Start hier</button>
-    <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Uit eigen route' : '➕ In eigen route'}</button>
-    <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht hier</button>
-    ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Weer meenemen in planning' : '🚫 Sla over in planning'}</button>` : ''}
-    <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" style="display:block;margin-top:4px;color:#3b82f6">Open in Google Maps</a>`;
+    <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
+    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
+      <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Niet bezocht' : '✔ Bezocht'}</button>
+      <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
+      <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Uit route' : '➕ Route'}</button>
+      <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht</button>
+      ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Meenemen' : '🚫 Overslaan'}</button>` : ''}
+    </div>
+    <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" style="display:block;margin-top:6px;color:#3b82f6">🧭 Open in Google Maps</a>`;
 }
 for (const s of SITES) {
-  const m = L.circleMarker([s.lat, s.lng], markerStyle(s)).bindPopup(() => popupHtml(s));
+  const m = L.circleMarker([s.lat, s.lng], markerStyle(s)).bindPopup(() => popupHtml(s), POPUP_OPTS);
   markers.set(s.id, m);
 }
 
@@ -755,7 +771,7 @@ function drawRoute() {
     day.stops.forEach((s, j) => {
       const badge = L.marker([s.lat, s.lng], {
         icon: L.divIcon({ className: '', html: `<div style="background:${dayColors[i % dayColors.length]};color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
-      }).bindPopup(() => popupHtml(s)).addTo(map);
+      }).bindPopup(() => popupHtml(s), POPUP_OPTS).addTo(map);
       routeLayers.push(badge);
     });
   });
@@ -1133,7 +1149,7 @@ function renderManual() {
   manualRoute.forEach((id, j) => {
     manualLayers.push(L.marker([SITES[id].lat, SITES[id].lng], {
       icon: L.divIcon({ className: '', html: `<div style="background:#2ecc71;color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
-    }).bindPopup(() => popupHtml(SITES[id])).addTo(map));
+    }).bindPopup(() => popupHtml(SITES[id]), POPUP_OPTS).addTo(map));
   });
   // totalen op basis van de planner-instellingen
   const factor = +document.getElementById('p-factor').value;

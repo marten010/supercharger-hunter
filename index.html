@@ -827,7 +827,10 @@ function renderDays(chargeMin, speed) {
       <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)<br>
         Start: ${day.start.name || day.start.label || 'startpunt'} · ${day.back ? '🏁 eindigt weer bij startpunt' : (day.endPoint ? '🌙 overnachten: ' + (day.endPoint.name || 'eigen punt') + ' (eigen keuze)' : '🌙 overnachten: ' + day.stops[day.stops.length-1].name)}</div>
       <div>${links}</div>
-      <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name} <button class="exbtn" data-ex="${s.id}" title="Uitsluiten en route herberekenen">✕</button></li>`).join('')}</ol>`;
+      <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}
+        <button class="exbtn" data-mv="-1:${s.id}" title="Eerder in de route">↑</button>
+        <button class="exbtn" data-mv="1:${s.id}" title="Later in de route">↓</button>
+        <button class="exbtn" data-ex="${s.id}" title="Uit de route halen">✕</button></li>`).join('')}</ol>`;
     el.appendChild(div);
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
@@ -836,6 +839,10 @@ function renderDays(chargeMin, speed) {
     renderExcluded();
     markers.get(id).setPopupContent(popupHtml(SITES[id]));
     removeStopFromRoute(id);   // alleen deze stop eruit; de rest blijft staan
+  });
+  el.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => {
+    const [dir, id] = b.dataset.mv.split(':');
+    moveStopInRoute(+id, +dir);
   });
   const sum = document.createElement('div');
   sum.className = 'muted';
@@ -921,6 +928,32 @@ function addStopToRoute(id) {
   recomputeDay(day);
   drawRoute();
   renderDays();
+}
+
+// stop handmatig eerder/later in de route zetten; over een dagrens heen
+// verhuist hij naar het einde/begin van de aangrenzende dag
+function moveStopInRoute(id, dir) {
+  for (let d = 0; d < plannedDays.length; d++) {
+    const day = plannedDays[d];
+    const i = day.stops.findIndex(s => s.id === id);
+    if (i < 0) continue;
+    const j = i + dir;
+    if (j >= 0 && j < day.stops.length) {
+      [day.stops[i], day.stops[j]] = [day.stops[j], day.stops[i]];
+      recomputeDay(day);
+    } else {
+      const buurDag = plannedDays[d + dir];
+      if (!buurDag) return;   // begin van dag 1 of einde van de laatste dag
+      const [stop] = day.stops.splice(i, 1);
+      if (dir < 0) buurDag.stops.push(stop); else buurDag.stops.unshift(stop);
+      recomputeDay(day);
+      recomputeDay(buurDag);
+      plannedDays = plannedDays.filter(x => x.stops.length);
+    }
+    drawRoute();
+    renderDays();
+    return;
+  }
 }
 
 // popup-knop: losse bestemming toevoegen aan / verwijderen uit de dagplanning

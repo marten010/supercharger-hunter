@@ -676,7 +676,9 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
       changed = true;
     }
   }
-  // opknippen in dagen (overnachten waar de dag vol zit)
+  // opknippen in dagen — gebalanceerd: streef naar gelijke dagduur in plaats
+  // van dag 1 volproppen en de restjes naar de laatste dag schuiven
+  const streefMin = Math.min(dayBudgetMin, tourTime() / days + 1);
   let day = { stops: [], km: 0, min: 0, start: startPoint };
   let prev = startPoint;
   for (let t = 0; t < tour.length; t++) {
@@ -685,8 +687,9 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
     const legMin = legKm / speed * 60 + chargeMin;
     const isLastDay = plannedDays.length === days - 1;
     const backMin = isLastDay ? hav(s, startPoint) * factor / speed * 60 : 0;
-    if (day.min + legMin + backMin > dayBudgetMin && day.stops.length) {
-      if (isLastDay) break;               // laatste dag zit vol: rest vervalt
+    const vol = day.min + legMin + backMin > dayBudgetMin || (!isLastDay && day.min + legMin > streefMin);
+    if (vol && day.stops.length) {
+      if (isLastDay) break;               // laatste dag zit echt vol: rest vervalt
       plannedDays.push(day);
       day = { stops: [], km: 0, min: 0, start: prev };
       t--;                                 // zelfde stop opnieuw beoordelen op de nieuwe dag

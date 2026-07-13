@@ -854,14 +854,17 @@ function renderDays(chargeMin, speed) {
     Registratie-laden: ${kwhReg} kWh (2 kWh/stop) · rijverbruik ±${kwhRit} kWh<br>
     Kosten ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0,40 · bulk €0,35/kWh)`;
   el.prepend(sum);
-  // herberekenen is een bewuste keuze: vult vrijgekomen tijd met nieuwe stops
-  const herplan = document.createElement('button');
-  herplan.className = 'small';
-  herplan.style.cssText = 'width:100%;margin-bottom:8px';
-  herplan.textContent = '🔁 Herbereken & vul route aan';
-  herplan.title = 'Plant opnieuw met de huidige instellingen; overgeslagen locaties blijven uitgesloten';
-  herplan.onclick = () => planRoute(true);
-  el.prepend(herplan);
+  // twee bewuste keuzes: alleen de volgorde optimaliseren (zelfde stops),
+  // of opnieuw plannen en de vrijgekomen tijd vullen met nieuwe stops
+  const knoppen = document.createElement('div');
+  knoppen.className = 'row';
+  knoppen.style.marginBottom = '8px';
+  knoppen.innerHTML = `
+    <button class="small" id="rd-opt" title="Zelfde stops, alleen de kortste volgorde — voegt niets toe">✨ Optimaliseer volgorde</button>
+    <button class="small" id="rd-fill" title="Plant opnieuw en vult vrije tijd met nieuwe stops; overgeslagen locaties blijven uitgesloten">🔁 Vul aan met nieuwe stops</button>`;
+  el.prepend(knoppen);
+  knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
+  knoppen.querySelector('#rd-fill').onclick = () => planRoute(true);
   // in de auto: één knop naar de eerstvolgende onbezochte stop van de route
   const next = plannedDays.flatMap(d => d.stops).find(s => !isVisited(s));
   const nav = document.createElement('button');
@@ -926,6 +929,22 @@ function addStopToRoute(id) {
   const day = plannedDays[best.di];
   day.stops.splice(best.i, 0, s);
   recomputeDay(day);
+  drawRoute();
+  renderDays();
+}
+
+// volgorde van de huidige route opnieuw optimaliseren — zelfde stops,
+// niets erbij, niets eraf; per dag de kortste volgorde zoeken
+function optimizeCurrentRoute() {
+  for (let d = 0; d < plannedDays.length; d++) {
+    const day = plannedDays[d];
+    if (d > 0) day.start = plannedDays[d-1].endPoint || plannedDays[d-1].stops[plannedDays[d-1].stops.length - 1];
+    if (day.stops.length > 2) {
+      if (day.endPoint) twoOptEnds(day.stops, day.start, day.endPoint);
+      else twoOpt(day.stops, day.start, 1);
+    }
+    recomputeDay(day);
+  }
   drawRoute();
   renderDays();
 }

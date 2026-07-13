@@ -1332,6 +1332,19 @@ function renderManual() {
   btns.style.marginTop = '6px';
   btns.innerHTML = `<button class="small" id="mr-opt">Optimaliseer</button><button class="small" id="mr-maps">Maps-links</button><button class="small" id="mr-clear">Wis</button>`;
   el.appendChild(btns);
+  const planBtn = document.createElement('button');
+  planBtn.className = 'primary';
+  planBtn.id = 'mr-plan';
+  planBtn.style.marginTop = '6px';
+  planBtn.textContent = '📅 Naar dagplanning';
+  planBtn.title = 'Verdeelt precies deze selectie over dagen volgens de planner-instellingen (dagen, uren, lus, overnachtingen)';
+  el.appendChild(planBtn);
+  planBtn.onclick = () => {
+    const n = manualRoute.length;
+    planRoute(true, manualRoute.map(id => SITES[id]));
+    const gepland = plannedDays.reduce((a, d) => a + d.stops.length, 0);
+    if (gepland < n) alert(`Let op: ${n - gepland} van de ${n} stops passen niet binnen het tijdbudget (dagen × uren/dag). Verhoog het aantal dagen of uren en druk opnieuw op "Naar dagplanning".`);
+  };
   document.getElementById('mr-opt').onclick = () => {
     const stops = manualRoute.map(id => SITES[id]);
     twoOpt(stops, startPoint, 1);

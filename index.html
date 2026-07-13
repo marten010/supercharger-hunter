@@ -441,13 +441,14 @@ window.setOvernight = function(id) {
   renderOvernights();
   map.closePopup();
 };
-// overslaan/weer meenemen via de marker-popup; herberekent een bestaande route direct
+// overslaan/weer meenemen via de marker-popup; haalt hoogstens deze ene stop
+// uit de huidige route — de rest van de route blijft ongemoeid
 window.excludeSite = function(id) {
   if (excluded.has(id)) excluded.delete(id); else excluded.add(id);
   renderExcluded();
   markers.get(id).setPopupContent(popupHtml(SITES[id]));
   map.closePopup();
-  if (plannedDays.length) planRoute(true);
+  if (excluded.has(id) && plannedDays.some(d => d.stops.some(s => s.id === id))) removeStopFromRoute(id);
 };
 function renderOvernights() {
   const el = document.getElementById('overnightlist');
@@ -476,7 +477,6 @@ function renderExcluded() {
     e.preventDefault();
     excluded.clear();
     renderExcluded();
-    if (plannedDays.length) planRoute(true);
   };
 }
 
@@ -830,9 +830,11 @@ function renderDays(chargeMin, speed) {
     el.appendChild(div);
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
-    excluded.add(+b.dataset.ex);
+    const id = +b.dataset.ex;
+    excluded.add(id);
     renderExcluded();
-    planRoute(true);
+    markers.get(id).setPopupContent(popupHtml(SITES[id]));
+    removeStopFromRoute(id);   // alleen deze stop eruit; de rest blijft staan
   });
   const sum = document.createElement('div');
   sum.className = 'muted';
@@ -844,6 +846,14 @@ function renderDays(chargeMin, speed) {
     Registratie-laden: ${kwhReg} kWh (2 kWh/stop) · rijverbruik ±${kwhRit} kWh<br>
     Kosten ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0,40 · bulk €0,35/kWh)`;
   el.prepend(sum);
+  // herberekenen is een bewuste keuze: vult vrijgekomen tijd met nieuwe stops
+  const herplan = document.createElement('button');
+  herplan.className = 'small';
+  herplan.style.cssText = 'width:100%;margin-bottom:8px';
+  herplan.textContent = '🔁 Herbereken & vul route aan';
+  herplan.title = 'Plant opnieuw met de huidige instellingen; overgeslagen locaties blijven uitgesloten';
+  herplan.onclick = () => planRoute(true);
+  el.prepend(herplan);
   // in de auto: één knop naar de eerstvolgende onbezochte stop van de route
   const next = plannedDays.flatMap(d => d.stops).find(s => !isVisited(s));
   const nav = document.createElement('button');
@@ -858,6 +868,27 @@ function renderDays(chargeMin, speed) {
     nav.disabled = true;
   }
   el.prepend(nav);
+}
+
+// één stop uit de huidige route halen zónder de rest te wijzigen
+function removeStopFromRoute(id) {
+  const speed = +document.getElementById('p-speed').value;
+  const factor = +document.getElementById('p-factor').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  for (const day of plannedDays) {
+    const i = day.stops.findIndex(s => s.id === id);
+    if (i < 0) continue;
+    day.stops.splice(i, 1);
+    let km = 0, prev = day.start;
+    for (const s of day.stops) { km += hav(prev, s) * factor; prev = s; }
+    if (day.endPoint) km += hav(prev, day.endPoint) * factor;
+    day.km = km;
+    day.min = km / speed * 60 + day.stops.length * chargeMin;
+    break;
+  }
+  plannedDays = plannedDays.filter(d => d.stops.length);
+  drawRoute();
+  renderDays(chargeMin, speed);
 }
 
 document.getElementById('p-plan').onclick = () => planRoute(false);

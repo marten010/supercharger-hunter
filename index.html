@@ -211,9 +211,15 @@
 <script>
 // ---------- state ----------
 const LS_KEY = 'sc_visited_overrides_v1';
-let overrides = {};
+let overrides = {};   // per site-id: { v: bezocht, t: tijdstip van de wijziging }
 try { overrides = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) {}
-const isVisited = s => (s.id in overrides) ? overrides[s.id] : s.visited;
+// migratie van oud formaat (kale true/false zonder tijdstempel)
+for (const id of Object.keys(overrides)) {
+  if (typeof overrides[id] !== 'object') overrides[id] = { v: overrides[id], t: '1970-01-01T00:00:00Z' };
+}
+const ovVal = o => (o && typeof o === 'object') ? o.v : o;
+const ovTime = o => (o && typeof o === 'object' && o.t) ? o.t : '1970-01-01T00:00:00Z';
+const isVisited = s => (s.id in overrides) ? ovVal(overrides[s.id]) : s.visited;
 const saveOverrides = () => localStorage.setItem(LS_KEY, JSON.stringify(overrides));
 
 let activeCountries = new Set();   // leeg = alle
@@ -307,9 +313,11 @@ window.toggleVisited = function(id) {
   const s = SITES[id];
   const wordtBezocht = !isVisited(s);
   if (!confirm(`${s.name}\n${wordtBezocht ? 'Markeren als BEZOCHT?' : 'Terugzetten naar NIET bezocht?'}`)) return;
-  if (wordtBezocht) setLastVisit(s.name, new Date().toISOString());
-  overrides[id] = wordtBezocht;
-  if (overrides[id] === s.visited) delete overrides[id];
+  const nu = new Date().toISOString();
+  if (wordtBezocht) setLastVisit(s.name, nu);
+  // wijziging mét tijdstempel bewaren (ook als hij gelijk is aan het databestand),
+  // zodat "nieuwste wijziging wint" over apparaten heen werkt
+  overrides[id] = { v: wordtBezocht, t: nu };
   saveOverrides();
   markers.get(id).setPopupContent(popupHtml(s));
   refreshMarkers();
@@ -321,23 +329,26 @@ window.toggleVisited = function(id) {
 // overzicht van handmatige wijzigingen t.o.v. het databestand
 function renderOverrides() {
   const el = document.getElementById('overrides-box');
-  const ids = Object.keys(overrides);
+  const ids = Object.keys(overrides).filter(id => SITES[id] && ovVal(overrides[id]) !== SITES[id].visited);
   if (!ids.length) { el.innerHTML = '<span class="muted">Geen handmatige wijzigingen t.o.v. het databestand.</span>'; return; }
   el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Handmatig gewijzigd (${ids.length}):</b></div>`;
   for (const id of ids) {
     const s = SITES[id];
-    if (!s) continue;
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `
-      <div class="info"><b>${s.name}</b><span>nu: ${overrides[id] ? '✔ bezocht' : '✘ niet bezocht'} (bestand zegt: ${s.visited ? 'bezocht' : 'niet bezocht'})</span></div>
+      <div class="info"><b>${s.name}</b><span>nu: ${ovVal(overrides[id]) ? '✔ bezocht' : '✘ niet bezocht'} (bestand zegt: ${s.visited ? 'bezocht' : 'niet bezocht'})</span></div>
       <button class="small" title="Wijziging ongedaan maken" data-undo="${id}">↩</button>`;
     row.querySelector('[data-undo]').onclick = () => {
-      delete overrides[id];
+      // terug naar de bestandswaarde, als nieuwe wijziging — zodat het ook
+      // op je andere apparaten wordt teruggedraaid
+      overrides[id] = { v: s.visited, t: new Date().toISOString() };
       saveOverrides();
       markers.get(s.id).setPopupContent(popupHtml(s));
       refreshMarkers();
       renderOverrides();
+      if (plannedDays.length) renderDays();
+      pushVisit(s);
     };
     el.appendChild(row);
   }
@@ -1003,19 +1014,21 @@ function setSyncStatus(txt) {
   if (el) el.textContent = txt;
 }
 
-// cloud-rijen toepassen op de lokale status (cloud is leidend)
+// cloud-rijen toepassen op de lokale status — nieuwste wijziging wint:
+// een cloud-rij wordt genegeerd als de lokale wijziging recenter is
 function applyCloud(rows) {
   let changed = false;
   for (const r of rows || []) {
     const s = keyToSite.get(r.site_key);
     if (!s) continue;
+    const lokaal = overrides[s.id];
+    if (lokaal && ovTime(lokaal) > (r.updated_at || '')) continue;   // lokaal is nieuwer
     if (r.visited && r.updated_at) setLastVisit(s.name, r.updated_at);
     if (isVisited(s) !== r.visited) {
-      if (r.visited === s.visited) delete overrides[s.id];
-      else overrides[s.id] = r.visited;
       markers.get(s.id).setPopupContent(popupHtml(s));
       changed = true;
     }
+    overrides[s.id] = { v: r.visited, t: r.updated_at || new Date().toISOString() };
   }
   if (changed) {
     saveOverrides();
@@ -1024,6 +1037,8 @@ function applyCloud(rows) {
     renderOverrides();
     if (plannedDays.length) renderDays();
     if (lastPos) renderNearby();
+  } else {
+    saveOverrides();
   }
 }
 
@@ -1032,21 +1047,31 @@ function applyCloud(rows) {
 async function pushVisit(s) {
   if (!supa) return;
   try {
-    await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: new Date().toISOString() });
+    const o = overrides[s.id];
+    await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
   } catch (e) { setSyncStatus('☁️ Sync: offline (wijziging staat lokaal klaar)'); }
 }
 
 async function initSync() {
   try {
     supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    // 1. lokale (nog niet gesynchroniseerde) wijzigingen eerst naar de cloud
-    const localRows = Object.entries(overrides)
-      .filter(([id]) => SITES[id])
-      .map(([id, v]) => ({ site_key: siteKey(SITES[id]), visited: v }));
-    if (localRows.length) await supa.from('visits').upsert(localRows);
-    // 2. volledige cloud-status ophalen en toepassen
+    // 1. eerst de cloud-status ophalen
     const { data, error } = await supa.from('visits').select('site_key, visited, updated_at');
     if (error) throw error;
+    // 2. alleen lokale wijzigingen pushen die NIEUWER zijn dan wat de cloud heeft
+    //    (voorkomt dat een oud apparaat verse correcties overschrijft)
+    const cloudByKey = new Map((data || []).map(r => [r.site_key, r]));
+    const toPush = [];
+    for (const [id, o] of Object.entries(overrides)) {
+      const s = SITES[id];
+      if (!s) continue;
+      const rij = cloudByKey.get(siteKey(s));
+      if (!rij || ovTime(o) > (rij.updated_at || '')) {
+        toPush.push({ site_key: siteKey(s), visited: ovVal(o), updated_at: ovTime(o) > '1971' ? ovTime(o) : new Date().toISOString() });
+      }
+    }
+    if (toPush.length) await supa.from('visits').upsert(toPush);
+    // 3. cloud toepassen (nieuwste wijziging wint per locatie)
     applyCloud(data);
     setSyncStatus(`☁️ Sync actief · ${(data || []).length} wijziging(en) in de cloud`);
     // 3. live meeluisteren: vinkje op het andere apparaat verschijnt hier direct
@@ -1088,6 +1113,9 @@ document.getElementById('imp-file').addEventListener('change', e => {
     try {
       const data = JSON.parse(t);
       overrides = data.overrides || {};
+      for (const id of Object.keys(overrides)) {
+        if (typeof overrides[id] !== 'object') overrides[id] = { v: overrides[id], t: '1970-01-01T00:00:00Z' };
+      }
       saveOverrides();
       buildCountryList(); refreshMarkers(); renderOverrides();
       alert('Backup hersteld.');

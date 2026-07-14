@@ -327,7 +327,6 @@ window.toggleVisited = function(id) {
   const wordtBezocht = !isVisited(s);
   if (!confirm(`${s.name}\n${wordtBezocht ? 'Markeren als BEZOCHT?' : 'Terugzetten naar NIET bezocht?'}`)) return;
   const nu = new Date().toISOString();
-  if (wordtBezocht) setLastVisit(s.name, nu);
   // wijziging mét tijdstempel bewaren (ook als hij gelijk is aan het databestand),
   // zodat "nieuwste wijziging wint" over apparaten heen werkt
   overrides[id] = { v: wordtBezocht, t: nu };
@@ -335,6 +334,7 @@ window.toggleVisited = function(id) {
   markers.get(id).setPopupContent(popupHtml(s));
   refreshMarkers();
   renderOverrides();
+  renderLastVisit();
   if (plannedDays.length) renderDays();   // doorstreping + volgende-stop-knop bijwerken
   pushVisit(s);                            // direct naar de cloud (live-sync)
 };
@@ -360,6 +360,7 @@ function renderOverrides() {
       markers.get(s.id).setPopupContent(popupHtml(s));
       refreshMarkers();
       renderOverrides();
+      renderLastVisit();
       if (plannedDays.length) renderDays();
       pushVisit(s);
     };
@@ -386,25 +387,33 @@ function setStart(lat, lng, label) {
 setStart(51.9225, 4.4792, 'Rotterdam (thuis)');
 
 // ---------- laatst bezochte locatie ----------
-const LS_LAST = 'sc_last_visit_v1';
-let lastVisit = null;
-try { lastVisit = JSON.parse(localStorage.getItem(LS_LAST)); } catch (e) {}
-function setLastVisit(name, at) {
-  if (lastVisit && at <= lastVisit.at) return;   // alleen recenter
-  lastVisit = { name, at };
-  localStorage.setItem(LS_LAST, JSON.stringify(lastVisit));
-  renderLastVisit();
+// Bewust NIET apart bijgehouden ("laatste keer dat iets op bezocht werd gezet"),
+// want dat raakt stale zodra zo'n wijziging weer wordt teruggedraaid. In plaats
+// daarvan elke keer opnieuw afleiden uit de actuele bezoek-status + tijdstempels
+// — zo kan het label nooit een verouderde/teruggedraaide locatie blijven tonen.
+function computeLastVisit() {
+  let best = null;
+  for (const id of Object.keys(overrides)) {
+    const o = overrides[id];
+    if (!ovVal(o) || !SITES[id]) continue;   // nu niet (meer) bezocht: telt niet mee
+    const t = ovTime(o);
+    if (t <= '1971') continue;                // geen echt tijdstip bekend (bv. oude sync-link)
+    if (!best || t > best.t) best = { name: SITES[id].name, t };
+  }
+  return best;
 }
 function renderLastVisit() {
   const el = document.getElementById('lastvisit');
-  if (!el || !lastVisit) return;
+  if (!el) return;
+  const lv = computeLastVisit();
+  if (!lv) { el.textContent = ''; return; }
   // de tijdsnotitie is alleen voor de ingelogde gebruiker; gasten zien geen datum/tijd
   if (!document.body.classList.contains('ingelogd')) {
-    el.textContent = `Laatst bezocht: ${lastVisit.name}`;
+    el.textContent = `Laatst bezocht: ${lv.name}`;
     return;
   }
-  const d = new Date(lastVisit.at);
-  el.textContent = `Laatst bezocht: ${lastVisit.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+  const d = new Date(lv.t);
+  el.textContent = `Laatst bezocht: ${lv.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 // ---------- statistieken & landenlijst ----------
@@ -1233,22 +1242,20 @@ function applyCloud(rows) {
     if (!s) continue;
     const lokaal = overrides[s.id];
     if (lokaal && ovTime(lokaal) > (r.updated_at || '')) continue;   // lokaal is nieuwer
-    if (r.visited && r.updated_at) setLastVisit(s.name, r.updated_at);
     if (isVisited(s) !== r.visited) {
       markers.get(s.id).setPopupContent(popupHtml(s));
       changed = true;
     }
     overrides[s.id] = { v: r.visited, t: r.updated_at || new Date().toISOString() };
   }
+  saveOverrides();
+  renderLastVisit();   // altijd herafleiden — ook een teruggedraaid bezoek moet het label kunnen wissen
   if (changed) {
-    saveOverrides();
     refreshMarkers();
     buildCountryList();
     renderOverrides();
     if (plannedDays.length) renderDays();
     if (lastPos) renderNearby();
-  } else {
-    saveOverrides();
   }
 }
 

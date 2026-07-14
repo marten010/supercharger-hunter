@@ -187,6 +187,7 @@
     <h2>Opgeslagen routes</h2>
     <button class="small" id="saveroute">💾 Bewaar huidige route</button>
     <div id="savedlist" style="margin-top:8px"></div>
+    <div id="routesyncnote" class="muted" style="margin-top:6px"></div>
   </section>
 
   <section>
@@ -1026,6 +1027,35 @@ let savedRoutes = [];
 try { savedRoutes = JSON.parse(localStorage.getItem(LS_ROUTES)) || []; } catch (e) {}
 const saveRoutesStore = () => localStorage.setItem(LS_ROUTES, JSON.stringify(savedRoutes));
 
+// routes meesyncen naar de cloud (tabel "routes"); ontbreekt die, dan blijft alles gewoon lokaal werken
+async function pushRouteCloud(r) {
+  if (!supa) return;
+  try { await supa.from('routes').upsert({ name: r.name, data: r, updated_at: new Date().toISOString() }); } catch (e) {}
+}
+async function deleteRouteCloud(name) {
+  if (!supa) return;
+  try { await supa.from('routes').delete().eq('name', name); } catch (e) {}
+}
+async function syncRoutes() {
+  if (!supa) return;
+  try {
+    const { data, error } = await supa.from('routes').select('name, data');
+    if (error) throw error;
+    const cloudNames = new Set((data || []).map(r => r.name));
+    for (const r of savedRoutes) if (!cloudNames.has(r.name)) await pushRouteCloud(r);   // lokale eerst omhoog
+    const merged = (data || []).map(r => r.data);
+    for (const r of savedRoutes) if (!cloudNames.has(r.name)) merged.push(r);
+    savedRoutes = merged;
+    saveRoutesStore();
+    renderSavedRoutes();
+    const note = document.getElementById('routesyncnote');
+    if (note) note.textContent = '☁️ Routes gesynchroniseerd tussen je apparaten.';
+  } catch (e) {
+    const note = document.getElementById('routesyncnote');
+    if (note) note.textContent = 'Routes staan alleen lokaal (cloud-tabel ontbreekt nog).';
+  }
+}
+
 // compacte representatie: alleen coördinaten; bij laden worden de locaties
 // teruggezocht in de actuele lijst (robuust tegen ververste data.js)
 function routeToData(name) {
@@ -1088,6 +1118,7 @@ function renderSavedRoutes() {
       if (!confirm(`Route "${r.name}" verwijderen?`)) return;
       savedRoutes.splice(i, 1);
       saveRoutesStore();
+      deleteRouteCloud(r.name);
       renderSavedRoutes();
     };
     el.appendChild(row);
@@ -1097,8 +1128,11 @@ document.getElementById('saveroute').onclick = () => {
   if (!plannedDays.length) { alert('Plan of laad eerst een route.'); return; }
   const name = prompt('Naam voor deze route:', 'Trip ' + new Date().toISOString().slice(0, 10));
   if (!name) return;
-  savedRoutes.push(routeToData(name));
+  const r = routeToData(name);
+  savedRoutes = savedRoutes.filter(x => x.name !== name);   // zelfde naam = overschrijven
+  savedRoutes.push(r);
   saveRoutesStore();
+  pushRouteCloud(r);
   renderSavedRoutes();
 };
 // gedeelde route via link openen: opslaan op dit apparaat en direct laden.
@@ -1114,6 +1148,7 @@ if (location.hash.startsWith('#r=')) {
         if (!savedRoutes.some(x => JSON.stringify(x.days) === JSON.stringify(r.days))) {
           savedRoutes.push(r);
           saveRoutesStore();
+          pushRouteCloud(r);
         }
         localStorage.setItem('sc_imported_route', location.hash);
         setTimeout(() => loadRoute(r), 100);
@@ -1229,6 +1264,7 @@ async function initSync() {
     // 3. cloud toepassen (nieuwste wijziging wint per locatie)
     applyCloud(data);
     setSyncStatus(`☁️ Sync actief · ${(data || []).length} wijziging(en) in de cloud`);
+    syncRoutes();
     // 3. live meeluisteren: vinkje op het andere apparaat verschijnt hier direct
     supa.channel('visits-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, payload => {

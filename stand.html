@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Supercharger Hunter 2026 — Tussenstand</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { padding: 16px; text-align: center; }
+  header h1 { font-size: 20px; }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 14px 30px; }
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .stat { background: var(--panel); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat b { font-size: 30px; display: block; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .progressbar { height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; }
+  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b6b); }
+  #lastvisit { color: var(--muted); font-size: 12px; margin: 8px 0 14px; text-align: center; }
+  #map { height: 46vh; min-height: 300px; border-radius: 10px; margin-bottom: 14px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .crow { display: flex; align-items: center; gap: 10px; padding: 5px 8px; font-size: 14px; }
+  .crow:nth-child(odd) { background: var(--panel); border-radius: 6px; }
+  .crow .naam { flex: 0 0 140px; }
+  .crow .balk { flex: 1; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  .crow .balk > div { height: 100%; background: var(--green); }
+  .crow .pct { flex: 0 0 70px; text-align: right; color: var(--muted); font-size: 12px; }
+  footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Supercharger Hunter 2026</h1>
+  <div class="sub">Tesla Supercharger-wedstrijd · tussenstand</div>
+</header>
+<div class="wrap">
+  <div class="statgrid">
+    <div class="stat"><b id="st-visited">…</b><span>bezocht</span></div>
+    <div class="stat"><b id="st-todo">…</b><span>te gaan</span></div>
+    <div class="stat"><b>700</b><span>doel</span></div>
+  </div>
+  <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
+  <div id="lastvisit"></div>
+  <div id="map"></div>
+  <h2>Voortgang per land</h2>
+  <div id="countrylist"></div>
+  <footer>Alleen-kijken-versie · data via supercharge.info · live gekoppeld aan de tracker</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="data.js"></script>
+<script>
+const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyToSite = new Map(SITES.map(s => [norm(s.name), s]));
+const visited = new Set(SITES.filter(s => s.visited).map(s => s.id));
+
+const map = L.map('map', { preferCanvas: true }).setView([50.5, 8], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+const markers = new Map();
+for (const s of SITES) {
+  const m = L.circleMarker([s.lat, s.lng], {
+    radius: 5, weight: 1, color: '#0008', fillOpacity: 0.9,
+    fillColor: visited.has(s.id) ? '#2ecc71' : '#e82127'
+  }).bindTooltip(s.name).addTo(map);
+  markers.set(s.id, m);
+}
+
+function render() {
+  document.getElementById('st-visited').textContent = visited.size;
+  document.getElementById('st-todo').textContent = SITES.length - visited.size;
+  document.getElementById('st-bar').style.width = Math.min(100, visited.size / 700 * 100) + '%';
+  const per = {};
+  for (const s of SITES) {
+    per[s.country] = per[s.country] || { t: 0, v: 0 };
+    per[s.country].t++;
+    if (visited.has(s.id)) per[s.country].v++;
+  }
+  const el = document.getElementById('countrylist');
+  el.innerHTML = '';
+  Object.entries(per).sort((a, b) => b[1].v - a[1].v || b[1].t - a[1].t).forEach(([c, x]) => {
+    const div = document.createElement('div');
+    div.className = 'crow';
+    div.innerHTML = `<span class="naam">${c}</span><span class="balk"><div style="width:${x.t ? x.v / x.t * 100 : 0}%"></div></span><span class="pct">${x.v} / ${x.t}</span>`;
+    el.appendChild(div);
+  });
+}
+
+async function load() {
+  try {
+    const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    const { data } = await supa.from('visits').select('site_key, visited, updated_at');
+    let last = null;
+    for (const r of data || []) {
+      const s = keyToSite.get(r.site_key);
+      if (!s) continue;
+      if (r.visited) visited.add(s.id); else visited.delete(s.id);
+      markers.get(s.id).setStyle({ fillColor: (r.visited ? '#2ecc71' : '#e82127') });
+      if (r.visited && (!last || r.updated_at > last.at)) last = { name: s.name, at: r.updated_at };
+    }
+    if (last) {
+      const d = new Date(last.at);
+      document.getElementById('lastvisit').textContent =
+        `Laatst bezocht: ${last.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  } catch (e) { /* zonder cloud tonen we de baseline uit data.js */ }
+  render();
+}
+render();
+load();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
+</script>
+</body>
+</html>

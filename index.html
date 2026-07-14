@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -88,7 +88,7 @@
   .nrow button { flex-shrink: 0; }
   @media (max-width: 768px) {
     body { flex-direction: column; }
-    #map { order: 1; flex: none; height: 40vh; min-height: 220px; }
+    #map { order: 1; flex: none; height: 50vh; min-height: 220px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
     h1 { display: none; }
     button.small, button.primary { padding: 10px 12px; font-size: 15px; }
@@ -111,108 +111,108 @@
 <body>
 <div id="sidebar">
   <h1>⚡ Supercharger Hunter 2026
-    <span class="sub">Tesla Supercharger-wedstrijd · Europa</span>
+    <span class="sub">Tesla Supercharger Challenge · Europe</span>
   </h1>
 
   <section class="authonly">
-    <h2>Onderweg</h2>
-    <button class="primary" id="nearby-btn" style="margin-top:0">📍 Dichtstbijzijnde onbezochte</button>
+    <h2>On the road</h2>
+    <button class="primary" id="nearby-btn" style="margin-top:0">📍 Nearest unvisited</button>
     <div id="nearbylist"></div>
   </section>
 
   <section>
     <div class="statgrid">
-      <div class="stat"><b id="st-visited">0</b><span>bezocht</span></div>
-      <div class="stat"><b id="st-todo">0</b><span>nog niet bezocht</span></div>
-      <div class="stat"><b id="st-target">800</b><span>doel</span></div>
+      <div class="stat"><b id="st-visited">0</b><span>visited</span></div>
+      <div class="stat"><b id="st-todo">0</b><span>not yet visited</span></div>
+      <div class="stat"><b id="st-target">800</b><span>goal</span></div>
     </div>
     <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
     <div id="lastvisit" class="muted" style="margin-top:6px; font-size:11px;"></div>
     <div class="legend">
-      <span><span class="dot" style="background:var(--green)"></span>bezocht</span>
-      <span><span class="dot" style="background:var(--accent)"></span>te bezoeken</span>
+      <span><span class="dot" style="background:var(--green)"></span>visited</span>
+      <span><span class="dot" style="background:var(--accent)"></span>to visit</span>
     </div>
   </section>
 
   <section class="authonly">
     <h2>Filter</h2>
-    <input type="text" id="search" placeholder="Zoek locatie of plaats…">
+    <input type="text" id="search" placeholder="Search location or city…">
     <label>Status</label>
     <select id="f-status">
-      <option value="all">Alles</option>
-      <option value="todo" selected>Nog te bezoeken</option>
-      <option value="visited">Bezocht</option>
+      <option value="all">All</option>
+      <option value="todo" selected>Not yet visited</option>
+      <option value="visited">Visited</option>
     </select>
-    <label>Landen (klik om te filteren, voortgang per land)</label>
+    <label>Countries (click to filter, progress per country)</label>
     <div id="countrylist"></div>
   </section>
 
   <section class="authonly">
-    <h2>Dagroute-planner</h2>
-    <div class="muted">Startpunt: klik op de kaart met <b>Shift</b> ingedrukt, of kies een locatie-popup → "Start hier".</div>
+    <h2>Day route planner</h2>
+    <div class="muted">Starting point: click the map while holding <b>Shift</b>, or choose a location popup → "Start here".</div>
     <div id="startinfo"></div>
     <div class="row">
-      <div><label>Dagen</label><input type="number" id="p-days" value="5" min="1" max="25"></div>
-      <div><label>Uur/dag</label><input type="number" id="p-hours" value="12" min="4" max="16"></div>
+      <div><label>Days</label><input type="number" id="p-days" value="5" min="1" max="25"></div>
+      <div><label>Hours/day</label><input type="number" id="p-hours" value="12" min="4" max="16"></div>
       <div><label>Min/stop</label><input type="number" id="p-charge" value="8" min="3" max="45"></div>
     </div>
     <div class="row">
-      <div><label>Gem. snelheid (km/u)</label><input type="number" id="p-speed" value="65" min="50" max="120"></div>
-      <div><label>Wegfactor</label><input type="number" id="p-factor" value="1.3" step="0.05" min="1" max="1.6"></div>
+      <div><label>Avg. speed (km/h)</label><input type="number" id="p-speed" value="65" min="50" max="120"></div>
+      <div><label>Road factor</label><input type="number" id="p-factor" value="1.3" step="0.05" min="1" max="1.6"></div>
     </div>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text)">
-      <input type="checkbox" id="p-loop"> Eindig weer bij startpunt (lus)
+      <input type="checkbox" id="p-loop"> End back at starting point (loop)
     </label>
     <label style="display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text)">
-      <input type="checkbox" id="p-view"> Alleen binnen huidige kaartweergave
+      <input type="checkbox" id="p-view"> Only within current map view
     </label>
-    <label>Beperk tot landen (leeg = alle, gebruik landenfilter hierboven)</label>
-    <label>Eigen overnachtingen (optioneel; met lus aan keert de laatste dag terug naar start)</label>
+    <label>Limit to countries (empty = all, use country filter above)</label>
+    <label>Custom overnight stops (optional; with loop on, the last day returns to start)</label>
     <div id="overnightlist" class="muted"></div>
     <div id="excludedinfo" class="muted" style="margin-top:4px"></div>
     <button class="primary" id="p-plan">Plan route</button>
-    <button class="small" id="p-clear" style="margin-top:6px">Wis route</button>
+    <button class="small" id="p-clear" style="margin-top:6px">Clear route</button>
   </section>
 
   <section class="authonly">
-    <h2>Eigen route</h2>
+    <h2>Custom route</h2>
     <div id="manuallist"></div>
   </section>
 
   <section class="authonly">
-    <h2>Geplande dagen</h2>
-    <div id="daylist" class="muted">Nog geen route gepland.</div>
+    <h2>Planned days</h2>
+    <div id="daylist" class="muted">No route planned yet.</div>
   </section>
 
   <section class="authonly">
-    <h2>Opgeslagen routes</h2>
-    <button class="small" id="saveroute">💾 Bewaar huidige route</button>
+    <h2>Saved routes</h2>
+    <button class="small" id="saveroute">💾 Save current route</button>
     <div id="savedlist" style="margin-top:8px"></div>
     <div id="routesyncnote" class="muted" style="margin-top:6px"></div>
   </section>
 
   <section>
     <h2>Account</h2>
-    <div id="authbox" class="muted">Verbinden…</div>
+    <div id="authbox" class="muted">Connecting…</div>
   </section>
 
   <section class="authonly">
     <h2>Data</h2>
     <div class="row">
-      <button class="small" id="exp-csv">Exporteer CSV</button>
+      <button class="small" id="exp-csv">Export CSV</button>
       <button class="small" id="exp-json">Backup JSON</button>
-      <button class="small" id="imp-json">Herstel backup</button>
+      <button class="small" id="imp-json">Restore backup</button>
     </div>
-    <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync-link bezochte locaties (voor je andere apparaat)</button>
+    <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync link for visited locations (for your other device)</button>
     <input type="file" id="imp-file" accept=".json" style="display:none">
     <div id="overrides-box" style="margin-top:8px"></div>
-    <div id="syncstatus" class="muted" style="margin-top:8px">☁️ Sync: verbinden…</div>
-    <div class="muted" style="margin-top:8px">Bezoek-status synchroniseert live tussen al je apparaten. De JSON-backup blijft als extra vangnet.</div>
+    <div id="syncstatus" class="muted" style="margin-top:8px">☁️ Sync: connecting…</div>
+    <div class="muted" style="margin-top:8px">Visit status syncs live across all your devices. The JSON backup remains as an extra safety net.</div>
   </section>
 
   <section>
-    <h2>Onderweg sporten/douchen</h2>
-    <a href="sportscholen.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">🏋️💪 Beide samen op één kaart</a>
+    <h2>Gym/shower stops en route</h2>
+    <a href="sportscholen.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">🏋️💪 Both combined on one map</a>
     <div class="row">
       <a class="small" href="anytimefitness.html" style="flex:1;text-align:center;text-decoration:none;display:block;padding:6px 0;background:var(--panel2);border-radius:6px;color:var(--text)">🏋️ Anytime Fitness</a>
       <a class="small" href="basicfit.html" style="flex:1;text-align:center;text-decoration:none;display:block;padding:6px 0;background:var(--panel2);border-radius:6px;color:var(--text)">💪 Basic-Fit</a>
@@ -258,7 +258,7 @@ const ReloadControl = L.Control.extend({
     const btn = L.DomUtil.create('button', '');
     btn.id = 'reloadbtn';
     btn.innerHTML = '↻';
-    btn.title = 'Ververs de app (reset route-instellingen)';
+    btn.title = 'Refresh the app (resets route settings)';
     btn.onclick = () => location.reload();
     return btn;
   }
@@ -292,17 +292,17 @@ function popupHtml(s) {
   const v = isVisited(s);
   const info = `<b>${s.name}</b><br>
     <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
-    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span>`;
-  // gasten zien alleen info; acties verschijnen na login
+    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Visited' : '✘ Not yet visited'}</span>`;
+  // guests see info only; actions appear after login
   if (!document.body.classList.contains('ingelogd')) return info;
   return `${info}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
-      <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Niet bezocht' : '✔ Bezocht'}</button>
+      <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Not visited' : '✔ Visited'}</button>
       <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
-      <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Uit route' : '➕ Route'}</button>
-      ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? '✕ Uit dagplanning' : '➕ In dagplanning'}</button>` : ''}
-      <button class="small" onclick="setOvernight(${s.id})">🌙 Overnacht</button>
-      ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Meenemen' : '🚫 Overslaan'}</button>` : ''}
+      <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Remove from route' : '➕ Route'}</button>
+      ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? '✕ Remove from day plan' : '➕ Add to day plan'}</button>` : ''}
+      <button class="small" onclick="setOvernight(${s.id})">🌙 Overnight</button>
+      ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Include' : '🚫 Skip'}</button>` : ''}
     </div>
     <a class="gmapslink" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank">🧭 Open in Google Maps</a>`;
 }
@@ -334,7 +334,7 @@ function refreshMarkers() {
 window.toggleVisited = function(id) {
   const s = SITES[id];
   const wordtBezocht = !isVisited(s);
-  if (!confirm(`${s.name}\n${wordtBezocht ? 'Markeren als BEZOCHT?' : 'Terugzetten naar NIET bezocht?'}`)) return;
+  if (!confirm(`${s.name}\n${wordtBezocht ? 'Mark as VISITED?' : 'Reset to NOT visited?'}`)) return;
   const nu = new Date().toISOString();
   // wijziging mét tijdstempel bewaren (ook als hij gelijk is aan het databestand),
   // zodat "nieuwste wijziging wint" over apparaten heen werkt
@@ -352,15 +352,15 @@ window.toggleVisited = function(id) {
 function renderOverrides() {
   const el = document.getElementById('overrides-box');
   const ids = Object.keys(overrides).filter(id => SITES[id] && ovVal(overrides[id]) !== SITES[id].visited);
-  if (!ids.length) { el.innerHTML = '<span class="muted">Geen handmatige wijzigingen t.o.v. het databestand.</span>'; return; }
-  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Handmatig gewijzigd (${ids.length}):</b></div>`;
+  if (!ids.length) { el.innerHTML = '<span class="muted">No manual changes vs. the data file.</span>'; return; }
+  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Manually changed (${ids.length}):</b></div>`;
   for (const id of ids) {
     const s = SITES[id];
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `
-      <div class="info"><b>${s.name}</b><span>nu: ${ovVal(overrides[id]) ? '✔ bezocht' : '✘ niet bezocht'} (bestand zegt: ${s.visited ? 'bezocht' : 'niet bezocht'})</span></div>
-      <button class="small" title="Wijziging ongedaan maken" data-undo="${id}">↩</button>`;
+      <div class="info"><b>${s.name}</b><span>now: ${ovVal(overrides[id]) ? '✔ visited' : '✘ not visited'} (file says: ${s.visited ? 'visited' : 'not visited'})</span></div>
+      <button class="small" title="Undo change" data-undo="${id}">↩</button>`;
     row.querySelector('[data-undo]').onclick = () => {
       // terug naar de bestandswaarde, als nieuwe wijziging — zodat het ook
       // op je andere apparaten wordt teruggedraaid
@@ -383,7 +383,7 @@ window.setStartFromSite = function(id) {
 };
 
 map.on('click', e => {
-  if (e.originalEvent.shiftKey) setStart(e.latlng.lat, e.latlng.lng, 'Eigen punt');
+  if (e.originalEvent.shiftKey) setStart(e.latlng.lat, e.latlng.lng, 'Custom point');
 });
 
 let startMarker = null;
@@ -393,7 +393,7 @@ function setStart(lat, lng, label) {
   startMarker = L.marker([lat, lng]).addTo(map).bindTooltip('Start: ' + label);
   document.getElementById('startinfo').textContent = '📍 Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 }
-setStart(51.9225, 4.4792, 'Rotterdam (thuis)');
+setStart(51.9225, 4.4792, 'Rotterdam (home)');
 
 // ---------- laatst bezochte locatie ----------
 // Bewust NIET apart bijgehouden ("laatste keer dat iets op bezocht werd gezet"),
@@ -418,11 +418,11 @@ function renderLastVisit() {
   if (!lv) { el.textContent = ''; return; }
   // de tijdsnotitie is alleen voor de ingelogde gebruiker; gasten zien geen datum/tijd
   if (!document.body.classList.contains('ingelogd')) {
-    el.textContent = `Laatst bezocht: ${lv.name}`;
+    el.textContent = `Last visited: ${lv.name}`;
     return;
   }
   const d = new Date(lv.t);
-  el.textContent = `Laatst bezocht: ${lv.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+  el.textContent = `Last visited: ${lv.name} · ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 // ---------- statistieken & landenlijst ----------
@@ -489,14 +489,14 @@ window.excludeSite = function(id) {
 function renderOvernights() {
   const el = document.getElementById('overnightlist');
   if (!overnights.length) {
-    el.innerHTML = 'Klik een marker aan en kies "🌙 Overnacht hier" — de eerste keuze wordt nacht 1, de tweede nacht 2, enz.';
+    el.innerHTML = 'Click a marker and choose "🌙 Overnight here" — the first choice becomes night 1, the second night 2, etc.';
     return;
   }
   el.innerHTML = '';
   overnights.forEach((o, i) => {
     const row = document.createElement('div');
     row.className = 'nrow';
-    row.innerHTML = `<div class="info"><b>Nacht ${i+1}: ${o.name}</b></div><button class="small" title="Verwijderen">✕</button>`;
+    row.innerHTML = `<div class="info"><b>Night ${i+1}: ${o.name}</b></div><button class="small" title="Remove">✕</button>`;
     row.querySelector('button').onclick = () => {
       overnights.splice(i, 1);
       renderOvernights();
@@ -508,7 +508,7 @@ function renderOvernights() {
 function renderExcluded() {
   const el = document.getElementById('excludedinfo');
   if (!excluded.size) { el.innerHTML = ''; return; }
-  el.innerHTML = `🚫 ${excluded.size} locatie(s) uitgesloten van planning · <a href="#" id="ex-reset" style="color:var(--blue)">herstel alles</a>`;
+  el.innerHTML = `🚫 ${excluded.size} location(s) excluded from planning · <a href="#" id="ex-reset" style="color:var(--blue)">restore all</a>`;
   document.getElementById('ex-reset').onclick = e => {
     e.preventDefault();
     excluded.clear();
@@ -534,7 +534,7 @@ function planRoute(reuseBounds = false, fixedPool = null) {
       if (!reuseBounds || !planBounds) planBounds = map.getBounds();
       pool = pool.filter(s => planBounds.contains([s.lat, s.lng]));
     }
-    if (!pool.length) { alert('Geen onbezochte locaties binnen het filter.'); return; }
+    if (!pool.length) { alert('No unvisited locations within the filter.'); return; }
     pool = pool.slice(); // kopie
   }
 
@@ -559,7 +559,7 @@ function planRoute(reuseBounds = false, fixedPool = null) {
   for (let d = 0; d < days && pool.length; d++) {
     // gewenste overnachting ná deze dag; bij een lus eindigt de laatste dag bij het startpunt
     const homeEnd = loop && d === days - 1;
-    const nightly = overnights[d] || (homeEnd ? { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' } : null);
+    const nightly = overnights[d] || (homeEnd ? { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' } : null);
     const stops = [];
     let usedMin = 0, distKm = 0;
     while (pool.length) {
@@ -686,7 +686,7 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
     tour.push(pool[bi]);
     pool.splice(bi, 1);
   }
-  if (!tour.length) { alert('Er past geen lus binnen het tijdbudget.'); return; }
+  if (!tour.length) { alert('No loop fits within the time budget.'); return; }
   twoOptClosed(tour);
   // opraap-ronde over de hele ronde binnen het totaalbudget
   const tourTime = () => {
@@ -739,7 +739,7 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
   day.km += backKm;
   day.min += backKm / speed * 60;
   day.back = true;
-  day.endPoint = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' };
+  day.endPoint = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' };
   if (day.stops.length) plannedDays.push(day);
 }
 
@@ -748,7 +748,7 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
 // via goedkoopste-invoeging verdeeld over het segment waar ze het beste passen.
 // Zo gaan corridor-locaties naar de terugweg als dat efficiënter is.
 function planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
-  const home = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'startpunt' };
+  const home = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' };
   const bounds = [home, ...overnights.slice(0, days - 1), home];
   const segs = [];
   for (let d = 0; d < bounds.length - 1; d++) {
@@ -889,23 +889,23 @@ function gmapsLinks(day) {
 
 function renderDays(chargeMin, speed) {
   const el = document.getElementById('daylist');
-  if (!plannedDays.length) { el.innerHTML = '<span class="muted">Nog geen route gepland.</span>'; return; }
+  if (!plannedDays.length) { el.innerHTML = '<span class="muted">No route planned yet.</span>'; return; }
   el.innerHTML = '';
   let totKm = 0, totStops = 0;
   plannedDays.forEach((day, i) => {
     totKm += day.km; totStops += day.stops.length;
     const div = document.createElement('div');
     div.className = 'day';
-    const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps deel ${j+1}</a>`).join('');
+    const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps part ${j+1}</a>`).join('');
     div.innerHTML = `
-      <h3><span style="color:${dayColors[i % dayColors.length]}">● Dag ${i+1}</span><span>${day.stops.length} stops</span></h3>
-      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} u (rijden + laden)${day.road ? ' · 🛣️ echte wegen' : ' · hemelsbreed'}<br>
-        Start: ${day.start.name || day.start.label || 'startpunt'} · ${day.back ? '🏁 eindigt weer bij startpunt' : (day.endPoint ? '🌙 overnachten: ' + (day.endPoint.name || 'eigen punt') + ' (eigen keuze)' : '🌙 overnachten: ' + day.stops[day.stops.length-1].name)}</div>
+      <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
+      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? ' · 🛣️ real roads' : ' · straight-line'}<br>
+        Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}</div>
       <div>${links}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}
-        <button class="exbtn" data-mv="-1:${s.id}" title="Eerder in de route">↑</button>
-        <button class="exbtn" data-mv="1:${s.id}" title="Later in de route">↓</button>
-        <button class="exbtn" data-ex="${s.id}" title="Uit de route halen">✕</button></li>`).join('')}</ol>`;
+        <button class="exbtn" data-mv="-1:${s.id}" title="Move earlier in the route">↑</button>
+        <button class="exbtn" data-mv="1:${s.id}" title="Move later in the route">↓</button>
+        <button class="exbtn" data-ex="${s.id}" title="Remove from route">✕</button></li>`).join('')}</ol>`;
     el.appendChild(div);
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
@@ -925,18 +925,18 @@ function renderDays(chargeMin, speed) {
   const kwhRit = Math.round(totKm * 0.16);
   const kwhReg = totStops * 2;
   const gedaan = plannedDays.flatMap(d => d.stops).filter(isVisited).length;
-  sum.innerHTML = `<b style="color:var(--text)">Totaal: ${totStops} locaties (${gedaan} ✔ afgevinkt), ${Math.round(totKm)} km</b><br>
-    Registratie-laden: ${kwhReg} kWh (2 kWh/stop) · rijverbruik ±${kwhRit} kWh<br>
-    Kosten ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0,40 · bulk €0,35/kWh)`;
+  sum.innerHTML = `<b style="color:var(--text)">Total: ${totStops} locations (${gedaan} ✔ checked off), ${Math.round(totKm)} km</b><br>
+    Registration charging: ${kwhReg} kWh (2 kWh/stop) · driving consumption ±${kwhRit} kWh<br>
+    Cost ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0.40 · bulk €0.35/kWh)`;
   el.prepend(sum);
-  // twee bewuste keuzes: alleen de volgorde optimaliseren (zelfde stops),
-  // of opnieuw plannen en de vrijgekomen tijd vullen met nieuwe stops
+  // two deliberate choices: only optimize the order (same stops),
+  // or re-plan and fill the freed-up time with new stops
   const knoppen = document.createElement('div');
   knoppen.className = 'row';
   knoppen.style.marginBottom = '8px';
   knoppen.innerHTML = `
-    <button class="small" id="rd-opt" title="Zelfde stops, alleen de kortste volgorde — voegt niets toe">✨ Optimaliseer volgorde</button>
-    <button class="small" id="rd-fill" title="Plant opnieuw en vult vrije tijd met nieuwe stops; overgeslagen locaties blijven uitgesloten">🔁 Vul aan met nieuwe stops</button>`;
+    <button class="small" id="rd-opt" title="Same stops, only the shortest order — adds nothing">✨ Optimize order</button>
+    <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">🔁 Fill with new stops</button>`;
   el.prepend(knoppen);
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
   knoppen.querySelector('#rd-fill').onclick = () => planRoute(true);
@@ -947,10 +947,10 @@ function renderDays(chargeMin, speed) {
   nav.style.marginTop = '0';
   nav.style.marginBottom = '8px';
   if (next) {
-    nav.textContent = `🧭 Volgende stop: ${next.name}`;
+    nav.textContent = `🧭 Next stop: ${next.name}`;
     nav.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${next.lat},${next.lng}&travelmode=driving`, '_blank');
   } else {
-    nav.textContent = '🎉 Alle stops van deze route afgevinkt!';
+    nav.textContent = '🎉 All stops on this route checked off!';
     nav.disabled = true;
   }
   el.prepend(nav);
@@ -1067,7 +1067,7 @@ async function pushRouteCloud(r) {
   try {
     const { error } = await supa.from('routes').upsert({ name: r.name, data: r, updated_at: new Date().toISOString() });
     const note = document.getElementById('routesyncnote');
-    if (error && note) note.textContent = 'Route alleen lokaal bewaard — log in om te syncen.';
+    if (error && note) note.textContent = 'Route saved locally only — log in to sync.';
   } catch (e) {}
 }
 async function deleteRouteCloud(name) {
@@ -1087,10 +1087,10 @@ async function syncRoutes() {
     saveRoutesStore();
     renderSavedRoutes();
     const note = document.getElementById('routesyncnote');
-    if (note) note.textContent = '☁️ Routes gesynchroniseerd tussen je apparaten.';
+    if (note) note.textContent = '☁️ Routes synced across your devices.';
   } catch (e) {
     const note = document.getElementById('routesyncnote');
-    if (note) note.textContent = 'Routes staan alleen lokaal (cloud-tabel ontbreekt nog).';
+    if (note) note.textContent = 'Routes are stored locally only (cloud table not set up yet).';
   }
 }
 
@@ -1135,25 +1135,25 @@ function routeLink(r) {
 }
 function renderSavedRoutes() {
   const el = document.getElementById('savedlist');
-  if (!savedRoutes.length) { el.innerHTML = '<span class="muted">Nog geen routes bewaard. Plan een route en klik "Bewaar huidige route". Via 🔗 stuur je hem naar je telefoon.</span>'; return; }
+  if (!savedRoutes.length) { el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click "Save current route". Use 🔗 to send it to your phone.</span>'; return; }
   el.innerHTML = '';
   savedRoutes.forEach((r, i) => {
     const stops = r.days.reduce((a, d) => a + d.stops.length, 0);
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `
-      <div class="info"><b>${r.name}</b><span>${r.days.length} dagen · ${stops} stops · ${r.created}</span></div>
-      <button class="small" data-a="load" title="Route laden">▶</button>
-      <button class="small" data-a="link" title="Deelbare link kopiëren">🔗</button>
-      <button class="small" data-a="del" title="Verwijderen">✕</button>`;
+      <div class="info"><b>${r.name}</b><span>${r.days.length} days · ${stops} stops · ${r.created}</span></div>
+      <button class="small" data-a="load" title="Load route">▶</button>
+      <button class="small" data-a="link" title="Copy shareable link">🔗</button>
+      <button class="small" data-a="del" title="Remove">✕</button>`;
     row.querySelector('[data-a=load]').onclick = () => loadRoute(r);
     row.querySelector('[data-a=link]').onclick = () => {
       const url = routeLink(r);
-      if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Link gekopieerd! Stuur hem naar je telefoon (WhatsApp/AirDrop/mail) en open hem daar.'));
-      else prompt('Kopieer deze link:', url);
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Link copied! Send it to your phone (WhatsApp/AirDrop/mail) and open it there.'));
+      else prompt('Copy this link:', url);
     };
     row.querySelector('[data-a=del]').onclick = () => {
-      if (!confirm(`Route "${r.name}" verwijderen?`)) return;
+      if (!confirm(`Delete route "${r.name}"?`)) return;
       savedRoutes.splice(i, 1);
       saveRoutesStore();
       deleteRouteCloud(r.name);
@@ -1163,8 +1163,8 @@ function renderSavedRoutes() {
   });
 }
 document.getElementById('saveroute').onclick = () => {
-  if (!plannedDays.length) { alert('Plan of laad eerst een route.'); return; }
-  const name = prompt('Naam voor deze route:', 'Trip ' + new Date().toISOString().slice(0, 10));
+  if (!plannedDays.length) { alert('Plan or load a route first.'); return; }
+  const name = prompt('Name for this route:', 'Trip ' + new Date().toISOString().slice(0, 10));
   if (!name) return;
   const r = routeToData(name);
   savedRoutes = savedRoutes.filter(x => x.name !== name);   // zelfde naam = overschrijven
@@ -1182,7 +1182,7 @@ if (location.hash.startsWith('#r=')) {
       const b64 = location.hash.slice(3).replace(/-/g, '+').replace(/_/g, '/');
       const r = JSON.parse(decodeURIComponent(escape(atob(b64))));
       if (r && r.days) {
-        r.name = r.name || 'Gedeelde route';
+        r.name = r.name || 'Shared route';
         if (!savedRoutes.some(x => JSON.stringify(x.days) === JSON.stringify(r.days))) {
           savedRoutes.push(r);
           saveRoutesStore();
@@ -1204,8 +1204,8 @@ document.getElementById('sync-link').onclick = () => {
   for (const s of SITES) if (isVisited(s)) bits[s.id >> 3] |= 1 << (s.id & 7);
   const b64 = btoa(String.fromCharCode(...bits)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const url = location.origin + location.pathname + '#v=' + b64;
-  if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Sync-link gekopieerd! Open hem op je andere apparaat om alle vinkjes over te nemen.'));
-  else prompt('Kopieer deze sync-link:', url);
+  if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert('Sync link copied! Open it on your other device to transfer all checkmarks.'));
+  else prompt('Copy this sync link:', url);
 };
 if (location.hash.startsWith('#v=')) {
   if (localStorage.getItem('sc_imported_visited') !== location.hash) {
@@ -1218,7 +1218,7 @@ if (location.hash.startsWith('#v=')) {
       }
       if (nieuw) saveOverrides();
       localStorage.setItem('sc_imported_visited', location.hash);
-      setTimeout(() => alert(nieuw ? nieuw + ' bezochte locatie(s) overgenomen van je andere apparaat. Nieuwe stand: ' + SITES.filter(isVisited).length : 'Alles was al gelijk — geen nieuwe vinkjes.'), 400);
+      setTimeout(() => alert(nieuw ? nieuw + ' visited location(s) transferred from your other device. New total: ' + SITES.filter(isVisited).length : 'Everything was already in sync — no new checkmarks.'), 400);
     } catch (e) { console.warn('Kon sync-link niet lezen', e); }
   }
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
@@ -1275,8 +1275,8 @@ async function pushVisit(s) {
   try {
     const o = overrides[s.id];
     const { error } = await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
-    if (error) setSyncStatus('☁️ Niet gesynct — log in om wijzigingen in de cloud op te slaan');
-  } catch (e) { setSyncStatus('☁️ Sync: offline (wijziging staat lokaal klaar)'); }
+    if (error) setSyncStatus('☁️ Not synced — log in to save changes to the cloud');
+  } catch (e) { setSyncStatus('☁️ Sync: offline (change queued locally)'); }
 }
 
 // login: kijken mag altijd, schrijven (afvinken/routes) alleen ingelogd
@@ -1289,24 +1289,24 @@ function renderAuth() {
     document.body.classList.toggle('ingelogd', !!sessie);
     renderLastVisit();   // tijdsnotitie tonen/verbergen o.b.v. login-status
     if (sessie) {
-      el.innerHTML = `<div>🔓 Ingelogd als <b>${sessie.user.email}</b></div>
-        <button class="small" id="au-uit" style="margin-top:6px">Uitloggen</button>`;
+      el.innerHTML = `<div>🔓 Logged in as <b>${sessie.user.email}</b></div>
+        <button class="small" id="au-uit" style="margin-top:6px">Log out</button>`;
       document.getElementById('au-uit').onclick = async () => {
         await supa.auth.signOut();
         location.reload();
       };
     } else {
       el.innerHTML = `
-        <input type="email" id="au-mail" placeholder="E-mail" autocomplete="username">
-        <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:6px">
-        <button class="primary" id="au-in" style="margin-top:8px">Inloggen</button>
-        <div class="muted" style="margin-top:6px">Kijken kan zonder login. Afvinken en routes bewaren in de cloud vereisen een login (eenmalig per apparaat).</div>`;
+        <input type="email" id="au-mail" placeholder="Email" autocomplete="username">
+        <input type="password" id="au-pw" placeholder="Password" autocomplete="current-password" style="margin-top:6px">
+        <button class="primary" id="au-in" style="margin-top:8px">Log in</button>
+        <div class="muted" style="margin-top:6px">Viewing works without login. Checking off visits and saving routes to the cloud require a login (once per device).</div>`;
       document.getElementById('au-in').onclick = async () => {
         const { error } = await supa.auth.signInWithPassword({
           email: document.getElementById('au-mail').value.trim(),
           password: document.getElementById('au-pw').value,
         });
-        if (error) alert('Inloggen mislukt: ' + error.message);
+        if (error) alert('Login failed: ' + error.message);
         else location.reload();   // schone start mét sessie
       };
     }
@@ -1335,7 +1335,7 @@ async function initSync() {
     if (toPush.length) await supa.from('visits').upsert(toPush);
     // 3. cloud toepassen (nieuwste wijziging wint per locatie)
     applyCloud(data);
-    setSyncStatus(`☁️ Sync actief · ${(data || []).length} wijziging(en) in de cloud`);
+    setSyncStatus(`☁️ Sync active · ${(data || []).length} change(s) in the cloud`);
     syncRoutes();
     // 3. live meeluisteren: vinkje op het andere apparaat verschijnt hier direct
     supa.channel('visits-live')
@@ -1343,8 +1343,8 @@ async function initSync() {
         if (payload.new) applyCloud([payload.new]);
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') setSyncStatus('☁️ Live-sync actief');
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('☁️ Sync actief (live-verbinding herstelt…)');
+        if (status === 'SUBSCRIBED') setSyncStatus('☁️ Live sync active');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('☁️ Sync active (live connection recovering…)');
       });
     // vangnet: bij terugkeer naar de app (telefoon uit slaapstand) opnieuw ophalen
     document.addEventListener('visibilitychange', async () => {
@@ -1354,7 +1354,7 @@ async function initSync() {
       }
     });
   } catch (e) {
-    setSyncStatus('☁️ Sync niet beschikbaar — lokaal opslaan werkt gewoon');
+    setSyncStatus('☁️ Sync unavailable — local saving still works');
     console.warn('Sync-fout:', e);
   }
 }
@@ -1381,8 +1381,8 @@ document.getElementById('imp-file').addEventListener('change', e => {
       }
       saveOverrides();
       buildCountryList(); refreshMarkers(); renderOverrides();
-      alert('Backup hersteld.');
-    } catch (err) { alert('Ongeldig backup-bestand.'); }
+      alert('Backup restored.');
+    } catch (err) { alert('Invalid backup file.'); }
   });
 });
 function download(name, content) {
@@ -1396,14 +1396,14 @@ function download(name, content) {
 let lastPos = null;
 document.getElementById('nearby-btn').onclick = () => {
   const el = document.getElementById('nearbylist');
-  el.innerHTML = '<div class="muted" style="padding:6px 0">GPS-locatie ophalen…</div>';
-  if (!navigator.geolocation) { el.innerHTML = '<div class="muted">Geen GPS beschikbaar in deze browser.</div>'; return; }
+  el.innerHTML = '<div class="muted" style="padding:6px 0">Getting GPS location…</div>';
+  if (!navigator.geolocation) { el.innerHTML = '<div class="muted">No GPS available in this browser.</div>'; return; }
   navigator.geolocation.getCurrentPosition(pos => {
     lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     map.setView([lastPos.lat, lastPos.lng], 10);
     renderNearby();
   }, err => {
-    el.innerHTML = `<div class="muted">GPS mislukt (${err.message}). Let op: locatie werkt alleen via https of localhost.</div>`;
+    el.innerHTML = `<div class="muted">GPS failed (${err.message}). Note: location only works via https or localhost.</div>`;
   }, { enableHighAccuracy: true, timeout: 10000 });
 };
 function renderNearby() {
@@ -1417,7 +1417,7 @@ function renderNearby() {
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `
-      <div class="info"><b>${s.name}</b><span>${d.toFixed(1)} km hemelsbreed · ${s.stalls ?? '?'} stalls ${s.version || ''}</span></div>
+      <div class="info"><b>${s.name}</b><span>${d.toFixed(1)} km straight-line · ${s.stalls ?? '?'} stalls ${s.version || ''}</span></div>
       <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving')">🧭</button>
       <button class="small" data-id="${s.id}">✔</button>`;
     row.querySelector('[data-id]').onclick = () => { toggleVisited(s.id); renderNearby(); };
@@ -1438,7 +1438,7 @@ function renderManual() {
   const el = document.getElementById('manuallist');
   manualLayers.forEach(l => map.removeLayer(l)); manualLayers = [];
   if (!manualRoute.length) {
-    el.innerHTML = '<span class="muted">Klik markers aan en kies "➕ In eigen route" om zelf een volgorde samen te stellen. De route start bij je startpunt.</span>';
+    el.innerHTML = '<span class="muted">Click markers and choose "➕ Route" to build your own order. The route starts at your starting point.</span>';
     return;
   }
   // stippellijn + nummers op de kaart
@@ -1456,15 +1456,15 @@ function renderManual() {
   let km = 0, prev = startPoint;
   for (const id of manualRoute) { km += hav(prev, SITES[id]) * factor; prev = SITES[id]; }
   const min = km / speed * 60 + manualRoute.length * chargeMin;
-  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">${manualRoute.length} stops · ${Math.round(km)} km · ${(min/60).toFixed(1)} u</b></div>`;
+  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">${manualRoute.length} stops · ${Math.round(km)} km · ${(min/60).toFixed(1)} h</b></div>`;
   manualRoute.forEach((id, j) => {
     const s = SITES[id];
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `<div class="info"><b>${j+1}. ${s.name}</b></div>
-      <button class="small" data-a="up" title="Eerder in de route">↑</button>
-      <button class="small" data-a="down" title="Later in de route">↓</button>
-      <button class="small" data-a="del" title="Verwijderen">✕</button>`;
+      <button class="small" data-a="up" title="Move earlier in the route">↑</button>
+      <button class="small" data-a="down" title="Move later in the route">↓</button>
+      <button class="small" data-a="del" title="Remove">✕</button>`;
     row.querySelector('[data-a=up]').onclick = () => { if (j > 0) { [manualRoute[j-1], manualRoute[j]] = [manualRoute[j], manualRoute[j-1]]; renderManual(); } };
     row.querySelector('[data-a=down]').onclick = () => { if (j < manualRoute.length - 1) { [manualRoute[j+1], manualRoute[j]] = [manualRoute[j], manualRoute[j+1]]; renderManual(); } };
     row.querySelector('[data-a=del]').onclick = () => { manualRoute.splice(j, 1); markers.get(id).setPopupContent(popupHtml(s)); renderManual(); };
@@ -1473,20 +1473,20 @@ function renderManual() {
   const btns = document.createElement('div');
   btns.className = 'row';
   btns.style.marginTop = '6px';
-  btns.innerHTML = `<button class="small" id="mr-opt">Optimaliseer</button><button class="small" id="mr-maps">Maps-links</button><button class="small" id="mr-clear">Wis</button>`;
+  btns.innerHTML = `<button class="small" id="mr-opt">Optimize</button><button class="small" id="mr-maps">Maps links</button><button class="small" id="mr-clear">Clear</button>`;
   el.appendChild(btns);
   const planBtn = document.createElement('button');
   planBtn.className = 'primary';
   planBtn.id = 'mr-plan';
   planBtn.style.marginTop = '6px';
-  planBtn.textContent = '📅 Naar dagplanning';
-  planBtn.title = 'Verdeelt precies deze selectie over dagen volgens de planner-instellingen (dagen, uren, lus, overnachtingen)';
+  planBtn.textContent = '📅 To day plan';
+  planBtn.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
   el.appendChild(planBtn);
   planBtn.onclick = () => {
     const n = manualRoute.length;
     planRoute(true, manualRoute.map(id => SITES[id]));
     const gepland = plannedDays.reduce((a, d) => a + d.stops.length, 0);
-    if (gepland < n) alert(`Let op: ${n - gepland} van de ${n} stops passen niet binnen het tijdbudget (dagen × uren/dag). Verhoog het aantal dagen of uren en druk opnieuw op "Naar dagplanning".`);
+    if (gepland < n) alert(`Note: ${n - gepland} of the ${n} stops don't fit within the time budget (days × hours/day). Increase the number of days or hours and click "To day plan" again.`);
   };
   document.getElementById('mr-opt').onclick = () => {
     const stops = manualRoute.map(id => SITES[id]);

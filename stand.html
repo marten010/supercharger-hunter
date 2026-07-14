@@ -41,7 +41,7 @@
   <div class="statgrid">
     <div class="stat"><b id="st-visited">…</b><span>bezocht</span></div>
     <div class="stat"><b id="st-todo">…</b><span>nog niet bezocht</span></div>
-    <div class="stat"><b>700</b><span>doel</span></div>
+    <div class="stat"><b>800</b><span>doel</span></div>
   </div>
   <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
   <div id="lastvisit"></div>
@@ -77,7 +77,7 @@ for (const s of SITES) {
 function render() {
   document.getElementById('st-visited').textContent = visited.size;
   document.getElementById('st-todo').textContent = SITES.length - visited.size;
-  document.getElementById('st-bar').style.width = Math.min(100, visited.size / 700 * 100) + '%';
+  document.getElementById('st-bar').style.width = Math.min(100, visited.size / 800 * 100) + '%';
   const per = {};
   for (const s of SITES) {
     per[s.country] = per[s.country] || { t: 0, v: 0 };

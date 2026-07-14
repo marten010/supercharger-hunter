@@ -124,7 +124,7 @@
     <div class="statgrid">
       <div class="stat"><b id="st-visited">0</b><span>bezocht</span></div>
       <div class="stat"><b id="st-todo">0</b><span>nog niet bezocht</span></div>
-      <div class="stat"><b id="st-target">700</b><span>doel</span></div>
+      <div class="stat"><b id="st-target">800</b><span>doel</span></div>
     </div>
     <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
     <div id="lastvisit" class="muted" style="margin-top:6px; font-size:11px;"></div>
@@ -421,7 +421,7 @@ function refreshStats() {
   const visited = SITES.filter(isVisited).length;
   document.getElementById('st-visited').textContent = visited;
   document.getElementById('st-todo').textContent = SITES.length - visited;
-  document.getElementById('st-bar').style.width = Math.min(100, visited / 700 * 100) + '%';
+  document.getElementById('st-bar').style.width = Math.min(100, visited / 800 * 100) + '%';
 }
 function buildCountryList() {
   const per = {};

@@ -123,7 +123,7 @@
   <section>
     <div class="statgrid">
       <div class="stat"><b id="st-visited">0</b><span>bezocht</span></div>
-      <div class="stat"><b id="st-todo">0</b><span>te gaan</span></div>
+      <div class="stat"><b id="st-todo">0</b><span>nog niet bezocht</span></div>
       <div class="stat"><b id="st-target">700</b><span>doel</span></div>
     </div>
     <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
@@ -399,6 +399,11 @@ function setLastVisit(name, at) {
 function renderLastVisit() {
   const el = document.getElementById('lastvisit');
   if (!el || !lastVisit) return;
+  // de tijdsnotitie is alleen voor de ingelogde gebruiker; gasten zien geen datum/tijd
+  if (!document.body.classList.contains('ingelogd')) {
+    el.textContent = `Laatst bezocht: ${lastVisit.name}`;
+    return;
+  }
   const d = new Date(lastVisit.at);
   el.textContent = `Laatst bezocht: ${lastVisit.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
 }
@@ -1267,6 +1272,7 @@ function renderAuth() {
   supa.auth.getSession().then(({ data }) => {
     const sessie = data.session;
     document.body.classList.toggle('ingelogd', !!sessie);
+    renderLastVisit();   // tijdsnotitie tonen/verbergen o.b.v. login-status
     if (sessie) {
       el.innerHTML = `<div>🔓 Ingelogd als <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Uitloggen</button>`;

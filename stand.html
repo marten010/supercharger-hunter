@@ -40,7 +40,7 @@
 <div class="wrap">
   <div class="statgrid">
     <div class="stat"><b id="st-visited">…</b><span>bezocht</span></div>
-    <div class="stat"><b id="st-todo">…</b><span>te gaan</span></div>
+    <div class="stat"><b id="st-todo">…</b><span>nog niet bezocht</span></div>
     <div class="stat"><b>700</b><span>doel</span></div>
   </div>
   <div class="progressbar"><div id="st-bar" style="width:0%"></div></div>
@@ -107,9 +107,8 @@ async function load() {
       if (r.visited && (!last || r.updated_at > last.at)) last = { name: s.name, at: r.updated_at };
     }
     if (last) {
-      const d = new Date(last.at);
-      document.getElementById('lastvisit').textContent =
-        `Laatst bezocht: ${last.name} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+      // deze publieke pagina is alleen voor gasten: geen datum/tijd tonen, alleen de naam
+      document.getElementById('lastvisit').textContent = `Laatst bezocht: ${last.name}`;
     }
   } catch (e) { /* zonder cloud tonen we de baseline uit data.js */ }
   render();

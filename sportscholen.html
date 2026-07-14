@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Basic-Fit — Europa</title>
+<title>Sportscholen — Europa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e11d48; --border:#333a45; }
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --af:#f59e0b; --bf:#e11d48; --border:#333a45; }
   * { box-sizing: border-box; margin: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
   #sidebar { width: 340px; min-width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
@@ -16,13 +16,19 @@
   h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .stat { background: var(--panel2); border-radius: 8px; padding: 10px; text-align: center; }
-  .stat b { font-size: 24px; display: block; }
+  .stat b { font-size: 22px; display: block; }
   .stat span { font-size: 11px; color: var(--muted); }
+  .brandrow { display: flex; align-items: center; gap: 8px; padding: 8px 6px; font-size: 14px; border-radius: 6px; cursor: pointer; user-select: none; }
+  .brandrow:hover { background: var(--panel2); }
+  .brandrow .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .brandrow .naam { flex: 1; }
+  .brandrow .n { color: var(--muted); font-size: 12px; }
+  .brandrow input { accent-color: var(--text); width: 16px; height: 16px; }
   .crow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; font-size: 13px; cursor: pointer; border-radius: 4px; }
   .crow:hover { background: var(--panel2); }
-  .crow.active { background: #3a1420; }
+  .crow.active { background: #2a2a10; }
   .crow .naam { flex: 1; }
   .crow .n { color: var(--muted); font-size: 12px; }
   .muted { color: var(--muted); font-size: 12px; }
@@ -49,13 +55,29 @@
 </head>
 <body>
 <div id="sidebar">
-  <h1>💪 Basic-Fit — Europa
-    <span class="sub">Douchen, sporten, water bijvullen onderweg</span>
+  <h1>🏋️💪 Sportscholen — Europa
+    <span class="sub">Anytime Fitness + Basic-Fit samen op één kaart</span>
   </h1>
   <section>
     <div class="statgrid">
-      <div class="stat"><b id="st-total">…</b><span>locaties</span></div>
-      <div class="stat"><b id="st-countries">…</b><span>landen</span></div>
+      <div class="stat"><b id="st-total">…</b><span>totaal zichtbaar</span></div>
+      <div class="stat"><b id="st-af">…</b><span>Anytime Fitness</span></div>
+      <div class="stat"><b id="st-bf">…</b><span>Basic-Fit</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Ketens</h2>
+    <div class="brandrow" id="row-af">
+      <input type="checkbox" id="chk-af" checked>
+      <span class="dot" style="background:var(--af)"></span>
+      <span class="naam">Anytime Fitness</span>
+      <span class="n" id="n-af">…</span>
+    </div>
+    <div class="brandrow" id="row-bf">
+      <input type="checkbox" id="chk-bf" checked>
+      <span class="dot" style="background:var(--bf)"></span>
+      <span class="naam">Basic-Fit</span>
+      <span class="n" id="n-bf">…</span>
     </div>
   </section>
   <section>
@@ -63,27 +85,26 @@
     <input type="text" id="search" placeholder="Zoek op stad of naam…">
   </section>
   <section>
-    <h2>Per land</h2>
+    <h2>Per land (zichtbare ketens)</h2>
     <div id="countrylist"></div>
   </section>
   <section>
     <div class="muted">
-      Data: officiële Basic-Fit-website (individuele clubpagina's), 14 juli 2026.
-      Basic-Fit is in Europa alleen actief in Nederland, België, Frankrijk, Spanje,
-      Duitsland en Luxemburg — geen vestigingen elders. "Coming soon"-clubs (nog niet
-      geopend) zijn niet meegenomen.
+      Data: officiële locatorsites van beide ketens, 14 juli 2026. Anytime Fitness (oranje):
+      AT/BE/DE/FR/IE/IT/LU/NL/ES/GB. Basic-Fit (roze/rood): NL/BE/FR/ES/DE/LU.
     </div>
     <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
-    <a class="backlink" href="anytimefitness.html">🏋️ Bekijk Anytime Fitness-kaart</a><br>
-    <a class="backlink" href="sportscholen.html">🏋️💪 Beide samen op één kaart</a>
+    <a class="backlink" href="anytimefitness.html">🏋️ Alleen Anytime Fitness</a><br>
+    <a class="backlink" href="basicfit.html">💪 Alleen Basic-Fit</a>
   </section>
 </div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="afdata.js"></script>
 <script src="bfdata.js"></script>
 <script>
-const map = L.map('map', { preferCanvas: true }).setView([48, 2.5], 5);
+const map = L.map('map', { preferCanvas: true }).setView([49, 3.5], 5);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
 }).addTo(map);
@@ -115,56 +136,84 @@ setTimeout(() => map.invalidateSize(), 400);
 
 function popupHtml(s) {
   const adres = [s.address, s.postcode, s.city].filter(Boolean).join(', ');
-  return `<b>${s.name}</b><br>
+  return `<b>${s.brandLabel} ${s.name}</b><br>
     <span style="color:#9aa3af">${adres || 'Adres onbekend'}${s.country ? ' · ' + s.country : ''}</span><br>
+    ${s.phone ? `<span style="color:#9aa3af">📞 ${s.phone}</span><br>` : ''}
     <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank">🧭 Google Maps</a>`;
 }
 
+// beide sets samenvoegen met een gedeeld schema; unieke id's per bron
+const ALL = [
+  ...AF_SITES.map(s => ({ ...s, brand: 'af', brandLabel: '🏋️', uid: 'af' + s.id })),
+  ...BF_SITES.map(s => ({ ...s, brand: 'bf', brandLabel: '💪', uid: 'bf' + s.id })),
+];
+
 const markers = new Map();
-for (const s of BF_SITES) {
+for (const s of ALL) {
   const m = L.circleMarker([s.lat, s.lon], {
-    radius: 5.5, weight: 1, color: '#0008', fillOpacity: 0.9, fillColor: '#e11d48'
+    radius: 5, weight: 1, color: '#0008', fillOpacity: 0.9,
+    fillColor: s.brand === 'af' ? '#f59e0b' : '#e11d48'
   }).bindPopup(() => popupHtml(s), POPUP_OPTS);
-  markers.set(s.id, m);
+  markers.set(s.uid, m);
 }
 
-let activeCountry = '';
+let showAf = true, showBf = true;
 let searchTerm = '';
+let activeCountry = '';
+
 function matches(s) {
+  if (s.brand === 'af' && !showAf) return false;
+  if (s.brand === 'bf' && !showBf) return false;
   if (activeCountry && s.country !== activeCountry) return false;
   if (searchTerm && !(s.name + ' ' + s.city).toLowerCase().includes(searchTerm)) return false;
   return true;
 }
 function refresh() {
-  for (const s of BF_SITES) {
-    const m = markers.get(s.id);
+  let visAf = 0, visBf = 0;
+  for (const s of ALL) {
+    const m = markers.get(s.uid);
     const show = matches(s);
     if (show && !map.hasLayer(m)) m.addTo(map);
     if (!show && map.hasLayer(m)) map.removeLayer(m);
+    if (show) { if (s.brand === 'af') visAf++; else visBf++; }
   }
+  document.getElementById('st-total').textContent = visAf + visBf;
+  document.getElementById('st-af').textContent = visAf;
+  document.getElementById('st-bf').textContent = visBf;
+  buildCountryList();
 }
 function buildCountryList() {
   const per = {};
-  BF_SITES.forEach(s => per[s.country] = (per[s.country] || 0) + 1);
+  ALL.forEach(s => {
+    if (s.brand === 'af' && !showAf) return;
+    if (s.brand === 'bf' && !showBf) return;
+    if (searchTerm && !(s.name + ' ' + s.city).toLowerCase().includes(searchTerm)) return;
+    per[s.country] = per[s.country] || { af: 0, bf: 0 };
+    per[s.country][s.brand]++;
+  });
   const el = document.getElementById('countrylist');
   el.innerHTML = '';
-  Object.entries(per).sort((a, b) => b[1] - a[1]).forEach(([c, n]) => {
+  Object.entries(per).sort((a, b) => (b[1].af + b[1].bf) - (a[1].af + a[1].bf)).forEach(([c, n]) => {
     const div = document.createElement('div');
     div.className = 'crow' + (activeCountry === c ? ' active' : '');
-    div.innerHTML = `<span class="naam">${c}</span><span class="n">${n}</span>`;
+    const totaal = n.af + n.bf;
+    div.innerHTML = `<span class="naam">${c}</span><span class="n">${n.af ? '🏋️' + n.af + ' ' : ''}${n.bf ? '💪' + n.bf : ''} (${totaal})</span>`;
     div.onclick = () => {
       activeCountry = activeCountry === c ? '' : c;
-      buildCountryList();
       refresh();
     };
     el.appendChild(div);
   });
 }
+
+document.getElementById('chk-af').addEventListener('change', e => { showAf = e.target.checked; refresh(); });
+document.getElementById('chk-bf').addEventListener('change', e => { showBf = e.target.checked; refresh(); });
+document.getElementById('row-af').addEventListener('click', e => { if (e.target.tagName !== 'INPUT') { document.getElementById('chk-af').click(); } });
+document.getElementById('row-bf').addEventListener('click', e => { if (e.target.tagName !== 'INPUT') { document.getElementById('chk-bf').click(); } });
 document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refresh(); });
 
-document.getElementById('st-total').textContent = BF_SITES.length;
-document.getElementById('st-countries').textContent = new Set(BF_SITES.map(s => s.country)).size;
-buildCountryList();
+document.getElementById('n-af').textContent = AF_SITES.length;
+document.getElementById('n-bf').textContent = BF_SITES.length;
 refresh();
 </script>
 </body>

@@ -191,6 +191,11 @@
   </section>
 
   <section>
+    <h2>Account</h2>
+    <div id="authbox" class="muted">Verbinden…</div>
+  </section>
+
+  <section>
     <h2>Data</h2>
     <div class="row">
       <button class="small" id="exp-csv">Exporteer CSV</button>
@@ -1030,7 +1035,11 @@ const saveRoutesStore = () => localStorage.setItem(LS_ROUTES, JSON.stringify(sav
 // routes meesyncen naar de cloud (tabel "routes"); ontbreekt die, dan blijft alles gewoon lokaal werken
 async function pushRouteCloud(r) {
   if (!supa) return;
-  try { await supa.from('routes').upsert({ name: r.name, data: r, updated_at: new Date().toISOString() }); } catch (e) {}
+  try {
+    const { error } = await supa.from('routes').upsert({ name: r.name, data: r, updated_at: new Date().toISOString() });
+    const note = document.getElementById('routesyncnote');
+    if (error && note) note.textContent = 'Route alleen lokaal bewaard — log in om te syncen.';
+  } catch (e) {}
 }
 async function deleteRouteCloud(name) {
   if (!supa) return;
@@ -1238,13 +1247,47 @@ async function pushVisit(s) {
   if (!supa) return;
   try {
     const o = overrides[s.id];
-    await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
+    const { error } = await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
+    if (error) setSyncStatus('☁️ Niet gesynct — log in om wijzigingen in de cloud op te slaan');
   } catch (e) { setSyncStatus('☁️ Sync: offline (wijziging staat lokaal klaar)'); }
+}
+
+// login: kijken mag altijd, schrijven (afvinken/routes) alleen ingelogd
+// — afgedwongen door de database-regels, niet alleen door de pagina
+function renderAuth() {
+  const el = document.getElementById('authbox');
+  if (!el || !supa) return;
+  supa.auth.getSession().then(({ data }) => {
+    const sessie = data.session;
+    if (sessie) {
+      el.innerHTML = `<div>🔓 Ingelogd als <b>${sessie.user.email}</b></div>
+        <button class="small" id="au-uit" style="margin-top:6px">Uitloggen</button>`;
+      document.getElementById('au-uit').onclick = async () => {
+        await supa.auth.signOut();
+        location.reload();
+      };
+    } else {
+      el.innerHTML = `
+        <input type="email" id="au-mail" placeholder="E-mail" autocomplete="username">
+        <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:6px">
+        <button class="primary" id="au-in" style="margin-top:8px">Inloggen</button>
+        <div class="muted" style="margin-top:6px">Kijken kan zonder login. Afvinken en routes bewaren in de cloud vereisen een login (eenmalig per apparaat).</div>`;
+      document.getElementById('au-in').onclick = async () => {
+        const { error } = await supa.auth.signInWithPassword({
+          email: document.getElementById('au-mail').value.trim(),
+          password: document.getElementById('au-pw').value,
+        });
+        if (error) alert('Inloggen mislukt: ' + error.message);
+        else location.reload();   // schone start mét sessie
+      };
+    }
+  });
 }
 
 async function initSync() {
   try {
     supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    renderAuth();
     // 1. eerst de cloud-status ophalen
     const { data, error } = await supa.from('visits').select('site_key, visited, updated_at');
     if (error) throw error;

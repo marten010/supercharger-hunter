@@ -78,6 +78,8 @@
     font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px #0008;
   }
   #reloadbtn:active { transform: rotate(180deg); }
+  /* gasten zien alleen tussenstand + kaart; de rest verschijnt na login */
+  body:not(.ingelogd) .authonly { display: none; }
   #nearbylist { font-size: 13px; }
   .nrow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
   .nrow .info { flex: 1; min-width: 0; }
@@ -112,7 +114,7 @@
     <span class="sub">Tesla Supercharger-wedstrijd · Europa</span>
   </h1>
 
-  <section>
+  <section class="authonly">
     <h2>Onderweg</h2>
     <button class="primary" id="nearby-btn" style="margin-top:0">📍 Dichtstbijzijnde onbezochte</button>
     <div id="nearbylist"></div>
@@ -133,7 +135,7 @@
     </div>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Filter</h2>
     <input type="text" id="search" placeholder="Zoek locatie of plaats…">
     <label>Status</label>
@@ -146,7 +148,7 @@
     <div id="countrylist"></div>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Dagroute-planner</h2>
     <div class="muted">Startpunt: klik op de kaart met <b>Shift</b> ingedrukt, of kies een locatie-popup → "Start hier".</div>
     <div id="startinfo"></div>
@@ -173,17 +175,17 @@
     <button class="small" id="p-clear" style="margin-top:6px">Wis route</button>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Eigen route</h2>
     <div id="manuallist"></div>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Geplande dagen</h2>
     <div id="daylist" class="muted">Nog geen route gepland.</div>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Opgeslagen routes</h2>
     <button class="small" id="saveroute">💾 Bewaar huidige route</button>
     <div id="savedlist" style="margin-top:8px"></div>
@@ -195,7 +197,7 @@
     <div id="authbox" class="muted">Verbinden…</div>
   </section>
 
-  <section>
+  <section class="authonly">
     <h2>Data</h2>
     <div class="row">
       <button class="small" id="exp-csv">Exporteer CSV</button>
@@ -280,9 +282,12 @@ function markerStyle(s) {
 }
 function popupHtml(s) {
   const v = isVisited(s);
-  return `<b>${s.name}</b><br>
+  const info = `<b>${s.name}</b><br>
     <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
-    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span>
+    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Bezocht' : '✘ Nog niet bezocht'}</span>`;
+  // gasten zien alleen info; acties verschijnen na login
+  if (!document.body.classList.contains('ingelogd')) return info;
+  return `${info}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
       <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Niet bezocht' : '✔ Bezocht'}</button>
       <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
@@ -299,6 +304,8 @@ for (const s of SITES) {
 }
 
 function siteMatchesFilter(s) {
+  // gasten (niet ingelogd) zien de volledige kaart: alle markers, geen filters
+  if (!document.body.classList.contains('ingelogd')) return true;
   if (activeCountries.size && !activeCountries.has(s.country)) return false;
   if (statusFilter === 'todo' && isVisited(s)) return false;
   if (statusFilter === 'visited' && !isVisited(s)) return false;
@@ -1259,6 +1266,7 @@ function renderAuth() {
   if (!el || !supa) return;
   supa.auth.getSession().then(({ data }) => {
     const sessie = data.session;
+    document.body.classList.toggle('ingelogd', !!sessie);
     if (sessie) {
       el.innerHTML = `<div>🔓 Ingelogd als <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Uitloggen</button>`;

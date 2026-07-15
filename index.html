@@ -132,17 +132,17 @@
       <span><span class="dot" style="background:var(--green)"></span>visited</span>
       <span><span class="dot" style="background:var(--accent)"></span>to visit</span>
     </div>
+    <label style="margin-top:8px">Show</label>
+    <select id="f-status-public">
+      <option value="todo" selected>Not yet visited</option>
+      <option value="visited">Visited</option>
+      <option value="all">All</option>
+    </select>
   </section>
 
   <section class="authonly">
     <h2>Filter</h2>
     <input type="text" id="search" placeholder="Search location or city…">
-    <label>Status</label>
-    <select id="f-status">
-      <option value="all">All</option>
-      <option value="todo" selected>Not yet visited</option>
-      <option value="visited">Visited</option>
-    </select>
     <label>Countries (click to filter, progress per country)</label>
     <div id="countrylist"></div>
   </section>
@@ -312,11 +312,12 @@ for (const s of SITES) {
 }
 
 function siteMatchesFilter(s) {
-  // gasten (niet ingelogd) zien de volledige kaart: alle markers, geen filters
-  if (!document.body.classList.contains('ingelogd')) return true;
-  if (activeCountries.size && !activeCountries.has(s.country)) return false;
+  // status-schakelaar werkt voor iedereen; land/zoek-filters hebben geen UI voor
+  // gasten (blijven dus altijd leeg/inert), dus die regels raken gasten niet
   if (statusFilter === 'todo' && isVisited(s)) return false;
   if (statusFilter === 'visited' && !isVisited(s)) return false;
+  if (!document.body.classList.contains('ingelogd')) return true;
+  if (activeCountries.size && !activeCountries.has(s.country)) return false;
   if (searchTerm && !(s.name + ' ' + s.city).toLowerCase().includes(searchTerm)) return false;
   return true;
 }
@@ -454,7 +455,7 @@ function buildCountryList() {
 }
 
 document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refreshMarkers(); });
-document.getElementById('f-status').addEventListener('change', e => { statusFilter = e.target.value; refreshMarkers(); });
+document.getElementById('f-status-public').addEventListener('change', e => { statusFilter = e.target.value; refreshMarkers(); });
 
 // ---------- routeplanner ----------
 const R = 6371;
@@ -1400,18 +1401,28 @@ document.getElementById('nearby-btn').onclick = () => {
   if (!navigator.geolocation) { el.innerHTML = '<div class="muted">No GPS available in this browser.</div>'; return; }
   navigator.geolocation.getCurrentPosition(pos => {
     lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    map.setView([lastPos.lat, lastPos.lng], 10);
-    renderNearby();
+    renderNearby();   // berekent de lijst en past de kaartweergave aan (zie hieronder)
   }, err => {
     el.innerHTML = `<div class="muted">GPS failed (${err.message}). Note: location only works via https or localhost.</div>`;
   }, { enableHighAccuracy: true, timeout: 10000 });
 };
+let youAreHereMarker = null;
 function renderNearby() {
   if (!lastPos) return;
   const el = document.getElementById('nearbylist');
   const nearest = SITES.filter(s => !isVisited(s))
     .map(s => ({ s, d: hav(lastPos, s) }))
     .sort((a, b) => a.d - b.d).slice(0, 12);
+  // kaart zo instellen dat jouw locatie én de dichtstbijzijnde onbezochte beide zichtbaar zijn
+  if (youAreHereMarker) map.removeLayer(youAreHereMarker);
+  youAreHereMarker = L.circleMarker([lastPos.lat, lastPos.lng], {
+    radius: 8, color: '#fff', weight: 2, fillColor: '#3b82f6', fillOpacity: 1
+  }).bindTooltip('You are here').addTo(map);
+  if (nearest.length) {
+    map.fitBounds([[lastPos.lat, lastPos.lng], [nearest[0].s.lat, nearest[0].s.lng]], { padding: [50, 50], maxZoom: 13 });
+  } else {
+    map.setView([lastPos.lat, lastPos.lng], 12);
+  }
   el.innerHTML = '';
   for (const { s, d } of nearest) {
     const row = document.createElement('div');

@@ -1552,6 +1552,12 @@ function renderManual() {
   const toDayPlan = () => {
     const n = manualRoute.length;
     planRoute(true, manualRoute.map(id => SITES[id]));
+    // de groene stippellijn/nummers van de eigen-route-weergave verwijderen: de
+    // dagplanning (met eigen kleuren) is nu de weergave die telt. De selectie
+    // zelf (manualRoute) blijft intact, zodat je na het ophogen van dagen/uren
+    // gewoon opnieuw op "To day plan" kunt klikken zonder alles opnieuw te kiezen.
+    manualLayers.forEach(l => map.removeLayer(l));
+    manualLayers = [];
     const gepland = plannedDays.reduce((a, d) => a + d.stops.length, 0);
     if (gepland < n) alert(`Note: ${n - gepland} of the ${n} stops don't fit within the time budget (days × hours/day). Increase the number of days or hours and click "To day plan" again.`);
   };

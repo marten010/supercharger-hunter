@@ -134,9 +134,9 @@
     </div>
     <label style="margin-top:8px">Show</label>
     <select id="f-status-public">
-      <option value="todo" selected>Not yet visited</option>
+      <option value="todo">Not yet visited</option>
       <option value="visited">Visited</option>
-      <option value="all">All</option>
+      <option value="all" selected>All</option>
     </select>
   </section>
 
@@ -240,7 +240,7 @@ const saveOverrides = () => localStorage.setItem(LS_KEY, JSON.stringify(override
 
 let activeCountries = new Set();   // leeg = alle
 let searchTerm = '';
-let statusFilter = 'todo';
+let statusFilter = 'all';
 let startPoint = null;             // {lat, lng, label}
 let routeLayers = [];
 let plannedDays = [];

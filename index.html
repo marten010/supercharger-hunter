@@ -247,9 +247,33 @@ let plannedDays = [];
 
 // ---------- kaart ----------
 const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+const TILE_URLS = {
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+};
+let mapStyle = localStorage.getItem('sc_map_style') || 'dark';
+let tileLayer = L.tileLayer(TILE_URLS[mapStyle], {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
 }).addTo(map);
+
+const MapStyleControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: () => {
+    const btn = L.DomUtil.create('button', '');
+    btn.id = 'mapstylebtn';
+    btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
+    btn.title = 'Wissel kaartstijl (licht/donker)';
+    btn.onclick = () => {
+      mapStyle = mapStyle === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('sc_map_style', mapStyle);
+      map.removeLayer(tileLayer);
+      tileLayer = L.tileLayer(TILE_URLS[mapStyle], { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19 }).addTo(map);
+      btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
+    };
+    return btn;
+  }
+});
+map.addControl(new MapStyleControl());
 
 // ververs-knop als kaart-knop rechtsonder (blokkeert zo geen popup-kruisjes)
 const ReloadControl = L.Control.extend({

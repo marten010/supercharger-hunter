@@ -33,6 +33,19 @@
   .crow .n { color: var(--muted); font-size: 12px; }
   .muted { color: var(--muted); font-size: 12px; }
   input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; }
+  button.primary {
+    width: 100%; background: var(--af); color: #14171c; border: 0; border-radius: 6px;
+    padding: 9px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.1); }
+  button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  button.small:hover { background: #303845; }
+  .nrow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  .nrow .info { flex: 1; min-width: 0; }
+  .nrow .info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nrow .info span { font-size: 11px; color: var(--muted); }
+  .nrow button { flex-shrink: 0; }
+  #nearbylist { margin-top: 8px; font-size: 13px; }
   a.backlink { color: var(--muted); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; }
   a.backlink:hover { color: var(--text); }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
@@ -47,9 +60,17 @@
   }
   @media (max-width: 768px) {
     body { flex-direction: column; }
-    #map { order: 1; flex: none; height: 40vh; min-height: 220px; }
+    #map { order: 1; flex: none; height: 50vh; min-height: 220px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
     h1 { display: none; }
+    section, #countrylist, .nrow { font-size: 15px; }
+    .crow { font-size: 15px; padding: 7px 4px; }
+    .nrow .info b { font-size: 15px; }
+    .nrow .info span, .crow .n, .muted { font-size: 13px; }
+    button.small, button.primary { padding: 11px 13px; font-size: 16px; }
+    input[type=text] { padding: 11px; font-size: 16px; }
+    .stat b { font-size: 24px; }
+    .stat span { font-size: 12px; }
   }
 </style>
 </head>
@@ -64,6 +85,10 @@
       <div class="stat"><b id="st-af">…</b><span>Anytime Fitness</span></div>
       <div class="stat"><b id="st-bf">…</b><span>Basic-Fit</span></div>
     </div>
+  </section>
+  <section>
+    <button class="primary" id="nearby-btn">📍 Dichtstbijzijnde sportschool</button>
+    <div id="nearbylist"></div>
   </section>
   <section>
     <h2>Ketens</h2>
@@ -215,6 +240,52 @@ document.getElementById('search').addEventListener('input', e => { searchTerm = 
 document.getElementById('n-af').textContent = AF_SITES.length;
 document.getElementById('n-bf').textContent = BF_SITES.length;
 refresh();
+
+// ---------- dichtstbijzijnde sportschool (op basis van GPS-locatie) ----------
+const R = 6371;
+function hav(a, b) {
+  const dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+let lastPos = null, youAreHereMarker = null;
+document.getElementById('nearby-btn').onclick = () => {
+  const el = document.getElementById('nearbylist');
+  el.innerHTML = '<div class="muted" style="padding:6px 0">GPS-locatie ophalen…</div>';
+  if (!navigator.geolocation) { el.innerHTML = '<div class="muted">Geen GPS beschikbaar in deze browser.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    renderNearby();
+  }, err => {
+    el.innerHTML = `<div class="muted">GPS mislukt (${err.message}). Let op: locatie werkt alleen via https of localhost.</div>`;
+  }, { enableHighAccuracy: true, timeout: 10000 });
+};
+function renderNearby() {
+  if (!lastPos) return;
+  const el = document.getElementById('nearbylist');
+  // alleen zoeken binnen de momenteel aangevinkte ketens (én evt. actief landfilter/zoekterm)
+  const pool = ALL.filter(matches).map(s => ({ s, d: hav(lastPos, { lat: s.lat, lng: s.lon }) })).sort((a, b) => a.d - b.d);
+  if (!pool.length) { el.innerHTML = '<div class="muted">Geen sportschool binnen het huidige filter.</div>'; return; }
+  const nearest = pool.slice(0, 12);
+
+  // kaart zo instellen dat jouw locatie én de dichtstbijzijnde beide zichtbaar zijn
+  if (youAreHereMarker) map.removeLayer(youAreHereMarker);
+  youAreHereMarker = L.circleMarker([lastPos.lat, lastPos.lng], {
+    radius: 8, color: '#fff', weight: 2, fillColor: '#3b82f6', fillOpacity: 1
+  }).bindTooltip('You are here').addTo(map);
+  map.fitBounds([[lastPos.lat, lastPos.lng], [nearest[0].s.lat, nearest[0].s.lon]], { padding: [50, 50], maxZoom: 13 });
+
+  el.innerHTML = '';
+  for (const { s, d } of nearest) {
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `
+      <div class="info"><b>${s.brandLabel} ${s.name}</b><span>${d.toFixed(1)} km hemelsbreed · ${s.city || s.country || ''}</span></div>
+      <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving')">🧭</button>`;
+    row.querySelector('.info').onclick = () => markers.get(s.uid).openPopup();
+    el.appendChild(row);
+  }
+}
 </script>
 </body>
 </html>

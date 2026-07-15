@@ -301,27 +301,29 @@ const markers = new Map();
 // (een eigen handmatige berekening bleek op echte mobiele toestellen onbetrouwbaar
 // door de meebewegende adresbalk van mobiel Safari, die de zichtbare hoogte
 // laat verschillen van wat JS op dat moment meet)
-const POPUP_OPTS = { autoPan: true, autoPanPadding: L.point(16, 16), maxWidth: 280 };
-// vangnet bovenop autoPan: Leaflet meet de popuphoogte soms vóórdat de browser 'm
-// echt heeft opgemaakt (net ingevoegde DOM, nog geen layout-pass), waardoor te
-// weinig wordt gepand. Na de eerstvolgende paint opnieuw meten en zo nodig corrigeren.
-function verifyPopupInView(popup) {
+const POPUP_OPTS = { autoPan: false, maxWidth: 280 };
+// popup altijd gecentreerd in de kaart, ongeacht waar de marker staat: na het
+// openen de werkelijke popuphoogte meten en de kaart zo verschuiven dat het
+// MIDDEN van de popup precies op het midden van de kaart valt.
+function centerPopup(popup) {
   const el = popup.getElement();
   const mapEl = document.getElementById('map');
   if (!el || !mapEl || !el.isConnected) return;
-  const pr = el.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
-  let dx = 0, dy = 0;
-  if (pr.top < mr.top) dy = pr.top - mr.top - 10;
-  else if (pr.bottom > mr.bottom) dy = pr.bottom - mr.bottom + 10;
-  if (pr.left < mr.left) dx = pr.left - mr.left - 10;
-  else if (pr.right > mr.right) dx = pr.right - mr.right + 10;
-  if (dx || dy) map.panBy([dx, dy], { animate: false });
+  const popupHeight = el.offsetHeight || 250;
+  const tipHeight = 17;   // hoogte van het driehoekje dat naar de marker wijst
+  const mapSize = map.getSize();
+  const anker = map.latLngToContainerPoint(popup.getLatLng());
+  const doelX = mapSize.x / 2;
+  const doelY = mapSize.y / 2 + tipHeight + popupHeight / 2;
+  const dx = anker.x - doelX, dy = anker.y - doelY;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) map.panBy([dx, dy], { animate: false });
 }
 // setTimeout i.p.v. requestAnimationFrame: rAF wordt door browsers gepauzeerd
-// zodra het tabblad niet op de voorgrond is, setTimeout blijft altijd werken
+// zodra het tabblad niet op de voorgrond is, setTimeout blijft altijd werken.
+// Twee pogingen: direct (meestal al genoeg) en nogmaals na 150ms als vangnet.
 map.on('popupopen', e => {
-  setTimeout(() => verifyPopupInView(e.popup), 30);
-  setTimeout(() => verifyPopupInView(e.popup), 200);
+  centerPopup(e.popup);
+  setTimeout(() => centerPopup(e.popup), 150);
 });
 window.addEventListener('resize', () => map.invalidateSize());
 setTimeout(() => map.invalidateSize(), 400);   // maat corrigeren na eerste layout (iPhone)

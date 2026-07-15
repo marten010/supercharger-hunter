@@ -1498,7 +1498,7 @@ function renderManual() {
   const el = document.getElementById('manuallist');
   manualLayers.forEach(l => map.removeLayer(l)); manualLayers = [];
   if (!manualRoute.length) {
-    el.innerHTML = '<span class="muted">Click markers and choose "➕ Route" to build your own order. The route starts at your starting point.</span>';
+    el.innerHTML = '<span class="muted">Step 1: click markers and choose "➕ Route" to add stops here. Step 2: once you\'re done, press "📅 To day plan" below to turn them into an actual route.</span>';
     return;
   }
   // stippellijn + nummers op de kaart
@@ -1517,6 +1517,13 @@ function renderManual() {
   for (const id of manualRoute) { km += hav(prev, SITES[id]) * factor; prev = SITES[id]; }
   const min = km / speed * 60 + manualRoute.length * chargeMin;
   el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">${manualRoute.length} stops · ${Math.round(km)} km · ${(min/60).toFixed(1)} h</b></div>`;
+  const planBtnTop = document.createElement('button');
+  planBtnTop.className = 'primary';
+  planBtnTop.style.marginTop = '0';
+  planBtnTop.style.marginBottom = '8px';
+  planBtnTop.textContent = '📅 To day plan — turn this into a route';
+  planBtnTop.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
+  el.appendChild(planBtnTop);
   manualRoute.forEach((id, j) => {
     const s = SITES[id];
     const row = document.createElement('div');
@@ -1542,12 +1549,14 @@ function renderManual() {
   planBtn.textContent = '📅 To day plan';
   planBtn.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
   el.appendChild(planBtn);
-  planBtn.onclick = () => {
+  const toDayPlan = () => {
     const n = manualRoute.length;
     planRoute(true, manualRoute.map(id => SITES[id]));
     const gepland = plannedDays.reduce((a, d) => a + d.stops.length, 0);
     if (gepland < n) alert(`Note: ${n - gepland} of the ${n} stops don't fit within the time budget (days × hours/day). Increase the number of days or hours and click "To day plan" again.`);
   };
+  planBtn.onclick = toDayPlan;
+  planBtnTop.onclick = toDayPlan;
   document.getElementById('mr-opt').onclick = () => {
     const stops = manualRoute.map(id => SITES[id]);
     twoOpt(stops, startPoint, 1);

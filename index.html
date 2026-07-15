@@ -257,7 +257,7 @@ let tileLayer = L.tileLayer(TILE_URLS[mapStyle], {
 }).addTo(map);
 
 const MapStyleControl = L.Control.extend({
-  options: { position: 'bottomright' },
+  options: { position: 'bottomleft' },
   onAdd: () => {
     const btn = L.DomUtil.create('button', '');
     btn.id = 'mapstylebtn';
@@ -295,13 +295,32 @@ const markers = new Map();
 const POPUP_OPTS = { autoPan: false, maxWidth: 280 };
 // popup altijd volledig in beeld: na het renderen de werkelijke popuphoogte
 // meten en de kaart in één stap (zonder animatie) exact goed zetten
-map.on('popupopen', e => {
+function positionPopup(e) {
+  map.invalidateSize();   // altijd verse maat (mobiel Safari's adresbalk kan 'm laten verschuiven)
   const el = e.popup.getElement();
   const h = (el && el.offsetHeight) || 250;
   const size = map.getSize();
   const anker = map.latLngToContainerPoint(e.popup.getLatLng());
   const doelY = Math.min(size.y - 20, h + 30);   // anker net onder de popup
   map.panBy([anker.x - size.x / 2, anker.y - doelY], { animate: false });
+}
+map.on('popupopen', e => {
+  positionPopup(e);
+  // controle op de werkelijk gerenderde positie: soms wijkt de berekende
+  // kaartmaat af van wat echt zichtbaar is (mobiele browser-UI); zo nodig
+  // nog eenmaal corrigeren op basis van de echte popup-rechthoek
+  requestAnimationFrame(() => {
+    const el = e.popup.getElement();
+    const mapEl = document.getElementById('map');
+    if (!el || !mapEl) return;
+    const pr = el.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
+    let dx = 0, dy = 0;
+    if (pr.top < mr.top) dy = pr.top - mr.top - 8;
+    else if (pr.bottom > mr.bottom) dy = pr.bottom - mr.bottom + 8;
+    if (pr.left < mr.left) dx = pr.left - mr.left - 8;
+    else if (pr.right > mr.right) dx = pr.right - mr.right + 8;
+    if (dx || dy) map.panBy([dx, dy], { animate: false });
+  });
 });
 window.addEventListener('resize', () => map.invalidateSize());
 setTimeout(() => map.invalidateSize(), 400);   // maat corrigeren na eerste layout (iPhone)

@@ -259,9 +259,11 @@ let plannedDays = [];
 const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
 const TILE_URLS = {
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  // Voyager: gedetailleerde stijl met duidelijk onderscheid tussen bebouwing,
+  // groen/natuur en wegtype (snelwegen oranje) — i.p.v. de vlakke light_all
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 };
-let mapStyle = localStorage.getItem('sc_map_style') || 'dark';
+let mapStyle = localStorage.getItem('sc_map_style') || 'light';
 let tileLayer = L.tileLayer(TILE_URLS[mapStyle], {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
 }).addTo(map);
@@ -272,7 +274,7 @@ const MapStyleControl = L.Control.extend({
     const btn = L.DomUtil.create('button', '');
     btn.id = 'mapstylebtn';
     btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
-    btn.title = 'Wissel kaartstijl (licht/donker)';
+    btn.title = 'Wissel kaartstijl (gedetailleerd/donker)';
     btn.onclick = () => {
       mapStyle = mapStyle === 'dark' ? 'light' : 'dark';
       localStorage.setItem('sc_map_style', mapStyle);

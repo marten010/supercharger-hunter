@@ -221,12 +221,7 @@
   </section>
 
   <section class="authonly">
-    <h2>Gym/shower stops en route</h2>
-    <a href="sportscholen.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">🏋️💪 Both combined on one map</a>
-    <div class="row" style="margin-bottom:6px">
-      <a class="small" href="anytimefitness.html" style="flex:1;text-align:center;text-decoration:none;display:block;padding:6px 0;background:var(--panel2);border-radius:6px;color:var(--text)">🏋️ Anytime Fitness</a>
-      <a class="small" href="basicfit.html" style="flex:1;text-align:center;text-decoration:none;display:block;padding:6px 0;background:var(--panel2);border-radius:6px;color:var(--text)">💪 Basic-Fit</a>
-    </div>
+    <h2>Shower stops en route</h2>
     <a href="douches.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text)">🚿 Highway showers (Sanifair e.a.) — goedkoper dan abonnement</a>
   </section>
 </div>
@@ -989,9 +984,11 @@ function renderDays(chargeMin, speed) {
   knoppen.style.marginBottom = '8px';
   knoppen.innerHTML = `
     <button class="small" id="rd-opt" title="Same stops, only the shortest order — adds nothing">✨ Optimize order</button>
+    <button class="small" id="rd-rev" title="Same stops per day, visited in reverse order — handy when roadworks cause congestion in one direction only">↔️ Reverse order</button>
     <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">🔁 Fill with new stops</button>`;
   el.prepend(knoppen);
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
+  knoppen.querySelector('#rd-rev').onclick = reverseRoute;
   knoppen.querySelector('#rd-fill').onclick = () => planRoute(true);
   // in de auto: één knop naar de eerstvolgende onbezochte stop van de route
   const next = plannedDays.flatMap(d => d.stops).find(s => !isVisited(s));
@@ -1067,6 +1064,20 @@ function optimizeCurrentRoute() {
   const pool = plannedDays.flatMap(d => d.stops);
   if (!pool.length) return;
   planRoute(true, pool);
+}
+
+// visiting order within each day reversed — start/end points per day stay
+// fixed, only the order of the stops in between flips. Handy when roadworks
+// cause congestion in one direction only: driving the same stops the other
+// way round can dodge it.
+function reverseRoute() {
+  if (!plannedDays.length) return;
+  plannedDays.forEach(day => {
+    day.stops.reverse();
+    recomputeDay(day);
+  });
+  drawRoute();
+  renderDays();
 }
 
 // stop handmatig eerder/later in de route zetten; over een dagrens heen

@@ -35,6 +35,18 @@
   .leaflet-popup-content b { font-size: 14px; }
   .leaflet-popup-content a { color: #3b82f6; }
   .badge247 { display: inline-block; background: #0c3a4a; color: #7dd3fc; border-radius: 4px; padding: 1px 6px; font-size: 11px; margin-left: 4px; }
+  button.primary {
+    width: 100%; background: var(--accent); color: #14171c; border: 0; border-radius: 6px;
+    padding: 9px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.1); }
+  button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  .nrow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  .nrow .info { flex: 1; min-width: 0; cursor: pointer; }
+  .nrow .info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nrow .info span { font-size: 11px; color: var(--muted); }
+  .nrow button { flex-shrink: 0; }
+  #nearbylist { margin-top: 8px; font-size: 13px; }
   #reloadbtn {
     position: fixed; top: 10px; right: 10px; z-index: 1200;
     width: 40px; height: 40px; border-radius: 50%;
@@ -59,6 +71,10 @@
       <div class="stat"><b id="st-total">…</b><span>locaties</span></div>
       <div class="stat"><b id="st-countries">…</b><span>landen</span></div>
     </div>
+  </section>
+  <section>
+    <button class="primary" id="nearby-btn">📍 Dichtstbijzijnde douche</button>
+    <div id="nearbylist"></div>
   </section>
   <section>
     <h2>Zoeken</h2>
@@ -93,8 +109,7 @@
       locatie, dus even bellen/checken wordt aangeraden. Controleer prijs/openingstijden altijd via
       de website- of Google Maps-link, want niet elke locatie is gratis.
     </div>
-    <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
-    <a class="backlink" href="sportscholen.html">🏋️💪 Sportschool-alternatief bekijken</a>
+    <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a>
   </section>
 </div>
 <div id="map"></div>
@@ -250,6 +265,58 @@ document.getElementById('st-pools').textContent = POOL_SITES.length + ' locaties
 document.getElementById('st-camping').textContent = CAMPING_SITES.length + ' locaties';
 buildCountryList();
 refresh();
+
+// ---------- dichtstbijzijnde douche/zwembad/camping (op basis van GPS-locatie) ----------
+const R = 6371;
+function hav(a, b) {
+  const dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lon - a.lon) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+let lastPos = null, youAreHereMarker = null;
+document.getElementById('nearby-btn').onclick = () => {
+  const el = document.getElementById('nearbylist');
+  el.innerHTML = '<div class="muted" style="padding:6px 0">GPS-locatie ophalen…</div>';
+  if (!navigator.geolocation) { el.innerHTML = '<div class="muted">Geen GPS beschikbaar in deze browser.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    renderNearby();
+  }, err => {
+    el.innerHTML = `<div class="muted">GPS mislukt (${err.message}). Let op: locatie werkt alleen via https of localhost.</div>`;
+  }, { enableHighAccuracy: true, timeout: 10000 });
+};
+function renderNearby() {
+  if (!lastPos) return;
+  const el = document.getElementById('nearbylist');
+  // zoekt binnen de momenteel actieve lagen/filters (douches altijd, zwembaden/campings alleen als aangevinkt)
+  let pool = SHOWER_SITES.filter(matches).map(s => ({ type: 'douche', icon: '🚿', s }));
+  if (showPools) pool = pool.concat(POOL_SITES.filter(poolMatches).map(s => ({ type: 'zwembad', icon: '🏊', s })));
+  if (showCamping) pool = pool.concat(CAMPING_SITES.filter(campingMatches).map(s => ({ type: 'camping', icon: '🏕️', s })));
+  pool = pool.map(x => ({ ...x, d: hav(lastPos, x.s) })).sort((a, b) => a.d - b.d);
+  if (!pool.length) { el.innerHTML = '<div class="muted">Niets binnen het huidige filter.</div>'; return; }
+  const nearest = pool.slice(0, 12);
+
+  if (youAreHereMarker) map.removeLayer(youAreHereMarker);
+  youAreHereMarker = L.circleMarker([lastPos.lat, lastPos.lon], {
+    radius: 8, color: '#fff', weight: 2, fillColor: '#3b82f6', fillOpacity: 1
+  }).bindTooltip('You are here').addTo(map);
+  map.fitBounds([[lastPos.lat, lastPos.lon], [nearest[0].s.lat, nearest[0].s.lon]], { padding: [50, 50], maxZoom: 13 });
+
+  el.innerHTML = '';
+  for (const { type, icon, s, d } of nearest) {
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.innerHTML = `
+      <div class="info"><b>${icon} ${s.name}</b><span>${d.toFixed(1)} km hemelsbreed · ${s.city || s.country || ''}</span></div>
+      <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving')">🧭</button>`;
+    row.querySelector('.info').onclick = () => {
+      const mMap = type === 'douche' ? markers : type === 'zwembad' ? poolMarkers : campingMarkers;
+      if (!mMap.get(s.id).getElement()) { if (!map.hasLayer(mMap.get(s.id))) mMap.get(s.id).addTo(map); }
+      mMap.get(s.id).openPopup();
+    };
+    el.appendChild(row);
+  }
+}
 </script>
 </body>
 </html>

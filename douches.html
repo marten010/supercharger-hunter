@@ -63,19 +63,28 @@
   <section>
     <h2>Zoeken</h2>
     <input type="text" id="search" placeholder="Zoek op stad, naam of merk…">
-    <label class="chk"><input type="checkbox" id="only247"> Alleen 24/7 open</label>
+    <label class="chk"><input type="checkbox" id="only247"> Alleen 24/7 open (douches)</label>
   </section>
   <section>
-    <h2>Per land</h2>
+    <label class="chk"><input type="checkbox" id="showpools"> 🏊 Zwembaden tonen (<span id="st-pools">…</span>)</label>
+    <div class="muted">Openbare zwembaden — meestal een paar euro dagkaartje incl. douche, geen aparte "alleen douchen"-tarief bekend. Check lokaal.</div>
+  </section>
+  <section>
+    <h2>Per land (douches)</h2>
     <div id="countrylist"></div>
   </section>
   <section>
     <div class="muted">
-      Duitsland: Sanifair-locaties met vrachtwagenchauffeursdouche (bron: sanifair.com, juli 2026).
-      Overige landen: OpenStreetMap-data voor tank-/wegrestaurants met douche (shower=yes/hgv),
-      juli 2026 — dekking hangt af van hoe goed lokale locaties in OSM zijn getagd; met name
-      België en Zwitserland zijn hier dun gedekt. Controleer prijs/openingstijden altijd via de
-      website- of Google Maps-link, want niet elke locatie is gratis.
+      Duitsland: Sanifair-locaties met vrachtwagenchauffeursdouche (bron: sanifair.com, juli 2026) +
+      1 extra onafhankelijke truckparking (Bitburg). Overige landen: OpenStreetMap-data voor
+      tank-/wegrestaurants met douche (shower=yes/hgv), juli 2026 — dekking hangt af van hoe goed
+      lokale locaties in OSM zijn getagd; België, Nederland, Zwitserland en Luxemburg zijn hier dun
+      gedekt (Luxemburg: 0 treffers). Een bredere OSM-zoekopdracht zonder de tank-/wegrestaurantfilter
+      leverde voor deze landen vrijwel alleen campings op, geen extra echte tank-/wegdouches — de
+      dekking is dus een kwestie van tagging, niet van een te strenge filter. Zwembaden-laag: publieke
+      binnenbaden/zwemhallen via OSM (amenity=public_bath / sports_centre+swimming), geen prijsdata
+      beschikbaar in de bron. Controleer prijs/openingstijden altijd via de website- of Google
+      Maps-link, want niet elke locatie is gratis.
     </div>
     <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
     <a class="backlink" href="sportscholen.html">🏋️💪 Sportschool-alternatief bekijken</a>
@@ -85,6 +94,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="showerdata.js"></script>
+<script src="poolsdata.js"></script>
 <script>
 const map = L.map('map', { preferCanvas: true }).setView([49, 6], 5);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -134,19 +144,45 @@ for (const s of SHOWER_SITES) {
   markers.set(s.id, m);
 }
 
+function poolPopupHtml(p) {
+  return `<b>🏊 ${p.name}</b><br>
+    <span style="color:#9aa3af">${p.city ? p.city + ' · ' : ''}${p.country}</span><br>
+    <span style="color:#9aa3af">Dagkaartje (incl. douche), prijs niet bekend — check lokaal</span><br>
+    <a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank">🧭 Google Maps</a>`;
+}
+const poolMarkers = new Map();
+for (const p of POOL_SITES) {
+  const m = L.circleMarker([p.lat, p.lon], {
+    radius: 4, weight: 1, color: '#0006', fillOpacity: 0.85, fillColor: '#10b981'
+  }).bindPopup(() => poolPopupHtml(p), POPUP_OPTS);
+  poolMarkers.set(p.id, m);
+}
+
 let activeCountry = '';
 let searchTerm = '';
 let only247 = false;
+let showPools = false;
 function matches(s) {
   if (activeCountry && s.country !== activeCountry) return false;
   if (only247 && !s.hours24) return false;
   if (searchTerm && !(s.name + ' ' + s.city + ' ' + s.brand).toLowerCase().includes(searchTerm)) return false;
   return true;
 }
+function poolMatches(p) {
+  if (activeCountry && p.country !== activeCountry) return false;
+  if (searchTerm && !(p.name + ' ' + p.city).toLowerCase().includes(searchTerm)) return false;
+  return true;
+}
 function refresh() {
   for (const s of SHOWER_SITES) {
     const m = markers.get(s.id);
     const show = matches(s);
+    if (show && !map.hasLayer(m)) m.addTo(map);
+    if (!show && map.hasLayer(m)) map.removeLayer(m);
+  }
+  for (const p of POOL_SITES) {
+    const m = poolMarkers.get(p.id);
+    const show = showPools && poolMatches(p);
     if (show && !map.hasLayer(m)) m.addTo(map);
     if (!show && map.hasLayer(m)) map.removeLayer(m);
   }
@@ -170,9 +206,11 @@ function buildCountryList() {
 }
 document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refresh(); });
 document.getElementById('only247').addEventListener('change', e => { only247 = e.target.checked; refresh(); });
+document.getElementById('showpools').addEventListener('change', e => { showPools = e.target.checked; refresh(); });
 
 document.getElementById('st-total').textContent = SHOWER_SITES.length;
 document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.map(s => s.country)).size;
+document.getElementById('st-pools').textContent = POOL_SITES.length + ' locaties';
 buildCountryList();
 refresh();
 </script>

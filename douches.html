@@ -68,6 +68,8 @@
   <section>
     <label class="chk"><input type="checkbox" id="showpools"> 🏊 Zwembaden tonen (<span id="st-pools">…</span>)</label>
     <div class="muted">Openbare zwembaden — meestal een paar euro dagkaartje incl. douche, geen aparte "alleen douchen"-tarief bekend. Check lokaal.</div>
+    <label class="chk"><input type="checkbox" id="showcamping"> 🏕️ Campings tonen (<span id="st-camping">…</span>)</label>
+    <div class="muted">Campings met douche — veel campings laten niet-gasten tegen kleine vergoeding douchen, maar dit is niet gegarandeerd bij elke camping. Bel/check vooraf.</div>
   </section>
   <section>
     <h2>Per land (douches)</h2>
@@ -85,8 +87,11 @@
       België, Zwitserland en Luxemburg zijn hier nog dun gedekt (Luxemburg: 0 treffers) en hebben
       mogelijk ook zo'n aparte beveiligde-truckparking-databron die nog niet is meegenomen. Zwembaden-
       laag: publieke binnenbaden/zwemhallen via OSM (amenity=public_bath / sports_centre+swimming),
-      geen prijsdata beschikbaar in de bron. Controleer prijs/openingstijden altijd via de website-
-      of Google Maps-link, want niet elke locatie is gratis.
+      geen prijsdata beschikbaar in de bron. Campings-laag (7530 locaties, alle 9 landen): dit is
+      verreweg de grootste categorie douche-locaties in OSM — veruit de meeste campings staan
+      niet-gasten toe om tegen een kleine vergoeding te douchen, maar dat is geen harde garantie per
+      locatie, dus even bellen/checken wordt aangeraden. Controleer prijs/openingstijden altijd via
+      de website- of Google Maps-link, want niet elke locatie is gratis.
     </div>
     <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
     <a class="backlink" href="sportscholen.html">🏋️💪 Sportschool-alternatief bekijken</a>
@@ -97,6 +102,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="showerdata.js"></script>
 <script src="poolsdata.js"></script>
+<script src="campingdata.js"></script>
 <script>
 const map = L.map('map', { preferCanvas: true }).setView([49, 6], 5);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -160,10 +166,26 @@ for (const p of POOL_SITES) {
   poolMarkers.set(p.id, m);
 }
 
+function campingPopupHtml(c) {
+  return `<b>🏕️ ${c.name}</b><br>
+    <span style="color:#9aa3af">${c.city ? c.city + ' · ' : ''}${c.country}</span><br>
+    <span style="color:#9aa3af">Camping met douche — niet-gasten mogelijk tegen vergoeding, check vooraf</span><br>
+    <a href="https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lon}" target="_blank">🧭 Google Maps</a>
+    ${c.website ? ` · <a href="${c.website}" target="_blank">Website</a>` : ''}`;
+}
+const campingMarkers = new Map();
+for (const c of CAMPING_SITES) {
+  const m = L.circleMarker([c.lat, c.lon], {
+    radius: 4, weight: 1, color: '#0006', fillOpacity: 0.85, fillColor: '#d97706'
+  }).bindPopup(() => campingPopupHtml(c), POPUP_OPTS);
+  campingMarkers.set(c.id, m);
+}
+
 let activeCountry = '';
 let searchTerm = '';
 let only247 = false;
 let showPools = false;
+let showCamping = false;
 function matches(s) {
   if (activeCountry && s.country !== activeCountry) return false;
   if (only247 && !s.hours24) return false;
@@ -173,6 +195,11 @@ function matches(s) {
 function poolMatches(p) {
   if (activeCountry && p.country !== activeCountry) return false;
   if (searchTerm && !(p.name + ' ' + p.city).toLowerCase().includes(searchTerm)) return false;
+  return true;
+}
+function campingMatches(c) {
+  if (activeCountry && c.country !== activeCountry) return false;
+  if (searchTerm && !(c.name + ' ' + c.city).toLowerCase().includes(searchTerm)) return false;
   return true;
 }
 function refresh() {
@@ -185,6 +212,12 @@ function refresh() {
   for (const p of POOL_SITES) {
     const m = poolMarkers.get(p.id);
     const show = showPools && poolMatches(p);
+    if (show && !map.hasLayer(m)) m.addTo(map);
+    if (!show && map.hasLayer(m)) map.removeLayer(m);
+  }
+  for (const c of CAMPING_SITES) {
+    const m = campingMarkers.get(c.id);
+    const show = showCamping && campingMatches(c);
     if (show && !map.hasLayer(m)) m.addTo(map);
     if (!show && map.hasLayer(m)) map.removeLayer(m);
   }
@@ -209,10 +242,12 @@ function buildCountryList() {
 document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refresh(); });
 document.getElementById('only247').addEventListener('change', e => { only247 = e.target.checked; refresh(); });
 document.getElementById('showpools').addEventListener('change', e => { showPools = e.target.checked; refresh(); });
+document.getElementById('showcamping').addEventListener('change', e => { showCamping = e.target.checked; refresh(); });
 
 document.getElementById('st-total').textContent = SHOWER_SITES.length;
 document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.map(s => s.country)).size;
 document.getElementById('st-pools').textContent = POOL_SITES.length + ' locaties';
+document.getElementById('st-camping').textContent = CAMPING_SITES.length + ' locaties';
 buildCountryList();
 refresh();
 </script>

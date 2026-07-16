@@ -1072,8 +1072,14 @@ function optimizeCurrentRoute() {
 // way round can dodge it.
 function reverseRoute() {
   if (!plannedDays.length) return;
-  plannedDays.forEach(day => {
+  plannedDays.forEach((day, i) => {
     day.stops.reverse();
+    // dag N start waar dag N-1 nu daadwerkelijk eindigt — die stop is door het
+    // omdraaien van dag N-1 veranderd, dus dit moet ná die reversal opnieuw gekoppeld worden
+    if (i > 0) {
+      const prevDay = plannedDays[i - 1];
+      day.start = prevDay.endPoint || prevDay.stops[prevDay.stops.length - 1];
+    }
     recomputeDay(day);
   });
   drawRoute();

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Douches onderweg — Europa</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#0ea5e9; --border:#333a45; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  #sidebar { width: 340px; min-width: 340px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  #map { flex: 1; background: #0e1116; }
+  h1 { font-size: 17px; padding: 14px 16px 4px; }
+  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: var(--panel2); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat b { font-size: 24px; display: block; }
+  .stat span { font-size: 11px; color: var(--muted); }
+  .crow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; font-size: 13px; cursor: pointer; border-radius: 4px; }
+  .crow:hover { background: var(--panel2); }
+  .crow.active { background: #0c3a4a; }
+  .crow .naam { flex: 1; }
+  .crow .n { color: var(--muted); font-size: 12px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; }
+  label.chk { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 0; cursor: pointer; }
+  a.backlink { color: var(--muted); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; }
+  a.backlink:hover { color: var(--text); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+  .leaflet-popup-content { font-size: 13px; }
+  .leaflet-popup-content b { font-size: 14px; }
+  .leaflet-popup-content a { color: #3b82f6; }
+  .badge247 { display: inline-block; background: #0c3a4a; color: #7dd3fc; border-radius: 4px; padding: 1px 6px; font-size: 11px; margin-left: 4px; }
+  #reloadbtn {
+    position: fixed; top: 10px; right: 10px; z-index: 1200;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px #0008;
+  }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #map { order: 1; flex: none; height: 40vh; min-height: 220px; }
+    #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
+    h1 { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>🚿 Douches onderweg — Europa
+    <span class="sub">Snelweg- en tankstationdouches i.p.v. sportschoolabonnement</span>
+  </h1>
+  <section>
+    <div class="statgrid">
+      <div class="stat"><b id="st-total">…</b><span>locaties</span></div>
+      <div class="stat"><b id="st-countries">…</b><span>landen</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Zoeken</h2>
+    <input type="text" id="search" placeholder="Zoek op stad, naam of merk…">
+    <label class="chk"><input type="checkbox" id="only247"> Alleen 24/7 open</label>
+  </section>
+  <section>
+    <h2>Per land</h2>
+    <div id="countrylist"></div>
+  </section>
+  <section>
+    <div class="muted">
+      Duitsland: Sanifair-locaties met vrachtwagenchauffeursdouche (bron: sanifair.com, juli 2026).
+      Overige landen: OpenStreetMap-data voor tank-/wegrestaurants met douche (shower=yes/hgv),
+      juli 2026 — dekking hangt af van hoe goed lokale locaties in OSM zijn getagd; met name
+      België en Zwitserland zijn hier dun gedekt. Controleer prijs/openingstijden altijd via de
+      website- of Google Maps-link, want niet elke locatie is gratis.
+    </div>
+    <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
+    <a class="backlink" href="sportscholen.html">🏋️💪 Sportschool-alternatief bekijken</a>
+  </section>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="showerdata.js"></script>
+<script>
+const map = L.map('map', { preferCanvas: true }).setView([49, 6], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+
+const ReloadControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: () => {
+    const btn = L.DomUtil.create('button', '');
+    btn.id = 'reloadbtn';
+    btn.innerHTML = '↻';
+    btn.title = 'Ververs';
+    btn.onclick = () => location.reload();
+    return btn;
+  }
+});
+map.addControl(new ReloadControl());
+
+const POPUP_OPTS = { autoPan: false, maxWidth: 270 };
+map.on('popupopen', e => {
+  const el = e.popup.getElement();
+  const h = (el && el.offsetHeight) || 200;
+  const size = map.getSize();
+  const anker = map.latLngToContainerPoint(e.popup.getLatLng());
+  const doelY = Math.min(size.y - 20, h + 30);
+  map.panBy([anker.x - size.x / 2, anker.y - doelY], { animate: false });
+});
+window.addEventListener('resize', () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 400);
+
+function popupHtml(s) {
+  const adres = [s.street, s.postcode, s.city].filter(Boolean).join(', ');
+  return `<b>${s.name}</b>${s.hours24 ? '<span class="badge247">24/7</span>' : ''}<br>
+    <span style="color:#9aa3af">${adres || 'Adres onbekend'}${s.country ? ' · ' + s.country : ''}</span><br>
+    ${s.highway ? `<span style="color:#9aa3af">🛣️ ${s.highway}</span><br>` : ''}
+    ${s.brand ? `<span style="color:#9aa3af">🚿 ${s.brand}</span><br>` : ''}
+    <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank">🧭 Google Maps</a>
+    ${s.website ? ` · <a href="${s.website}" target="_blank">Website</a>` : ''}`;
+}
+
+const markers = new Map();
+for (const s of SHOWER_SITES) {
+  const m = L.circleMarker([s.lat, s.lon], {
+    radius: 5.5, weight: 1, color: '#0008', fillOpacity: 0.9, fillColor: '#0ea5e9'
+  }).bindPopup(() => popupHtml(s), POPUP_OPTS);
+  markers.set(s.id, m);
+}
+
+let activeCountry = '';
+let searchTerm = '';
+let only247 = false;
+function matches(s) {
+  if (activeCountry && s.country !== activeCountry) return false;
+  if (only247 && !s.hours24) return false;
+  if (searchTerm && !(s.name + ' ' + s.city + ' ' + s.brand).toLowerCase().includes(searchTerm)) return false;
+  return true;
+}
+function refresh() {
+  for (const s of SHOWER_SITES) {
+    const m = markers.get(s.id);
+    const show = matches(s);
+    if (show && !map.hasLayer(m)) m.addTo(map);
+    if (!show && map.hasLayer(m)) map.removeLayer(m);
+  }
+}
+function buildCountryList() {
+  const per = {};
+  SHOWER_SITES.forEach(s => per[s.country] = (per[s.country] || 0) + 1);
+  const el = document.getElementById('countrylist');
+  el.innerHTML = '';
+  Object.entries(per).sort((a, b) => b[1] - a[1]).forEach(([c, n]) => {
+    const div = document.createElement('div');
+    div.className = 'crow' + (activeCountry === c ? ' active' : '');
+    div.innerHTML = `<span class="naam">${c}</span><span class="n">${n}</span>`;
+    div.onclick = () => {
+      activeCountry = activeCountry === c ? '' : c;
+      buildCountryList();
+      refresh();
+    };
+    el.appendChild(div);
+  });
+}
+document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); refresh(); });
+document.getElementById('only247').addEventListener('change', e => { only247 = e.target.checked; refresh(); });
+
+document.getElementById('st-total').textContent = SHOWER_SITES.length;
+document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.map(s => s.country)).size;
+buildCountryList();
+refresh();
+</script>
+</body>
+</html>

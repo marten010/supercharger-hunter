@@ -232,16 +232,31 @@
 <script src="data.js"></script>
 <script>
 // ---------- state ----------
-const LS_KEY = 'sc_visited_overrides_v1';
-let overrides = {};   // per site-id: { v: bezocht, t: tijdstip van de wijziging }
+// site-key (genormaliseerde naam) i.p.v. numeriek site-id: dat id is alleen een
+// array-index in data.js en verschuift bij elke build-master.js-ververing (nieuwe
+// locaties schuiven latere indices op) — met een numerieke sleutel in localStorage
+// zou een oude override na zo'n ververing op een heel andere, willekeurige locatie
+// terechtkomen zodra hij naar de cloud wordt gesynchroniseerd. Naam ligt vast.
+const LS_KEY = 'sc_visited_overrides_v2';
+const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
+let overrides = {};   // per site-key: { v: bezocht, t: tijdstip van de wijziging }
 try { overrides = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) {}
+// eenmalige migratie vanaf het oude, op site-id gebaseerde formaat: een id-sleutel
+// kan hier niet betrouwbaar herleid worden naar de juiste locatie (dat vereist de
+// data.js-versie van tóen), dus die entries worden overgeslagen — de cloud (Supabase)
+// blijft de bron van waarheid en vult dit apparaat bij initSync() gewoon weer aan.
+try {
+  const oud = JSON.parse(localStorage.getItem('sc_visited_overrides_v1')) || {};
+  if (Object.keys(oud).length) console.warn(`${Object.keys(oud).length} oude id-gebaseerde override(s) genegeerd bij migratie naar naam-sleutels — cloud vult dit aan.`);
+} catch (e) {}
 // migratie van oud formaat (kale true/false zonder tijdstempel)
-for (const id of Object.keys(overrides)) {
-  if (typeof overrides[id] !== 'object') overrides[id] = { v: overrides[id], t: '1970-01-01T00:00:00Z' };
+for (const k of Object.keys(overrides)) {
+  if (typeof overrides[k] !== 'object') overrides[k] = { v: overrides[k], t: '1970-01-01T00:00:00Z' };
 }
 const ovVal = o => (o && typeof o === 'object') ? o.v : o;
 const ovTime = o => (o && typeof o === 'object' && o.t) ? o.t : '1970-01-01T00:00:00Z';
-const isVisited = s => (s.id in overrides) ? ovVal(overrides[s.id]) : s.visited;
+const isVisited = s => (siteKey(s) in overrides) ? ovVal(overrides[siteKey(s)]) : s.visited;
 const saveOverrides = () => localStorage.setItem(LS_KEY, JSON.stringify(overrides));
 
 let activeCountries = new Set();   // leeg = alle
@@ -386,7 +401,7 @@ window.toggleVisited = function(id) {
   const nu = new Date().toISOString();
   // wijziging mét tijdstempel bewaren (ook als hij gelijk is aan het databestand),
   // zodat "nieuwste wijziging wint" over apparaten heen werkt
-  overrides[id] = { v: wordtBezocht, t: nu };
+  overrides[siteKey(s)] = { v: wordtBezocht, t: nu };
   saveOverrides();
   markers.get(id).setPopupContent(popupHtml(s));
   refreshMarkers();
@@ -399,20 +414,20 @@ window.toggleVisited = function(id) {
 // overzicht van handmatige wijzigingen t.o.v. het databestand
 function renderOverrides() {
   const el = document.getElementById('overrides-box');
-  const ids = Object.keys(overrides).filter(id => SITES[id] && ovVal(overrides[id]) !== SITES[id].visited);
-  if (!ids.length) { el.innerHTML = '<span class="muted">No manual changes vs. the data file.</span>'; return; }
-  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Manually changed (${ids.length}):</b></div>`;
-  for (const id of ids) {
-    const s = SITES[id];
+  const keys = Object.keys(overrides).filter(k => keyToSite.get(k) && ovVal(overrides[k]) !== keyToSite.get(k).visited);
+  if (!keys.length) { el.innerHTML = '<span class="muted">No manual changes vs. the data file.</span>'; return; }
+  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Manually changed (${keys.length}):</b></div>`;
+  for (const key of keys) {
+    const s = keyToSite.get(key);
     const row = document.createElement('div');
     row.className = 'nrow';
     row.innerHTML = `
-      <div class="info"><b>${s.name}</b><span>now: ${ovVal(overrides[id]) ? '✔ visited' : '✘ not visited'} (file says: ${s.visited ? 'visited' : 'not visited'})</span></div>
-      <button class="small" title="Undo change" data-undo="${id}">↩</button>`;
+      <div class="info"><b>${s.name}</b><span>now: ${ovVal(overrides[key]) ? '✔ visited' : '✘ not visited'} (file says: ${s.visited ? 'visited' : 'not visited'})</span></div>
+      <button class="small" title="Undo change" data-undo="${key}">↩</button>`;
     row.querySelector('[data-undo]').onclick = () => {
       // terug naar de bestandswaarde, als nieuwe wijziging — zodat het ook
       // op je andere apparaten wordt teruggedraaid
-      overrides[id] = { v: s.visited, t: new Date().toISOString() };
+      overrides[key] = { v: s.visited, t: new Date().toISOString() };
       saveOverrides();
       markers.get(s.id).setPopupContent(popupHtml(s));
       refreshMarkers();
@@ -450,12 +465,13 @@ setStart(51.9225, 4.4792, 'Rotterdam (home)');
 // — zo kan het label nooit een verouderde/teruggedraaide locatie blijven tonen.
 function computeLastVisit() {
   let best = null;
-  for (const id of Object.keys(overrides)) {
-    const o = overrides[id];
-    if (!ovVal(o) || !SITES[id]) continue;   // nu niet (meer) bezocht: telt niet mee
+  for (const key of Object.keys(overrides)) {
+    const o = overrides[key];
+    const s = keyToSite.get(key);
+    if (!ovVal(o) || !s) continue;   // nu niet (meer) bezocht: telt niet mee
     const t = ovTime(o);
     if (t <= '1971') continue;                // geen echt tijdstip bekend (bv. oude sync-link)
-    if (!best || t > best.t) best = { name: SITES[id].name, t };
+    if (!best || t > best.t) best = { name: s.name, t };
   }
   return best;
 }
@@ -1284,7 +1300,7 @@ if (location.hash.startsWith('#v=')) {
       let nieuw = 0;
       for (const s of SITES) {
         const aan = (raw.charCodeAt(s.id >> 3) >> (s.id & 7)) & 1;
-        if (aan && !isVisited(s)) { overrides[s.id] = true; nieuw++; }
+        if (aan && !isVisited(s)) { overrides[siteKey(s)] = { v: true, t: new Date().toISOString() }; nieuw++; }
       }
       if (nieuw) saveOverrides();
       localStorage.setItem('sc_imported_visited', location.hash);
@@ -1303,8 +1319,6 @@ window.addEventListener('hashchange', () => {
 // ---------- cloud-sync (Supabase): live tussen laptop en telefoon ----------
 const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
 const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
-const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
 let supa = null;
 
 function setSyncStatus(txt) {
@@ -1319,13 +1333,13 @@ function applyCloud(rows) {
   for (const r of rows || []) {
     const s = keyToSite.get(r.site_key);
     if (!s) continue;
-    const lokaal = overrides[s.id];
+    const lokaal = overrides[siteKey(s)];
     if (lokaal && ovTime(lokaal) > (r.updated_at || '')) continue;   // lokaal is nieuwer
     if (isVisited(s) !== r.visited) {
       markers.get(s.id).setPopupContent(popupHtml(s));
       changed = true;
     }
-    overrides[s.id] = { v: r.visited, t: r.updated_at || new Date().toISOString() };
+    overrides[siteKey(s)] = { v: r.visited, t: r.updated_at || new Date().toISOString() };
   }
   saveOverrides();
   renderLastVisit();   // altijd herafleiden — ook een teruggedraaid bezoek moet het label kunnen wissen
@@ -1343,7 +1357,7 @@ function applyCloud(rows) {
 async function pushVisit(s) {
   if (!supa) return;
   try {
-    const o = overrides[s.id];
+    const o = overrides[siteKey(s)];
     const { error } = await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
     if (error) setSyncStatus('☁️ Not synced — log in to save changes to the cloud');
   } catch (e) { setSyncStatus('☁️ Sync: offline (change queued locally)'); }
@@ -1394,12 +1408,12 @@ async function initSync() {
     //    (voorkomt dat een oud apparaat verse correcties overschrijft)
     const cloudByKey = new Map((data || []).map(r => [r.site_key, r]));
     const toPush = [];
-    for (const [id, o] of Object.entries(overrides)) {
-      const s = SITES[id];
+    for (const [key, o] of Object.entries(overrides)) {
+      const s = keyToSite.get(key);
       if (!s) continue;
-      const rij = cloudByKey.get(siteKey(s));
+      const rij = cloudByKey.get(key);
       if (!rij || ovTime(o) > (rij.updated_at || '')) {
-        toPush.push({ site_key: siteKey(s), visited: ovVal(o), updated_at: ovTime(o) > '1971' ? ovTime(o) : new Date().toISOString() });
+        toPush.push({ site_key: key, visited: ovVal(o), updated_at: ovTime(o) > '1971' ? ovTime(o) : new Date().toISOString() });
       }
     }
     if (toPush.length) await supa.from('visits').upsert(toPush);

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Herstel bezocht-status — eenmalige reparatie</title>
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 24px; }
+  p, li { line-height: 1.5; }
+  .box { background: var(--panel); border-radius: 10px; padding: 16px; margin: 14px 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  input[type=email], input[type=password] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: var(--panel2); color: var(--text); }
+  .list { max-height: 260px; overflow-y: auto; background: var(--panel2); border-radius: 6px; padding: 10px; font-size: 13px; margin-top: 8px; }
+  .list div { padding: 2px 0; border-bottom: 1px solid var(--border); }
+  .list div:last-child { border-bottom: none; }
+  #status { margin-top: 14px; padding: 12px; border-radius: 8px; }
+  #status.ok { background: #123a1c; color: var(--green); }
+  #status.err { background: #3a1414; color: #ff8080; }
+</style>
+</head>
+<body>
+<h1>🔧 Herstel bezocht-status</h1>
+<div class="box">
+  <p><b>Wat is er gebeurd?</b><br>
+  Bij het verversen van de Supercharger-lijst (17-1748 locaties) zijn de interne site-nummers
+  verschoven. De sync-functie in de app gebruikte per ongeluk die nummers i.p.v. namen, waardoor
+  bij het synchroniseren vanaf je telefoon willekeurige andere locaties per ongeluk als "bezocht"
+  werden gemarkeerd. Dit is inmiddels in de code opgelost (voortaan wordt op naam gesynchroniseerd,
+  die verschuift nooit) — deze pagina herstelt alleen de data die al fout in de cloud staat.</p>
+  <p class="muted">Deze pagina is eenmalig. Na het herstellen kun je 'm negeren/verwijderen.</p>
+</div>
+
+<div class="box" id="authbox">
+  <h2>Stap 1: inloggen</h2>
+  <input type="email" id="au-mail" placeholder="Email" autocomplete="username">
+  <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password">
+  <button id="au-in">Inloggen</button>
+  <div id="au-status" class="muted" style="margin-top:8px"></div>
+</div>
+
+<div class="box" id="previewbox" style="display:none">
+  <h2>Stap 2: controleren</h2>
+  <p><b id="p-toFalse-count"></b> locaties worden teruggezet naar <b>niet bezocht</b> (fantoom-vinkjes door de bug —
+  geen van deze komt voor in je echte laadhistorie):</p>
+  <div class="list" id="list-toFalse"></div>
+  <p style="margin-top:14px"><b id="p-toTrue-count"></b> locatie wordt teruggezet naar <b>wél bezocht</b>
+  (was door dezelfde bug per ongeluk uitgevinkt):</p>
+  <div class="list" id="list-toTrue"></div>
+  <button id="run-fix">✅ Herstellen</button>
+</div>
+
+<div id="status" style="display:none"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
+const nameOf = key => (keyToSite.get(key) || {}).name || key;
+
+// vooraf berekende, exacte reparatielijst (zie gesprek): fantoom-locaties die de
+// sync-bug per ongeluk op "bezocht" zette, en de ene locatie die per ongeluk werd
+// uitgevinkt — vergeleken tegen zowel de laatste schone stand vóór de bug als de
+// echte Tesla-laadhistorie (geen van de 76 komt daar in voor).
+const TO_FALSE = ["schwetzingen germany","hessisch lichtenau germany","schweinfurt germany","copenhagen denmark","linkoping sweden","saarbrucken germany","bregenz austria","vitoria spain","afyonkarahisar turkiye","steyr austria","furstenfeldbruck germany","schipkau germany","kiel germany moorsee","egilssta ir iceland kaupvangur","ev otm finmere uk","couvin belgium","chemnitz germany","stekene belgium","holmavik iceland","rumia poland","lucon france","aire de lafayette france","harrislee germany","solihull uk","mantsala finland","uddevalla sweden herrestads torp","fleet uk northbound","cork ireland","torrent spain northbound","bourges france chem le vallon","lillehammer norway rosenlund","michaelwood uk northbound","hohenwarsleben germany","macon france","lier north norway","arboga sweden","motten germany","grosseto italy","orleans france","tinqueux france","volda norway","kuopio south finland","salaise sur sanne france","sundsvall west sweden","rudsh gda norway","pforzheim germany","chatellerault france","schierling germany","biganos france","lublin poland","mandelieu la napoule france","riga latvia","craiova romania","leigh delamere uk westbound","mantova italy","chauray france","bailly romainvilliers france","sveg sweden","notodden norway","langkampfen austria","montbeliard france","worth germany","brekkvasselv norway braahkenjohke","irxleben germany","hitra norway","tournus france","varberg sweden north","berlin germany gleisdreieck","hall in tirol austria","magliano sabina italy","leipzig seehausen germany","granna sweden","la roche sur yon france","bristol uk eastgate","briancon france","akhisar turkiye istanbul bound"];
+const TO_TRUE = ["norten hardenberg germany"];
+
+document.getElementById('p-toFalse-count').textContent = TO_FALSE.length;
+document.getElementById('p-toTrue-count').textContent = TO_TRUE.length;
+document.getElementById('list-toFalse').innerHTML = TO_FALSE.map(k => `<div>${nameOf(k)}</div>`).join('');
+document.getElementById('list-toTrue').innerHTML = TO_TRUE.map(k => `<div>${nameOf(k)}</div>`).join('');
+
+function showStatus(msg, ok) {
+  const el = document.getElementById('status');
+  el.style.display = 'block';
+  el.className = ok ? 'ok' : 'err';
+  el.textContent = msg;
+}
+
+async function checkSession() {
+  const { data } = await supa.auth.getSession();
+  if (data.session) {
+    document.getElementById('authbox').innerHTML = `<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>${data.session.user.email}</b></p>`;
+    document.getElementById('previewbox').style.display = 'block';
+  }
+}
+checkSession();
+
+document.getElementById('au-in').onclick = async () => {
+  const email = document.getElementById('au-mail').value.trim();
+  const password = document.getElementById('au-pw').value;
+  document.getElementById('au-status').textContent = 'Bezig met inloggen…';
+  const { error } = await supa.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('au-status').textContent = 'Inloggen mislukt: ' + error.message; return; }
+  checkSession();
+};
+
+document.getElementById('run-fix').onclick = async () => {
+  const btn = document.getElementById('run-fix');
+  btn.disabled = true;
+  btn.textContent = 'Bezig…';
+  try {
+    const nu = new Date().toISOString();
+    const rows = [
+      ...TO_FALSE.map(site_key => ({ site_key, visited: false, updated_at: nu })),
+      ...TO_TRUE.map(site_key => ({ site_key, visited: true, updated_at: nu })),
+    ];
+    const { error } = await supa.from('visits').upsert(rows);
+    if (error) throw error;
+    showStatus(`✅ Klaar. ${TO_FALSE.length} fantoom-vinkjes teruggezet naar niet-bezocht, ${TO_TRUE.length} vinkje hersteld naar bezocht. Ververs de hoofdpagina om de nieuwe stand te zien.`, true);
+    btn.textContent = '✅ Herstellen';
+  } catch (e) {
+    showStatus('❌ Mislukt: ' + e.message, false);
+    btn.disabled = false;
+    btn.textContent = '✅ Herstellen';
+  }
+};
+</script>
+</body>
+</html>

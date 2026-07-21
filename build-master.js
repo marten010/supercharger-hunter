@@ -35,8 +35,12 @@ const hav = (a, b) => {
   const res = await fetch(URL, { headers: { 'User-Agent': 'personal-supercharger-tracker' } });
   if (!res.ok) throw new Error('Ophalen mislukt: HTTP ' + res.status);
   const all = await res.json();
-  const open = all.filter(s => s.address.region === 'Europe' && s.status === 'OPEN');
-  console.log(`Ontvangen: ${all.length} wereldwijd, ${open.length} open in Europa`);
+  // OPEN + EXPANDING (bestaande palen werken, er komen alleen bij) tellen als bruikbaar.
+  // Een eerder bezochte locatie nooit laten verdwijnen door een statuswissel
+  // (bijv. tijdelijk CLOSED_TEMP) — anders verliest die zijn vinkje stilzwijgend.
+  const open = all.filter(s => s.address.region === 'Europe' &&
+    (s.status === 'OPEN' || s.status === 'EXPANDING' || visitedNames.has(norm(s.name))));
+  console.log(`Ontvangen: ${all.length} wereldwijd, ${open.length} bruikbaar/bezocht in Europa`);
 
   // 3. nieuwe lijst opbouwen met bezocht-status
   const sites = open.map((s, i) => ({

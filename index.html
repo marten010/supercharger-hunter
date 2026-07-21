@@ -215,7 +215,6 @@
     </div>
     <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync link for visited locations (for your other device)</button>
     <input type="file" id="imp-file" accept=".json" style="display:none">
-    <div id="overrides-box" style="margin-top:8px"></div>
     <div id="syncstatus" class="muted" style="margin-top:8px">☁️ Sync: connecting…</div>
     <div class="muted" style="margin-top:8px">Visit status syncs live across all your devices. The JSON backup remains as an extra safety net.</div>
   </section>
@@ -405,40 +404,11 @@ window.toggleVisited = function(id) {
   saveOverrides();
   markers.get(id).setPopupContent(popupHtml(s));
   refreshMarkers();
-  renderOverrides();
   renderLastVisit();
   if (plannedDays.length) renderDays();   // doorstreping + volgende-stop-knop bijwerken
   pushVisit(s);                            // direct naar de cloud (live-sync)
 };
 
-// overzicht van handmatige wijzigingen t.o.v. het databestand
-function renderOverrides() {
-  const el = document.getElementById('overrides-box');
-  const keys = Object.keys(overrides).filter(k => keyToSite.get(k) && ovVal(overrides[k]) !== keyToSite.get(k).visited);
-  if (!keys.length) { el.innerHTML = '<span class="muted">No manual changes vs. the data file.</span>'; return; }
-  el.innerHTML = `<div class="muted" style="margin-bottom:4px"><b style="color:var(--text)">Manually changed (${keys.length}):</b></div>`;
-  for (const key of keys) {
-    const s = keyToSite.get(key);
-    const row = document.createElement('div');
-    row.className = 'nrow';
-    row.innerHTML = `
-      <div class="info"><b>${s.name}</b><span>now: ${ovVal(overrides[key]) ? '✔ visited' : '✘ not visited'} (file says: ${s.visited ? 'visited' : 'not visited'})</span></div>
-      <button class="small" title="Undo change" data-undo="${key}">↩</button>`;
-    row.querySelector('[data-undo]').onclick = () => {
-      // terug naar de bestandswaarde, als nieuwe wijziging — zodat het ook
-      // op je andere apparaten wordt teruggedraaid
-      overrides[key] = { v: s.visited, t: new Date().toISOString() };
-      saveOverrides();
-      markers.get(s.id).setPopupContent(popupHtml(s));
-      refreshMarkers();
-      renderOverrides();
-      renderLastVisit();
-      if (plannedDays.length) renderDays();
-      pushVisit(s);
-    };
-    el.appendChild(row);
-  }
-}
 window.setStartFromSite = function(id) {
   const s = SITES[id];
   setStart(s.lat, s.lng, s.name);
@@ -1346,7 +1316,6 @@ function applyCloud(rows) {
   if (changed) {
     refreshMarkers();
     buildCountryList();
-    renderOverrides();
     if (plannedDays.length) renderDays();
     if (lastPos) renderNearby();
   }
@@ -1464,7 +1433,7 @@ document.getElementById('imp-file').addEventListener('change', e => {
         if (typeof overrides[id] !== 'object') overrides[id] = { v: overrides[id], t: '1970-01-01T00:00:00Z' };
       }
       saveOverrides();
-      buildCountryList(); refreshMarkers(); renderOverrides();
+      buildCountryList(); refreshMarkers();
       alert('Backup restored.');
     } catch (err) { alert('Invalid backup file.'); }
   });
@@ -1617,7 +1586,6 @@ function renderManual() {
 // ---------- init ----------
 buildCountryList();
 refreshMarkers();
-renderOverrides();
 renderManual();
 renderOvernights();
 renderSavedRoutes();

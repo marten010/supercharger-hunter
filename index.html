@@ -102,7 +102,10 @@
     .day h3 { font-size: 17px; }
     .day a { font-size: 15px; }
     .day ol { max-height: 200px; padding-left: 22px; }
-    .day ol li { margin-bottom: 4px; }
+    /* bestemmingsnamen zelf goed leesbaar houden tijdens het rijden: groter en
+       feller dan de rest van de (bewust gedempte) route-details */
+    .day ol li { margin-bottom: 10px; font-size: 19px; color: var(--text); line-height: 1.3; }
+    .day ol li.done { color: var(--green); }
     /* pijltjes/kruisjes voor stops verplaatsen/verwijderen: veel groter tikvlak */
     .exbtn { font-size: 20px; padding: 6px 9px; line-height: 1; }
     .stat b { font-size: 26px; }

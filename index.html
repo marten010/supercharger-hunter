@@ -1071,6 +1071,9 @@ function removeStopFromRoute(id) {
 function addStopToRoute(id) {
   const s = SITES[id];
   const factor = +document.getElementById('p-factor').value;
+  const speed = +document.getElementById('p-speed').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  const dayBudgetMin = +document.getElementById('p-hours').value * 60;
   excluded.delete(id);
   renderExcluded();
   let best = null;
@@ -1087,6 +1090,16 @@ function addStopToRoute(id) {
   });
   if (!best) return;
   const day = plannedDays[best.di];
+  // dit voegt altijd toe op de goedkoopste plek, ongeacht het dagbudget — een dag
+  // kan zo (onopgemerkt) boven zijn Hours/day-instelling uitkomen. Dat is op zich
+  // geen probleem totdat je "Optimize order" gebruikt, want die herbouwt strikt
+  // bínnen dat budget en zou de overtollige stops dan laten vallen. Daarom hier
+  // al waarschuwen, met de keuze om toch door te zetten.
+  const extraMin = best.extra / speed * 60 + chargeMin;
+  if (day.min + extraMin > dayBudgetMin) {
+    const doorgaan = confirm(`This would push Day ${plannedDays.indexOf(day) + 1} to ${((day.min + extraMin) / 60).toFixed(1)} h, over your Hours/day setting (${(dayBudgetMin / 60).toFixed(1)} h).\n\nThat's fine for now, but if you later use "Optimize order" it rebuilds strictly within budget and could drop stops that don't fit. Add anyway?`);
+    if (!doorgaan) return;
+  }
   day.stops.splice(best.i, 0, s);
   recomputeDay(day);
   drawRoute();
@@ -1094,11 +1107,28 @@ function addStopToRoute(id) {
 }
 
 // de huidige route opnieuw optimaal plannen — zelfde stops, niets erbij,
-// niets eraf; volgorde én dagindeling worden volledig opnieuw bepaald
+// niets eraf; volgorde én dagindeling worden volledig opnieuw bepaald.
+// Val niet stilzwijgend terug op minder stops: "+ Add to day plan" checkt het
+// dagbudget niet bij het toevoegen, dus een dag kan al over zijn Hours/day-limiet
+// zitten vóórdat je optimaliseert — planRoute() herbouwt dan strikt binnen dat
+// budget en zou de rest gewoon laten vallen. Dat melden we hier expliciet en
+// bieden we de kans om het ongedaan te maken.
 function optimizeCurrentRoute() {
   const pool = plannedDays.flatMap(d => d.stops);
   if (!pool.length) return;
+  const before = plannedDays;   // planRoute() bouwt een nieuwe array/dagen; deze blijft ongewijzigd
   planRoute(true, pool);
+  const afterIds = new Set(plannedDays.flatMap(d => d.stops).map(s => s.id));
+  const dropped = pool.filter(s => !afterIds.has(s.id));
+  if (dropped.length) {
+    const namen = dropped.map(s => s.name).join('\n - ');
+    const doorgaan = confirm(`Optimizing would drop ${dropped.length} stop(s) that no longer fit within the current Days × Hours/day budget:\n - ${namen}\n\nPress OK to keep the optimized route without these stops, or Cancel to undo and keep your route exactly as it was (increase Days or Hours/day first if you want everything to fit).`);
+    if (!doorgaan) {
+      plannedDays = before;
+      drawRoute();
+      renderDays();
+    }
+  }
 }
 
 // visiting order within each day reversed — start/end points per day stay

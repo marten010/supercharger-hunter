@@ -1097,7 +1097,8 @@ function addStopToRoute(id) {
   // al waarschuwen, met de keuze om toch door te zetten.
   const extraMin = best.extra / speed * 60 + chargeMin;
   if (day.min + extraMin > dayBudgetMin) {
-    const doorgaan = confirm(`This would push Day ${plannedDays.indexOf(day) + 1} to ${((day.min + extraMin) / 60).toFixed(1)} h, over your Hours/day setting (${(dayBudgetMin / 60).toFixed(1)} h).\n\nThat's fine for now, but if you later use "Optimize order" it rebuilds strictly within budget and could drop stops that don't fit. Add anyway?`);
+    const nodigUur = Math.ceil((day.min + extraMin) / 60 * 10) / 10;
+    const doorgaan = confirm(`Why: this stop needs ${(extraMin).toFixed(0)} min extra driving+charging, which would push Day ${plannedDays.indexOf(day) + 1} to ${((day.min + extraMin) / 60).toFixed(1)} h — over your Hours/day setting (${(dayBudgetMin / 60).toFixed(1)} h).\n\nFix: set Hours/day to at least ${nodigUur} h before adding, so this stop stays included later if you use "Optimize order" (it rebuilds strictly within budget and would otherwise drop whatever doesn't fit).\n\nAdd it now anyway (over budget)?`);
     if (!doorgaan) return;
   }
   day.stops.splice(best.i, 0, s);
@@ -1117,12 +1118,24 @@ function optimizeCurrentRoute() {
   const pool = plannedDays.flatMap(d => d.stops);
   if (!pool.length) return;
   const before = plannedDays;   // planRoute() bouwt een nieuwe array/dagen; deze blijft ongewijzigd
+  const days = +document.getElementById('p-days').value;
+  const dayBudgetMin = +document.getElementById('p-hours').value * 60;
   planRoute(true, pool);
   const afterIds = new Set(plannedDays.flatMap(d => d.stops).map(s => s.id));
   const dropped = pool.filter(s => !afterIds.has(s.id));
   if (dropped.length) {
     const namen = dropped.map(s => s.name).join('\n - ');
-    const doorgaan = confirm(`Optimizing would drop ${dropped.length} stop(s) that no longer fit within the current Days × Hours/day budget:\n - ${namen}\n\nPress OK to keep the optimized route without these stops, or Cancel to undo and keep your route exactly as it was (increase Days or Hours/day first if you want everything to fit).`);
+    // grove schatting van de benodigde extra tijd: gemiddelde tijd per stop in de
+    // wél geplande route toepassen op het aantal laten-vallen stops — geen exacte
+    // herberekening (die zou de kaart/route meerdere keren opnieuw laten tekenen),
+    // maar wel een bruikbaar richtgetal om Days/Hours op bij te stellen
+    const totMin = plannedDays.reduce((a, d) => a + d.min, 0);
+    const totStops = plannedDays.reduce((a, d) => a + d.stops.length, 0);
+    const avgMinPerStop = totStops ? totMin / totStops : 30;
+    const extraMin = dropped.length * avgMinPerStop;
+    const extraHoursPerDay = Math.ceil(extraMin / days / 6) / 10;   // afronden op 0,1 h
+    const extraDays = Math.max(1, Math.ceil(extraMin / dayBudgetMin));
+    const doorgaan = confirm(`Why: these ${dropped.length} stop(s) need roughly ${Math.round(extraMin)} extra minutes of driving+charging in total — more than fits in your current ${days} day(s) × ${(dayBudgetMin/60).toFixed(1)} h/day budget:\n - ${namen}\n\nFix: try raising Hours/day by about ${extraHoursPerDay} h, or Days by about ${extraDays}, then optimize again (rough estimate — exact fit may need a bit more or less).\n\nPress OK to keep the optimized route without these stops now, or Cancel to undo and keep your route exactly as it was.`);
     if (!doorgaan) {
       plannedDays = before;
       drawRoute();

@@ -173,6 +173,10 @@
       <div><label>Avg. speed (km/h)</label><input type="number" id="p-speed" value="65" min="50" max="120"></div>
       <div><label>Road factor</label><input type="number" id="p-factor" value="1.3" step="0.05" min="1" max="1.6"></div>
     </div>
+    <div class="row">
+      <div><label>Max detour per stop (km, optional)</label><input type="number" id="p-maxdetour" placeholder="off" min="1" step="5"></div>
+    </div>
+    <div class="muted" style="margin-top:2px">Skips stops that would pull the route too far off its main path — keeps the core of a dense area instead of criss-crossing the whole region. Leave empty to include everything that fits the time budget.</div>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text)">
       <input type="checkbox" id="p-loop"> End back at starting point (loop)
     </label>
@@ -560,6 +564,7 @@ function planRoute(reuseBounds = false, fixedPool = null) {
   const speed = +document.getElementById('p-speed').value;
   const factor = +document.getElementById('p-factor').value;
   const loop = document.getElementById('p-loop').checked;
+  const maxDetourKm = +document.getElementById('p-maxdetour').value || 0;
 
   let pool;
   if (fixedPool) {
@@ -579,14 +584,14 @@ function planRoute(reuseBounds = false, fixedPool = null) {
   plannedDays = [];
   // pure lus (zonder eigen overnachtingen): plan als gesloten ronde
   if (loop && !overnights.length) {
-    planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor);
+    planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor, maxDetourKm);
     drawRoute();
     renderDays(chargeMin, speed);
     return;
   }
   // lus met een overnachting voor elke nacht: segmenten gezamenlijk optimaliseren
   if (loop && overnights.length >= days - 1) {
-    planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor);
+    planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor, maxDetourKm);
     drawRoute();
     renderDays(chargeMin, speed);
     return;
@@ -622,6 +627,12 @@ function planRoute(reuseBounds = false, fixedPool = null) {
     const dayStart = d === 0 ? startPoint : (prevDay.endPoint || prevDay.stops[prevDay.stops.length-1]);
     if (nightly) twoOptEnds(stops, dayStart, nightly);
     else twoOpt(stops, dayStart, factor);
+    // stops die de dag te ver van zijn hoofdlijn trekken eruit halen — terug de pool in,
+    // zodat ze eventueel op een dag/plek passen waar ze wél binnen budget vallen
+    if (maxDetourKm) {
+      const { kept, removed } = trimDetours(stops, dayStart, nightly, factor, maxDetourKm);
+      if (removed.length) { stops.length = 0; stops.push(...kept); pool.push(...removed); }
+    }
     // herbereken tijd/afstand na 2-opt
     let km = 0, prev = dayStart;
     for (const s of stops) { km += hav(prev, s) * factor; prev = s; }
@@ -644,7 +655,7 @@ function planRoute(reuseBounds = false, fixedPool = null) {
           if (!best || extra < best.extra) best = { p, i, extra };
         }
       }
-      if (best) {
+      if (best && (!maxDetourKm || best.extra <= maxDetourKm)) {
         const extraMin = best.extra / speed * 60 + chargeMin;
         if (day.min + extraMin <= dayBudgetMin) {
           day.stops.splice(best.i, 0, pool[best.p]);
@@ -658,6 +669,34 @@ function planRoute(reuseBounds = false, fixedPool = null) {
   }
   drawRoute();
   renderDays(chargeMin, speed);
+}
+
+// verwijdert stops die de route te ver van zijn hoofdlijn trekken: herhaaldelijk
+// de stop met de hoogste "kost" (extra km t.o.v. rechtstreeks doorrijden zonder
+// die stop) eruit halen tot niemand meer boven de drempel zit. Werkt op een al
+// vaste volgorde (na 2-opt) — dit is een opschoning, geen herordening.
+function trimDetours(stops, start, end, factor, maxKm) {
+  let arr = stops.slice();
+  const removed = [];
+  let changed = true;
+  while (changed && arr.length) {
+    changed = false;
+    const pts = end ? [start, ...arr, end] : [start, ...arr];
+    let worstIdx = -1, worstCost = -Infinity;
+    for (let i = 1; i < pts.length - (end ? 1 : 0); i++) {
+      const prev = pts[i-1], next = pts[i+1];
+      const cost = next
+        ? (hav(prev, pts[i]) + hav(pts[i], next) - hav(prev, next)) * factor
+        : hav(prev, pts[i]) * factor;   // laatste stop zonder eindpunt: eigen dead-end-stuk is de kost
+      if (cost > worstCost) { worstCost = cost; worstIdx = i; }
+    }
+    if (worstIdx >= 0 && worstCost > maxKm) {
+      removed.push(arr[worstIdx - 1]);
+      arr.splice(worstIdx - 1, 1);
+      changed = true;
+    }
+  }
+  return { kept: arr, removed };
 }
 
 function twoOpt(stops, start, factor) {
@@ -704,7 +743,7 @@ function twoOptEnds(stops, start, end) {
 
 // Lus-planning: één grote gesloten ronde (heen- en terugweg via verschillende
 // corridors), daarna opgeknipt in dagen — zo hebben ook terugrij-dagen bezoeken.
-function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
+function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor, maxDetourKm) {
   const totalBudget = days * dayBudgetMin;
   const tour = [];
   let cur = startPoint, used = 0;
@@ -725,6 +764,13 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
   }
   if (!tour.length) { alert('No loop fits within the time budget.'); return; }
   twoOptClosed(tour);
+  // stops die de ronde te ver van zijn hoofdlijn trekken eruit halen — terug de
+  // pool in, zodat de opraap-ronde ze alsnog kan proberen (en opnieuw afwijst
+  // als ze nog steeds boven de drempel zitten)
+  if (maxDetourKm) {
+    const { kept, removed } = trimDetours(tour, startPoint, startPoint, factor, maxDetourKm);
+    if (removed.length) { tour.length = 0; tour.push(...kept); pool.push(...removed); }
+  }
   // opraap-ronde over de hele ronde binnen het totaalbudget
   const tourTime = () => {
     let km = 0, prev = startPoint;
@@ -742,7 +788,7 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
         const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
         if (!best || extra < best.extra) best = { p, i, extra };
       }
-    if (best && tourTime() + best.extra / speed * 60 + chargeMin <= totalBudget) {
+    if (best && (!maxDetourKm || best.extra <= maxDetourKm) && tourTime() + best.extra / speed * 60 + chargeMin <= totalBudget) {
       tour.splice(best.i, 0, pool[best.p]);
       pool.splice(best.p, 1);
       changed = true;
@@ -784,7 +830,7 @@ function planClosedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
 // (start→nacht1, nacht1→nacht2, …, laatste nacht→start) en alle locaties worden
 // via goedkoopste-invoeging verdeeld over het segment waar ze het beste passen.
 // Zo gaan corridor-locaties naar de terugweg als dat efficiënter is.
-function planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
+function planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor, maxDetourKm) {
   const home = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' };
   const bounds = [home, ...overnights.slice(0, days - 1), home];
   const segs = [];
@@ -805,7 +851,7 @@ function planSegmentedLoop(pool, days, dayBudgetMin, chargeMin, speed, factor) {
         for (let i = 0; i + 1 < pts.length; i++) {
           const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
           const extraMin = extra / speed * 60 + chargeMin;
-          if (seg.min + extraMin <= dayBudgetMin && (!best || extra < best.extra)) best = { p, g, i, extra, extraMin };
+          if (seg.min + extraMin <= dayBudgetMin && (!maxDetourKm || extra <= maxDetourKm) && (!best || extra < best.extra)) best = { p, g, i, extra, extraMin };
         }
       }
     }

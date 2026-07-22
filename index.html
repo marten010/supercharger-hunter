@@ -278,6 +278,26 @@ let startPoint = null;             // {lat, lng, label}
 let routeLayers = [];
 let plannedDays = [];
 
+// ---------- undo voor route-wijzigingen ----------
+// Sommige route-acties (verwijderen/toevoegen/verplaatsen/omdraaien van stops)
+// muteren de bestaande dag-objecten in place, dus een simpele referentie naar
+// plannedDays bewaren is niet genoeg — vandaar een echte (ondiepe) kopie per stap.
+let routeHistory = [];
+function cloneDays(days) {
+  return days.map(d => ({ stops: d.stops.slice(), km: d.km, min: d.min, start: d.start, endPoint: d.endPoint, back: d.back }));
+}
+function snapshotRoute() {
+  if (!plannedDays.length) return;
+  routeHistory.push(cloneDays(plannedDays));
+  if (routeHistory.length > 15) routeHistory.shift();   // geheugen begrenzen
+}
+function undoRoute() {
+  if (!routeHistory.length) return;
+  plannedDays = routeHistory.pop();
+  drawRoute();
+  renderDays();
+}
+
 // ---------- kaart ----------
 const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
 const TILE_URLS = {
@@ -545,6 +565,7 @@ function renderOvernights() {
     row.className = 'nrow';
     row.innerHTML = `<div class="info"><b>Night ${i+1}: ${o.name}</b></div><button class="small" title="Remove">✕</button>`;
     row.querySelector('button').onclick = () => {
+      if (plannedDays.length) snapshotRoute();
       overnights.splice(i, 1);
       renderOvernights();
       if (plannedDays.length) planRoute(true);
@@ -1030,7 +1051,19 @@ function renderDays(chargeMin, speed) {
   el.prepend(knoppen);
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
   knoppen.querySelector('#rd-rev').onclick = reverseRoute;
-  knoppen.querySelector('#rd-fill').onclick = () => planRoute(true);
+  knoppen.querySelector('#rd-fill').onclick = () => { snapshotRoute(); planRoute(true); };
+  // route-wijziging niet naar wens? één klik terug naar de vorige stand —
+  // dekt optimaliseren/omdraaien/aanvullen/stops toevoegen-verwijderen/nieuw plannen
+  if (routeHistory.length) {
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'small';
+    undoBtn.style.width = '100%';
+    undoBtn.style.marginBottom = '8px';
+    undoBtn.title = 'Revert the last route change (optimize, reverse, fill, add/remove stop, plan, overnight change)';
+    undoBtn.textContent = `↩ Undo last change (${routeHistory.length})`;
+    undoBtn.onclick = undoRoute;
+    el.prepend(undoBtn);
+  }
   // in de auto: één knop naar de eerstvolgende onbezochte stop van de route
   const next = plannedDays.flatMap(d => d.stops).find(s => !isVisited(s));
   const nav = document.createElement('button');
@@ -1061,6 +1094,7 @@ function recomputeDay(day) {
 
 // één stop uit de huidige route halen zónder de rest te wijzigen
 function removeStopFromRoute(id) {
+  snapshotRoute();
   for (const day of plannedDays) {
     const i = day.stops.findIndex(s => s.id === id);
     if (i < 0) continue;
@@ -1075,6 +1109,7 @@ function removeStopFromRoute(id) {
 
 // één losse bestemming toevoegen op het goedkoopste punt in de bestaande route
 function addStopToRoute(id) {
+  snapshotRoute();
   const s = SITES[id];
   const factor = +document.getElementById('p-factor').value;
   const speed = +document.getElementById('p-speed').value;
@@ -1134,6 +1169,7 @@ function showToast(msg, ms = 6000) {
 function optimizeCurrentRoute() {
   const pool = plannedDays.flatMap(d => d.stops);
   if (!pool.length) return;
+  snapshotRoute();
   const startDays = +document.getElementById('p-days').value;
   const startHours = +document.getElementById('p-hours').value;
   const HOURS_MAX = 16;   // zelfde bovengrens als het Hours/day-invoerveld
@@ -1177,6 +1213,7 @@ function optimizeCurrentRoute() {
 // way round can dodge it.
 function reverseRoute() {
   if (!plannedDays.length) return;
+  snapshotRoute();
   plannedDays.forEach((day, i) => {
     day.stops.reverse();
     // dag N start waar dag N-1 nu daadwerkelijk eindigt — die stop is door het
@@ -1225,7 +1262,7 @@ window.routePlanToggle = function(id) {
   map.closePopup();
 };
 
-document.getElementById('p-plan').onclick = () => planRoute(false);
+document.getElementById('p-plan').onclick = () => { snapshotRoute(); planRoute(false); };
 document.getElementById('p-clear').onclick = () => { plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
 
 // ---------- opgeslagen routes ----------
@@ -1672,6 +1709,7 @@ function renderManual() {
   planBtn.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
   el.appendChild(planBtn);
   const toDayPlan = () => {
+    snapshotRoute();
     const n = manualRoute.length;
     planRoute(true, manualRoute.map(id => SITES[id]));
     // de groene stippellijn/nummers van de eigen-route-weergave verwijderen: de

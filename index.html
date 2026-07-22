@@ -78,6 +78,19 @@
     font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px #0008;
   }
   #reloadbtn:active { transform: rotate(180deg); }
+  .dropdlg-overlay {
+    position: fixed; inset: 0; background: #000a; z-index: 3000;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .dropdlg-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; max-width: 420px; max-height: 85vh; overflow-y: auto;
+  }
+  .dropdlg-box p { font-size: 13px; line-height: 1.5; margin: 0 0 10px; white-space: pre-line; }
+  .dropdlg-box button { width: 100%; margin-top: 8px; padding: 10px; border-radius: 6px; border: 0; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .dropdlg-fit { background: var(--green); color: #0a1f10; }
+  .dropdlg-keep { background: var(--panel2); color: var(--text); border: 1px solid var(--border) !important; }
+  .dropdlg-cancel { background: transparent; color: var(--muted); }
   /* gasten zien alleen tussenstand + kaart; de rest verschijnt na login */
   body:not(.ingelogd) .authonly { display: none; }
   #nearbylist { font-size: 13px; }
@@ -1114,6 +1127,25 @@ function addStopToRoute(id) {
 // zitten vóórdat je optimaliseert — planRoute() herbouwt dan strikt binnen dat
 // budget en zou de rest gewoon laten vallen. Dat melden we hier expliciet en
 // bieden we de kans om het ongedaan te maken.
+// klein modaal keuzedialoogje met 3 knoppen — confirm()/alert() ondersteunen er maar 2,
+// en "gewoon doorgaan met verlies" mag hier niet de enige makkelijke weg zijn
+function showDropDialog(message, { fitLabel, onFit, onKeep, onCancel }) {
+  const overlay = document.createElement('div');
+  overlay.className = 'dropdlg-overlay';
+  overlay.innerHTML = `
+    <div class="dropdlg-box">
+      <p>${message}</p>
+      <button class="dropdlg-fit">🔧 ${fitLabel}</button>
+      <button class="dropdlg-keep">Keep optimized route without these stops</button>
+      <button class="dropdlg-cancel">Cancel — undo, keep route as it was</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = (fn) => { document.body.removeChild(overlay); if (fn) fn(); };
+  overlay.querySelector('.dropdlg-fit').onclick = () => close(onFit);
+  overlay.querySelector('.dropdlg-keep').onclick = () => close(onKeep);
+  overlay.querySelector('.dropdlg-cancel').onclick = () => close(onCancel);
+}
+
 function optimizeCurrentRoute() {
   const pool = plannedDays.flatMap(d => d.stops);
   if (!pool.length) return;
@@ -1123,25 +1155,39 @@ function optimizeCurrentRoute() {
   planRoute(true, pool);
   const afterIds = new Set(plannedDays.flatMap(d => d.stops).map(s => s.id));
   const dropped = pool.filter(s => !afterIds.has(s.id));
-  if (dropped.length) {
-    const namen = dropped.map(s => s.name).join('\n - ');
-    // grove schatting van de benodigde extra tijd: gemiddelde tijd per stop in de
-    // wél geplande route toepassen op het aantal laten-vallen stops — geen exacte
-    // herberekening (die zou de kaart/route meerdere keren opnieuw laten tekenen),
-    // maar wel een bruikbaar richtgetal om Days/Hours op bij te stellen
-    const totMin = plannedDays.reduce((a, d) => a + d.min, 0);
-    const totStops = plannedDays.reduce((a, d) => a + d.stops.length, 0);
-    const avgMinPerStop = totStops ? totMin / totStops : 30;
-    const extraMin = dropped.length * avgMinPerStop;
-    const extraHoursPerDay = Math.ceil(extraMin / days / 6) / 10;   // afronden op 0,1 h
-    const extraDays = Math.max(1, Math.ceil(extraMin / dayBudgetMin));
-    const doorgaan = confirm(`Why: these ${dropped.length} stop(s) need roughly ${Math.round(extraMin)} extra minutes of driving+charging in total — more than fits in your current ${days} day(s) × ${(dayBudgetMin/60).toFixed(1)} h/day budget:\n - ${namen}\n\nFix: try raising Hours/day by about ${extraHoursPerDay} h, or Days by about ${extraDays}, then optimize again (rough estimate — exact fit may need a bit more or less).\n\nPress OK to keep the optimized route without these stops now, or Cancel to undo and keep your route exactly as it was.`);
-    if (!doorgaan) {
+  if (!dropped.length) return;
+
+  const namen = dropped.map(s => s.name).join('\n - ');
+  // grove schatting van de benodigde extra tijd: gemiddelde tijd per stop in de
+  // wél geplande route toepassen op het aantal laten-vallen stops — geen exacte
+  // herberekening (die zou de kaart/route meerdere keren opnieuw laten tekenen),
+  // maar wel een bruikbaar richtgetal om Days/Hours op bij te stellen
+  const totMin = plannedDays.reduce((a, d) => a + d.min, 0);
+  const totStops = plannedDays.reduce((a, d) => a + d.stops.length, 0);
+  const avgMinPerStop = totStops ? totMin / totStops : 30;
+  const extraMin = dropped.length * avgMinPerStop;
+  const HOURS_MAX = 16;   // zelfde bovengrens als het Hours/day-invoerveld
+  const hoursNow = dayBudgetMin / 60;
+  const extraHoursPerDay = Math.ceil(extraMin / days / 6) / 10;
+  const fitsWithMoreHours = hoursNow + extraHoursPerDay <= HOURS_MAX;
+  const extraDays = Math.max(1, Math.ceil(extraMin / dayBudgetMin));
+
+  const fitLabel = fitsWithMoreHours
+    ? `Auto-fit: set Hours/day to ${(hoursNow + extraHoursPerDay).toFixed(1)} h and re-optimize`
+    : `Auto-fit: set Days to ${days + extraDays} and re-optimize`;
+  const message = `Why: these ${dropped.length} stop(s) need roughly ${Math.round(extraMin)} extra minutes of driving+charging in total — more than fits in your current ${days} day(s) × ${hoursNow.toFixed(1)} h/day budget:\n - ${namen}\n\nThis is a rough estimate — exact fit may need a bit more or less, so you may need to press Optimize once more after auto-fitting.`;
+
+  showDropDialog(message, {
+    fitLabel,
+    onFit: () => {
+      if (fitsWithMoreHours) document.getElementById('p-hours').value = (hoursNow + extraHoursPerDay).toFixed(1);
+      else document.getElementById('p-days').value = days + extraDays;
       plannedDays = before;
-      drawRoute();
-      renderDays();
-    }
-  }
+      optimizeCurrentRoute();
+    },
+    onKeep: () => { /* de al opnieuw-geplande (kortere) route blijft gewoon staan */ },
+    onCancel: () => { plannedDays = before; drawRoute(); renderDays(); },
+  });
 }
 
 // visiting order within each day reversed — start/end points per day stay

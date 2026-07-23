@@ -189,6 +189,9 @@
     <label style="display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text)">
       <input type="checkbox" id="p-view"> Only within current map view
     </label>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text)">
+      <input type="checkbox" id="p-noroutes" checked> Exclude stops already in other saved routes
+    </label>
     <label>Limit to countries (empty = all, use country filter above)</label>
     <label>Custom overnight stops (optional; with loop on, the last day returns to start)</label>
     <div id="overnightlist" class="muted"></div>
@@ -598,6 +601,10 @@ function planRoute(reuseBounds = false, fixedPool = null) {
     pool = fixedPool.slice();   // vaste selectie: optimaliseren zonder toe te voegen
   } else {
     pool = SITES.filter(s => !isVisited(s) && !excluded.has(s.id));
+    if (document.getElementById('p-noroutes').checked) {
+      const reserved = sitesInOtherSavedRoutes();
+      pool = pool.filter(s => !reserved.has(s.id));
+    }
     if (activeCountries.size) pool = pool.filter(s => activeCountries.has(s.country));
     if (document.getElementById('p-view').checked) {
       if (!reuseBounds || !planBounds) planBounds = map.getBounds();
@@ -1262,8 +1269,8 @@ window.routePlanToggle = function(id) {
   map.closePopup();
 };
 
-document.getElementById('p-plan').onclick = () => { snapshotRoute(); planRoute(false); };
-document.getElementById('p-clear').onclick = () => { plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
+document.getElementById('p-plan').onclick = () => { loadedRouteName = null; snapshotRoute(); planRoute(false); };
+document.getElementById('p-clear').onclick = () => { loadedRouteName = null; plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
 
 // ---------- opgeslagen routes ----------
 // Bewust wél permanent opgeslagen (net als bezocht-status): een bewaarde route
@@ -1343,12 +1350,24 @@ function routeToData(name) {
     })),
   };
 }
+// site-id's die al in een ANDERE opgeslagen route zitten dan de nu geladen route
+// (voorkomt dat de planner een stop voorstelt die je al ergens anders had gepland)
+function sitesInOtherSavedRoutes() {
+  const ids = new Set();
+  for (const r of savedRoutes) {
+    if (r.name === loadedRouteName) continue;
+    for (const d of r.days) for (const pt of d.stops) { const s = resolveSite(pt); if (s) ids.add(s.id); }
+  }
+  return ids;
+}
 function resolveSite(pt) {
   let best = null, bd = Infinity;
   for (const s of SITES) { const dd = hav({ lat: pt[0], lng: pt[1] }, s); if (dd < bd) { bd = dd; best = s; } }
   return bd < 1 ? best : null;   // binnen 1 km
 }
+let loadedRouteName = null;   // welke opgeslagen route nu geladen is, voor de "sluit andere routes uit"-filter
 function loadRoute(r) {
+  loadedRouteName = r.name;
   const speed = +document.getElementById('p-speed').value;
   const factor = +document.getElementById('p-factor').value;
   const chargeMin = +document.getElementById('p-charge').value;

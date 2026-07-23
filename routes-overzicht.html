@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Routes-overzicht — alle geplande trips</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --border:#333a45; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  #sidebar { width: 320px; min-width: 320px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  #map { flex: 1; background: #0e1116; }
+  h1 { font-size: 17px; padding: 14px 16px 4px; }
+  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .rrow { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 6px; cursor: pointer; user-select: none; }
+  .rrow:hover { background: var(--panel2); }
+  .rrow input { width: 17px; height: 17px; flex-shrink: 0; }
+  .rrow .swatch { width: 22px; height: 5px; border-radius: 3px; flex-shrink: 0; }
+  .rrow .info { flex: 1; min-width: 0; }
+  .rrow .info b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rrow .info span { font-size: 12px; color: var(--muted); }
+  .muted { color: var(--muted); font-size: 12px; }
+  button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; cursor: pointer; }
+  button.small:hover { background: #303845; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  a.backlink { color: var(--muted); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; }
+  a.backlink:hover { color: var(--text); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+  .leaflet-popup-content { font-size: 13px; }
+  #status { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #map { order: 1; flex: none; height: 55vh; min-height: 240px; }
+    #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
+    h1 { display: none; }
+    .rrow .info b { font-size: 16px; }
+    .rrow .info span, .muted { font-size: 14px; }
+    button.small { padding: 11px 13px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>🗺️ Routes-overzicht
+    <span class="sub">Alle opgeslagen trips samen op één kaart</span>
+  </h1>
+  <section>
+    <h2>Routes</h2>
+    <div id="routelist"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="small" id="alles-aan">Alles tonen</button>
+      <button class="small" id="alles-uit">Alles verbergen</button>
+    </div>
+    <button class="small" id="ververs" style="width:100%;margin-top:8px">↻ Ververs uit cloud</button>
+    <div id="status"></div>
+  </section>
+  <section>
+    <div class="muted">
+      Elke route heeft één kleur en loopt door als één doorlopende lijn — de dagindeling
+      is hier bewust weggelaten. Stippen zijn de geplande stops; de grote ster is het
+      startpunt. Klik een route in de lijst om alleen die route te zien (dubbelklik voor
+      alles weer aan).
+    </div>
+    <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a>
+  </section>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="routesdata.js"></script>
+<script>
+const map = L.map('map', { preferCanvas: true }).setView([50, 6], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+
+// duidelijk onderscheidbare kleuren, ook naast elkaar op een lichte kaart
+const KLEUREN = ['#e11d48', '#0ea5e9', '#f59e0b', '#22c55e', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
+
+let routes = SAVED_ROUTES.slice();
+let lagen = [];     // per route: { line, dots, zichtbaar }
+
+function tekenRoutes() {
+  lagen.forEach(l => { map.removeLayer(l.line); l.dots.forEach(d => map.removeLayer(d)); });
+  lagen = [];
+  routes.forEach((r, i) => {
+    const kleur = KLEUREN[i % KLEUREN.length];
+    // start + alle stops + eindpunt als één doorlopende lijn (dagen samengevoegd)
+    const pts = [];
+    if (r.start) pts.push([r.start.lat, r.start.lng]);
+    r.stops.forEach(s => pts.push([s[0], s[1]]));
+    if (r.end) pts.push([r.end.lat, r.end.lng]);
+
+    const line = L.polyline(pts, { color: kleur, weight: 3, opacity: 0.75 });
+    const dots = r.stops.map(s => L.circleMarker([s[0], s[1]], {
+      radius: 3.5, weight: 1, color: '#0006', fillColor: kleur, fillOpacity: 0.9
+    }).bindTooltip(r.name));
+    if (r.start) {
+      dots.push(L.marker([r.start.lat, r.start.lng], {
+        icon: L.divIcon({ className: '', html: `<div style="font-size:20px;line-height:1;text-shadow:0 0 3px #000">★</div>`, iconSize: [20,20] })
+      }).bindTooltip('Start: ' + (r.start.name || 'startpunt')));
+    }
+    lagen.push({ line, dots, zichtbaar: true });
+  });
+  pasZichtbaarheidToe();
+  const zichtbareLijnen = lagen.filter(l => l.zichtbaar).map(l => l.line);
+  if (zichtbareLijnen.length) map.fitBounds(L.featureGroup(zichtbareLijnen).getBounds().pad(0.05));
+}
+
+function pasZichtbaarheidToe() {
+  lagen.forEach(l => {
+    if (l.zichtbaar) {
+      if (!map.hasLayer(l.line)) l.line.addTo(map);
+      l.dots.forEach(d => { if (!map.hasLayer(d)) d.addTo(map); });
+    } else {
+      if (map.hasLayer(l.line)) map.removeLayer(l.line);
+      l.dots.forEach(d => { if (map.hasLayer(d)) map.removeLayer(d); });
+    }
+  });
+}
+
+function bouwLijst() {
+  const el = document.getElementById('routelist');
+  el.innerHTML = '';
+  routes.forEach((r, i) => {
+    const kleur = KLEUREN[i % KLEUREN.length];
+    const div = document.createElement('div');
+    div.className = 'rrow';
+    div.innerHTML = `
+      <input type="checkbox" ${lagen[i] && lagen[i].zichtbaar ? 'checked' : ''}>
+      <span class="swatch" style="background:${kleur}"></span>
+      <div class="info"><b>${r.name.trim()}</b><span>${r.stops.length} stops</span></div>`;
+    const cb = div.querySelector('input');
+    cb.onclick = e => {
+      e.stopPropagation();
+      lagen[i].zichtbaar = cb.checked;
+      pasZichtbaarheidToe();
+    };
+    // op de rij klikken = solo (alleen deze), nogmaals = alles weer aan
+    div.onclick = () => {
+      const nuSolo = lagen.every((l, j) => j === i ? l.zichtbaar : !l.zichtbaar);
+      lagen.forEach((l, j) => l.zichtbaar = nuSolo ? true : j === i);
+      pasZichtbaarheidToe();
+      bouwLijst();
+      if (!nuSolo) map.fitBounds(lagen[i].line.getBounds().pad(0.05));
+    };
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('alles-aan').onclick = () => { lagen.forEach(l => l.zichtbaar = true); pasZichtbaarheidToe(); bouwLijst(); };
+document.getElementById('alles-uit').onclick = () => { lagen.forEach(l => l.zichtbaar = false); pasZichtbaarheidToe(); bouwLijst(); };
+
+// verse routes uit de cloud halen (zelfde bron als de hoofdapp)
+document.getElementById('ververs').onclick = async () => {
+  const st = document.getElementById('status');
+  st.textContent = 'Ophalen…';
+  try {
+    const supa = window.supabase.createClient(
+      'https://kgnfkuqzmdfstbdryfcy.supabase.co',
+      'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v'
+    );
+    const { data, error } = await supa.from('routes').select('name, data');
+    if (error) throw error;
+    routes = (data || []).map(r => ({
+      name: r.name,
+      start: r.data.days[0] ? r.data.days[0].start : null,
+      stops: r.data.days.flatMap(d => d.stops),
+      end: r.data.days[r.data.days.length - 1] ? r.data.days[r.data.days.length - 1].end : null,
+    }));
+    tekenRoutes();
+    bouwLijst();
+    st.textContent = `☁️ ${routes.length} route(s) opgehaald.`;
+  } catch (e) {
+    st.textContent = 'Ophalen mislukt — de opgeslagen momentopname blijft zichtbaar.';
+  }
+};
+
+window.addEventListener('resize', () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 400);
+
+tekenRoutes();
+bouwLijst();
+</script>
+</body>
+</html>

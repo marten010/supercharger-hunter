@@ -1058,7 +1058,11 @@ function renderDays(chargeMin, speed) {
   el.prepend(knoppen);
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
   knoppen.querySelector('#rd-rev').onclick = reverseRoute;
-  knoppen.querySelector('#rd-fill').onclick = () => { snapshotRoute(); planRoute(true); };
+  // reuseBounds=false: gebruik de HUIDIGE kaartweergave, niet de vastgezette
+  // begrenzing van de vorige planactie — anders blijft een regio die je net
+  // buiten beeld hebt geschoven (om 'm uit te sluiten) toch meegenomen, want
+  // "Only within current map view" filtert dan op een verouderde begrenzing
+  knoppen.querySelector('#rd-fill').onclick = () => { snapshotRoute(); planRoute(false); };
   // route-wijziging niet naar wens? één klik terug naar de vorige stand —
   // dekt optimaliseren/omdraaien/aanvullen/stops toevoegen-verwijderen/nieuw plannen
   if (routeHistory.length) {

@@ -1273,6 +1273,16 @@ let savedRoutes = [];
 try { savedRoutes = JSON.parse(localStorage.getItem(LS_ROUTES)) || []; } catch (e) {}
 const saveRoutesStore = () => localStorage.setItem(LS_ROUTES, JSON.stringify(savedRoutes));
 
+// "tombstones": namen van bewust verwijderde routes, met tijdstip. Zonder dit
+// weet syncRoutes() niet het verschil tussen "nog nooit opgehaald" en "bewust
+// verwijderd" — een cloud-rij die nog bestaat (bijv. omdat deleteRouteCloud()
+// niet op tijd klaar was vóór een paginaverversing) werd zo bij elke sync
+// stilzwijgend teruggehaald, ook al had je 'm net verwijderd.
+const LS_DELETED_ROUTES = 'sc_deleted_routes_v1';
+let deletedRoutes = {};   // naam -> ISO-tijdstip van verwijderen
+try { deletedRoutes = JSON.parse(localStorage.getItem(LS_DELETED_ROUTES)) || {}; } catch (e) {}
+const saveDeletedRoutes = () => localStorage.setItem(LS_DELETED_ROUTES, JSON.stringify(deletedRoutes));
+
 // routes meesyncen naar de cloud (tabel "routes"); ontbreekt die, dan blijft alles gewoon lokaal werken
 async function pushRouteCloud(r) {
   if (!supa) return;
@@ -1289,12 +1299,25 @@ async function deleteRouteCloud(name) {
 async function syncRoutes() {
   if (!supa) return;
   try {
-    const { data, error } = await supa.from('routes').select('name, data');
+    const { data, error } = await supa.from('routes').select('name, data, updated_at');
     if (error) throw error;
-    const cloudNames = new Set((data || []).map(r => r.name));
-    for (const r of savedRoutes) if (!cloudNames.has(r.name)) await pushRouteCloud(r);   // lokale eerst omhoog
-    const merged = (data || []).map(r => r.data);
-    for (const r of savedRoutes) if (!cloudNames.has(r.name)) merged.push(r);
+    // tombstone-check: een cloud-rij die vóór de verwijdering is opgeslagen (of
+    // sindsdien niet opnieuw is gepusht) nooit terugtrekken — en zelf-herstellend
+    // alsnog verwijderen, voor het geval de eerdere deleteRouteCloud() niet aankwam
+    const isTombstoned = row => deletedRoutes[row.name] && (!row.updated_at || row.updated_at <= deletedRoutes[row.name]);
+    for (const row of (data || []).filter(isTombstoned)) deleteRouteCloud(row.name);
+    const liveData = (data || []).filter(row => !isTombstoned(row));
+    // tombstones opruimen zodra de cloud-rij écht weg is (voorkomt onbeperkte groei)
+    let tombstonesChanged = false;
+    for (const name of Object.keys(deletedRoutes)) {
+      if (!(data || []).some(row => row.name === name)) { delete deletedRoutes[name]; tombstonesChanged = true; }
+    }
+    if (tombstonesChanged) saveDeletedRoutes();
+
+    const cloudNames = new Set(liveData.map(r => r.name));
+    for (const r of savedRoutes) if (!cloudNames.has(r.name) && !deletedRoutes[r.name]) await pushRouteCloud(r);   // lokale eerst omhoog
+    const merged = liveData.map(r => r.data);
+    for (const r of savedRoutes) if (!cloudNames.has(r.name) && !deletedRoutes[r.name]) merged.push(r);
     savedRoutes = merged;
     saveRoutesStore();
     renderSavedRoutes();
@@ -1368,6 +1391,8 @@ function renderSavedRoutes() {
       if (!confirm(`Delete route "${r.name}"?`)) return;
       savedRoutes.splice(i, 1);
       saveRoutesStore();
+      deletedRoutes[r.name] = new Date().toISOString();
+      saveDeletedRoutes();
       deleteRouteCloud(r.name);
       renderSavedRoutes();
     };
@@ -1382,6 +1407,7 @@ document.getElementById('saveroute').onclick = () => {
   savedRoutes = savedRoutes.filter(x => x.name !== name);   // zelfde naam = overschrijven
   savedRoutes.push(r);
   saveRoutesStore();
+  if (deletedRoutes[name]) { delete deletedRoutes[name]; saveDeletedRoutes(); }   // bewust opnieuw opgeslagen: geen tombstone meer nodig
   pushRouteCloud(r);
   renderSavedRoutes();
 };

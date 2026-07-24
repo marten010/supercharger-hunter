@@ -72,7 +72,7 @@
       <div><span class="dot" style="background:#f59e0b"></span> dichtbij een route — makkelijk mee te pikken</div>
       <div><span class="dot" style="background:var(--accent)"></span> blijft daarna nog over</div>
     </div>
-    <label class="chk"><input type="checkbox" id="verberg-rest"> Verberg wat overblijft (alleen eindresultaat)</label>
+    <label class="chk"><input type="checkbox" id="verberg-rest"> Toon alleen wat overblijft (nog niet bezocht én niet gepland)</label>
   </section>
   <section>
     <h2 id="aanvul-kop">Makkelijkste aanvullingen</h2>
@@ -124,7 +124,7 @@ const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
 let bezocht = new Set(SITES.filter(s => s.visited).map(s => s.id));   // baseline uit data.js
 let inRoutes = new Set();
 let markers = new Map();
-let verbergRest = false;
+let alleenRest = false;
 
 function berekenRoutes() {
   inRoutes = new Set();
@@ -172,7 +172,9 @@ function tekenKaart() {
   markers = new Map();
   for (const s of SITES) {
     const isRest = !bezocht.has(s.id) && !inRoutes.has(s.id);
-    if (verbergRest && isRest) continue;
+    // aangevinkt: juist alléén de overgebleven locaties tonen (nog niet bezocht
+    // én niet in een geplande route) — het werk dat na alle routes nog wacht
+    if (alleenRest && !isRest) continue;
     const k = kleurVan(s);
     const kand = makkelijkIds.has(s.id) ? aanvulKandidaten.find(x => x.site.id === s.id) : null;
     const label = bezocht.has(s.id) ? ' ✔ bezocht'
@@ -237,7 +239,7 @@ function render() {
   tekenKaart();
 }
 
-document.getElementById('verberg-rest').addEventListener('change', e => { verbergRest = e.target.checked; tekenKaart(); });
+document.getElementById('verberg-rest').addEventListener('change', e => { alleenRest = e.target.checked; tekenKaart(); });
 
 // actuele bezoek-status uit de cloud (zelfde bron als de hoofdapp); lukt dat niet,
 // dan blijft de baseline uit data.js staan

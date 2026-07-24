@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Projectie — kaart na alle geplande routes</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af;
+          --accent:#e82127; --green:#2ecc71; --blue:#3b82f6; --border:#333a45; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  #sidebar { width: 330px; min-width: 330px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  #map { flex: 1; background: #0e1116; }
+  h1 { font-size: 17px; padding: 14px 16px 4px; }
+  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: var(--panel2); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat b { font-size: 24px; display: block; }
+  .stat span { font-size: 11px; color: var(--muted); }
+  .stat.doel b { color: var(--green); }
+  .progressbar { height: 14px; background: var(--panel2); border-radius: 7px; overflow: hidden; margin-top: 10px; display: flex; }
+  .progressbar .nu { height: 100%; background: var(--green); }
+  .progressbar .straks { height: 100%; background: var(--blue); }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend div { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .crow { display: flex; justify-content: space-between; padding: 4px 4px; font-size: 13px; border-radius: 4px; }
+  .crow:nth-child(odd) { background: var(--panel2); }
+  .crow .pct { color: var(--muted); font-size: 12px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  #countrylist { max-height: 260px; overflow-y: auto; }
+  a.backlink { color: var(--muted); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; }
+  a.backlink:hover { color: var(--text); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+  .leaflet-popup-content { font-size: 13px; }
+  label.chk { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 0; cursor: pointer; color: var(--text); }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #map { order: 1; flex: none; height: 50vh; min-height: 240px; }
+    #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
+    h1 { display: none; }
+    section, .crow, .legend, label.chk { font-size: 15px; }
+    .stat b { font-size: 27px; }
+    .stat span { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>🔮 Projectie
+    <span class="sub">Hoe de kaart eruitziet ná alle geplande routes</span>
+  </h1>
+  <section>
+    <div class="statgrid">
+      <div class="stat"><b id="st-nu">…</b><span>nu bezocht</span></div>
+      <div class="stat"><b id="st-nieuw">…</b><span>via routes erbij</span></div>
+      <div class="stat doel"><b id="st-straks">…</b><span>straks totaal</span></div>
+      <div class="stat"><b id="st-tekort">…</b><span>tekort t.o.v. 800</span></div>
+    </div>
+    <div class="progressbar" title="groen = nu bezocht, blauw = via de geplande routes erbij">
+      <div class="nu" id="bar-nu"></div>
+      <div class="straks" id="bar-straks"></div>
+    </div>
+    <div class="muted" style="margin-top:6px" id="doeltekst"></div>
+    <div class="legend">
+      <div><span class="dot" style="background:var(--green)"></span> nu al bezocht</div>
+      <div><span class="dot" style="background:var(--blue)"></span> komt erbij via een geplande route</div>
+      <div><span class="dot" style="background:#f59e0b"></span> dichtbij een route — makkelijk mee te pikken</div>
+      <div><span class="dot" style="background:var(--accent)"></span> blijft daarna nog over</div>
+    </div>
+    <label class="chk"><input type="checkbox" id="verberg-rest"> Verberg wat overblijft (alleen eindresultaat)</label>
+  </section>
+  <section>
+    <h2 id="aanvul-kop">Makkelijkste aanvullingen</h2>
+    <div class="muted" style="margin-bottom:8px" id="aanvul-uitleg"></div>
+    <div id="aanvullijst"></div>
+  </section>
+  <section>
+    <h2>Per land — straks</h2>
+    <div id="countrylist"></div>
+  </section>
+  <section>
+    <div class="muted" id="bron">
+      Berekend uit de opgeslagen routes + je actuele bezoek-status. Locaties die in
+      meerdere routes voorkomen tellen één keer mee.
+    </div>
+    <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
+    <a class="backlink" href="routes-overzicht.html">🗺️ Routes-overzicht bekijken</a>
+  </section>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="data.js"></script>
+<script src="routesdata.js"></script>
+<script>
+const DOEL = 800;
+const map = L.map('map', { preferCanvas: true }).setView([50, 8], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+
+const R = 6371;
+const hav = (a, b) => {
+  const dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+};
+// route-stop (coördinaat) terugzoeken naar de bijbehorende Supercharger
+function resolveSite(pt) {
+  let best = null, bd = Infinity;
+  for (const s of SITES) { const dd = hav({ lat: pt[0], lng: pt[1] }, s); if (dd < bd) { bd = dd; best = s; } }
+  return bd < 2 ? best : null;
+}
+
+const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyToSite = new Map(SITES.map(s => [siteKey(s), s]));
+
+let bezocht = new Set(SITES.filter(s => s.visited).map(s => s.id));   // baseline uit data.js
+let inRoutes = new Set();
+let markers = new Map();
+let verbergRest = false;
+
+function berekenRoutes() {
+  inRoutes = new Set();
+  for (const r of SAVED_ROUTES) {
+    for (const pt of r.stops) {
+      const s = resolveSite(pt);
+      if (s && !bezocht.has(s.id)) inRoutes.add(s.id);
+    }
+  }
+}
+
+// Wat er ná alle routes nog overblijft, gerangschikt op hoe dicht het bij de
+// geplande routes ligt: hoe kleiner de omweg, hoe makkelijker alsnog mee te pikken.
+// De afstand is hemelsbreed tot het dichtstbijzijnde punt op een geplande route.
+let aanvulKandidaten = [];   // [{ site, km }] oplopend op km
+let makkelijkIds = new Set();
+const MAKKELIJK_KM = 25;
+
+function berekenAanvullingen() {
+  const routePunten = [];
+  for (const r of SAVED_ROUTES) {
+    if (r.start) routePunten.push({ lat: r.start.lat, lng: r.start.lng });
+    for (const pt of r.stops) routePunten.push({ lat: pt[0], lng: pt[1] });
+  }
+  aanvulKandidaten = [];
+  for (const s of SITES) {
+    if (bezocht.has(s.id) || inRoutes.has(s.id)) continue;
+    let bd = Infinity;
+    for (const p of routePunten) { const d = hav(p, s); if (d < bd) bd = d; }
+    aanvulKandidaten.push({ site: s, km: bd });
+  }
+  aanvulKandidaten.sort((a, b) => a.km - b.km);
+  makkelijkIds = new Set(aanvulKandidaten.filter(k => k.km <= MAKKELIJK_KM).map(k => k.site.id));
+}
+
+function kleurVan(s) {
+  if (bezocht.has(s.id)) return { fill: '#2ecc71', r: 4.5 };
+  if (inRoutes.has(s.id)) return { fill: '#3b82f6', r: 4.5 };
+  if (makkelijkIds.has(s.id)) return { fill: '#f59e0b', r: 5 };
+  return { fill: '#e82127', r: 3 };
+}
+
+function tekenKaart() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = new Map();
+  for (const s of SITES) {
+    const isRest = !bezocht.has(s.id) && !inRoutes.has(s.id);
+    if (verbergRest && isRest) continue;
+    const k = kleurVan(s);
+    const kand = makkelijkIds.has(s.id) ? aanvulKandidaten.find(x => x.site.id === s.id) : null;
+    const label = bezocht.has(s.id) ? ' ✔ bezocht'
+      : inRoutes.has(s.id) ? ' 🔵 gepland'
+      : kand ? ` 🟠 ${Math.round(kand.km)} km van een route` : '';
+    const m = L.circleMarker([s.lat, s.lng], {
+      radius: k.r, weight: 1, color: '#0006', fillOpacity: 0.9, fillColor: k.fill
+    }).bindTooltip(`${s.name}${label}`).addTo(map);
+    markers.set(s.id, m);
+  }
+}
+
+function render() {
+  const nu = bezocht.size;
+  const nieuw = inRoutes.size;
+  const straks = nu + nieuw;
+  document.getElementById('st-nu').textContent = nu;
+  document.getElementById('st-nieuw').textContent = '+' + nieuw;
+  document.getElementById('st-straks').textContent = straks;
+  const tekort = DOEL - straks;
+  document.getElementById('st-tekort').textContent = tekort > 0 ? tekort : '✔ gehaald';
+  document.getElementById('bar-nu').style.width = Math.min(100, nu / DOEL * 100) + '%';
+  document.getElementById('bar-straks').style.width = Math.min(100 - nu / DOEL * 100, nieuw / DOEL * 100) + '%';
+  document.getElementById('doeltekst').textContent = tekort > 0
+    ? `Na alle ${SAVED_ROUTES.length} geplande routes zit je op ${straks} van ${DOEL} — nog ${tekort} te gaan.`
+    : `Na alle geplande routes haal je het doel van ${DOEL} ruim (${straks}).`;
+
+  // makkelijkste aanvullingen: precies zoveel als je nog tekortkomt, plus wat marge
+  const nodig = Math.max(0, tekort);
+  const toon = aanvulKandidaten.slice(0, Math.max(nodig + 5, 10));
+  const binnenBereik = aanvulKandidaten.filter(k => k.km <= MAKKELIJK_KM).length;
+  document.getElementById('aanvul-kop').textContent =
+    nodig > 0 ? `Makkelijkste aanvullingen (${nodig} nodig)` : 'Makkelijkste aanvullingen';
+  document.getElementById('aanvul-uitleg').textContent = nodig > 0
+    ? `Dichtstbijzijnde nog-open locaties t.o.v. je geplande routes — ${binnenBereik} liggen binnen ${MAKKELIJK_KM} km (oranje op de kaart). De bovenste ${nodig} volstaan om op ${DOEL} te komen.`
+    : `Je haalt het doel al; dit zijn de dichtstbijzijnde extra's mocht je willen doorpakken.`;
+  const al = document.getElementById('aanvullijst');
+  al.innerHTML = '';
+  toon.forEach((k, i) => {
+    const div = document.createElement('div');
+    div.className = 'crow';
+    div.style.cursor = 'pointer';
+    div.innerHTML = `<span>${i < nodig ? '<b>' + (i+1) + '.</b> ' : ''}${k.site.name}</span><span class="pct">${Math.round(k.km)} km</span>`;
+    div.onclick = () => { map.setView([k.site.lat, k.site.lng], 11); const m = markers.get(k.site.id); if (m) m.openTooltip(); };
+    al.appendChild(div);
+  });
+
+  const per = {};
+  for (const s of SITES) {
+    per[s.country] = per[s.country] || { totaal: 0, straks: 0 };
+    per[s.country].totaal++;
+    if (bezocht.has(s.id) || inRoutes.has(s.id)) per[s.country].straks++;
+  }
+  const el = document.getElementById('countrylist');
+  el.innerHTML = '';
+  Object.entries(per).filter(([, x]) => x.straks > 0).sort((a, b) => b[1].straks - a[1].straks).forEach(([c, x]) => {
+    const div = document.createElement('div');
+    div.className = 'crow';
+    div.innerHTML = `<span>${c}</span><span class="pct">${x.straks} / ${x.totaal}</span>`;
+    el.appendChild(div);
+  });
+  tekenKaart();
+}
+
+document.getElementById('verberg-rest').addEventListener('change', e => { verbergRest = e.target.checked; tekenKaart(); });
+
+// actuele bezoek-status uit de cloud (zelfde bron als de hoofdapp); lukt dat niet,
+// dan blijft de baseline uit data.js staan
+async function laadCloud() {
+  try {
+    const supa = window.supabase.createClient(
+      'https://kgnfkuqzmdfstbdryfcy.supabase.co',
+      'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v'
+    );
+    const { data, error } = await supa.from('visits').select('site_key, visited');
+    if (error) throw error;
+    for (const r of data || []) {
+      const s = keyToSite.get(r.site_key);
+      if (!s) continue;
+      if (r.visited) bezocht.add(s.id); else bezocht.delete(s.id);
+    }
+    document.getElementById('bron').textContent =
+      'Berekend uit de opgeslagen routes + je actuele bezoek-status (live uit de cloud). Locaties die in meerdere routes voorkomen tellen één keer mee.';
+  } catch (e) { /* baseline uit data.js blijft staan */ }
+  berekenRoutes();
+  berekenAanvullingen();
+  render();
+}
+
+berekenRoutes();
+berekenAanvullingen();
+render();
+laadCloud();
+window.addEventListener('resize', () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 400);
+</script>
+</body>
+</html>

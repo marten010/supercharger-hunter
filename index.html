@@ -1305,32 +1305,65 @@ async function pushRouteCloud(r) {
     if (error && note) note.textContent = 'Route saved locally only — log in to sync.';
   } catch (e) {}
 }
-async function deleteRouteCloud(name) {
+// verwijderen = een "grafsteen"-rij in de cloud zetten ({__deleted:true}) i.p.v.
+// hard wissen. Een hard-delete verdwijnt namelijk zonder spoor, waardoor een
+// ánder apparaat dat de route nog lokaal heeft 'm bij de eerstvolgende sync weer
+// omhoog duwt ("staat niet in de cloud → dus pushen"). Een grafsteen-rij blijft
+// staan en zegt tegen élk apparaat: deze route is bewust weg.
+async function deleteRouteCloud(name, when) {
   if (!supa) return;
-  try { await supa.from('routes').delete().eq('name', name); } catch (e) {}
+  try { await supa.from('routes').upsert({ name, data: { __deleted: true }, updated_at: when || new Date().toISOString() }); } catch (e) {}
 }
+const routeSavedAt = r => (r && r.savedAt) || '1970-01-01T00:00:00Z';   // legacy routes zonder tijd = heel oud
 async function syncRoutes() {
   if (!supa) return;
   try {
     const { data, error } = await supa.from('routes').select('name, data, updated_at');
     if (error) throw error;
-    // tombstone-check: een cloud-rij die vóór de verwijdering is opgeslagen (of
-    // sindsdien niet opnieuw is gepusht) nooit terugtrekken — en zelf-herstellend
-    // alsnog verwijderen, voor het geval de eerdere deleteRouteCloud() niet aankwam
-    const isTombstoned = row => deletedRoutes[row.name] && (!row.updated_at || row.updated_at <= deletedRoutes[row.name]);
-    for (const row of (data || []).filter(isTombstoned)) deleteRouteCloud(row.name);
-    const liveData = (data || []).filter(row => !isTombstoned(row));
-    // tombstones opruimen zodra de cloud-rij écht weg is (voorkomt onbeperkte groei)
-    let tombstonesChanged = false;
-    for (const name of Object.keys(deletedRoutes)) {
-      if (!(data || []).some(row => row.name === name)) { delete deletedRoutes[name]; tombstonesChanged = true; }
+    const rows = data || [];
+    // cloud opsplitsen in echte routes en grafstenen (bewust verwijderd)
+    const cloudLive = [], cloudTomb = new Map();   // grafsteen: naam -> tijdstip
+    for (const row of rows) {
+      if (row.data && row.data.__deleted) cloudTomb.set(row.name, row.updated_at || '');
+      else cloudLive.push(row);
     }
-    if (tombstonesChanged) saveDeletedRoutes();
+    // cloud-grafstenen samenvoegen met de lokale lijst (nieuwste tijd wint), zodat
+    // een verwijdering elders ook op dit apparaat blijft gelden
+    let tombChanged = false;
+    for (const [name, t] of cloudTomb) {
+      if (!deletedRoutes[name] || deletedRoutes[name] < t) { deletedRoutes[name] = t; tombChanged = true; }
+    }
+    if (tombChanged) saveDeletedRoutes();
 
-    const cloudNames = new Set(liveData.map(r => r.name));
-    for (const r of savedRoutes) if (!cloudNames.has(r.name) && !deletedRoutes[r.name]) await pushRouteCloud(r);   // lokale eerst omhoog
-    const merged = liveData.map(r => r.data);
-    for (const r of savedRoutes) if (!cloudNames.has(r.name) && !deletedRoutes[r.name]) merged.push(r);
+    // lokale route weggooien als er een (cloud- of lokale) grafsteen is die
+    // nieuwer is dan het moment waarop die route lokaal is opgeslagen
+    savedRoutes = savedRoutes.filter(r => {
+      const t = deletedRoutes[r.name];
+      return !t || routeSavedAt(r) > t;
+    });
+
+    const cloudByName = new Map(cloudLive.map(r => [r.name, r]));
+    // lokale routes omhoog die de cloud nog niet (levend) heeft en niet verwijderd zijn
+    for (const r of savedRoutes) {
+      const t = deletedRoutes[r.name];
+      if (t && routeSavedAt(r) <= t) continue;            // bewust verwijderd
+      if (!cloudByName.has(r.name)) await pushRouteCloud(r);
+    }
+    // een grafsteen die nieuwer is dan zijn eigen (nog levende) cloud-rij mag die rij
+    // opruimen — bijv. als een oud apparaat 'm net vóór onze grafsteen terugduwde
+    for (const row of cloudLive) {
+      const t = deletedRoutes[row.name];
+      if (t && t >= (row.updated_at || '')) deleteRouteCloud(row.name, t);
+    }
+
+    // samengevoegde lijst: cloud-routes die niet (nieuwer) verwijderd zijn + lokale extra's
+    const merged = [];
+    for (const row of cloudLive) {
+      const t = deletedRoutes[row.name];
+      if (t && t >= (row.updated_at || '')) continue;
+      merged.push(row.data);
+    }
+    for (const r of savedRoutes) if (!merged.some(m => m.name === r.name)) merged.push(r);
     savedRoutes = merged;
     saveRoutesStore();
     renderSavedRoutes();
@@ -1348,6 +1381,7 @@ function routeToData(name) {
   return {
     name,
     created: new Date().toISOString().slice(0, 10),
+    savedAt: new Date().toISOString(),   // vol tijdstip: bepaalt of een re-save nieuwer is dan een grafsteen
     days: plannedDays.map(d => ({
       start: { lat: +(+d.start.lat).toFixed(5), lng: +(+d.start.lng).toFixed(5), name: d.start.name || d.start.label || 'start' },
       stops: d.stops.map(s => [+s.lat.toFixed(5), +s.lng.toFixed(5)]),
@@ -1414,11 +1448,12 @@ function renderSavedRoutes() {
     };
     row.querySelector('[data-a=del]').onclick = () => {
       if (!confirm(`Delete route "${r.name}"?`)) return;
+      const when = new Date().toISOString();
       savedRoutes.splice(i, 1);
       saveRoutesStore();
-      deletedRoutes[r.name] = new Date().toISOString();
+      deletedRoutes[r.name] = when;
       saveDeletedRoutes();
-      deleteRouteCloud(r.name);
+      deleteRouteCloud(r.name, when);   // zelfde tijdstip lokaal én in de cloud-grafsteen
       renderSavedRoutes();
     };
     el.appendChild(row);

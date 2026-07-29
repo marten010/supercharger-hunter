@@ -168,7 +168,7 @@ document.getElementById('ververs').onclick = async () => {
     );
     const { data, error } = await supa.from('routes').select('name, data');
     if (error) throw error;
-    routes = (data || []).map(r => ({
+    routes = (data || []).filter(r => r.data && !r.data.__deleted && r.data.days).map(r => ({
       name: r.name,
       start: r.data.days[0] ? r.data.days[0].start : null,
       stops: r.data.days.flatMap(d => d.stops),

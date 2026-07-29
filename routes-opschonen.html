@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Routes opschonen — eenmalig</title>
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 22px; }
+  p, li { line-height: 1.5; font-size: 14px; }
+  .box { background: var(--panel); border-radius: 10px; padding: 16px; margin: 14px 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  input[type=email], input[type=password] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .list { background: var(--panel2); border-radius: 6px; padding: 10px; font-size: 13px; margin-top: 8px; }
+  .list div { padding: 3px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+  .list div:last-child { border-bottom: none; }
+  .keep { color: var(--green); }
+  .del { color: #ff8080; }
+  #status { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; }
+  #status.ok { background: #123a1c; color: var(--green); }
+  #status.err { background: #3a1414; color: #ff8080; }
+  a.backlink { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>🧹 Routes opschonen</h1>
+<div class="box">
+  <p>Deze pagina bewaart alleen de 5 routes die je wilt houden en verwijdert de rest
+  definitief (met de nieuwe grafsteen-markering, zodat ze niet meer via een ander
+  apparaat terugkomen).</p>
+  <p class="muted">Eenmalig bedoeld. Na het opschonen kun je 'm negeren.</p>
+</div>
+
+<div class="box" id="authbox">
+  <h2>Stap 1: inloggen</h2>
+  <input type="email" id="au-mail" placeholder="Email" autocomplete="username">
+  <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password">
+  <button id="au-in">Inloggen</button>
+  <div id="au-status" class="muted" style="margin-top:8px"></div>
+</div>
+
+<div class="box" id="previewbox" style="display:none">
+  <h2>Stap 2: controleren</h2>
+  <p class="keep"><b>Behouden (5):</b></p>
+  <div class="list" id="list-keep"></div>
+  <p class="del" style="margin-top:14px"><b id="del-count"></b></p>
+  <div class="list" id="list-del"></div>
+  <button id="run-clean">🧹 Opschonen — verwijder de rest</button>
+</div>
+
+<div id="status" style="display:none"></div>
+<p style="margin-top:20px"><a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// de exact 5 te behouden routes (genormaliseerd vergelijken, zodat een extra spatie
+// zoals in "NL DE DK BE " niet per ongeluk tot verwijderen leidt)
+const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const KEEP = ['UK 23-7', 'Parijs 23-7', 'DE CH IT AT 23-7', 'NL DE DK BE', 'FR 7 days'].map(norm);
+
+let teVerwijderen = [];   // cloud-rijnamen die weg moeten
+
+function showStatus(msg, ok) {
+  const el = document.getElementById('status');
+  el.style.display = 'block';
+  el.className = ok ? 'ok' : 'err';
+  el.textContent = msg;
+}
+
+async function laadEnToon() {
+  const { data, error } = await supa.from('routes').select('name, data');
+  if (error) { showStatus('Ophalen mislukt: ' + error.message, false); return; }
+  const rows = (data || []).filter(r => r.data && !r.data.__deleted);   // grafstenen negeren
+  const keepRows = [], delRows = [];
+  for (const r of rows) {
+    if (KEEP.includes(norm(r.name))) keepRows.push(r); else delRows.push(r);
+  }
+  teVerwijderen = delRows.map(r => r.name);
+
+  const stops = r => (r.data.days || []).reduce((a, d) => a + (d.stops ? d.stops.length : 0), 0);
+  document.getElementById('list-keep').innerHTML = keepRows.map(r =>
+    `<div><span>${r.name}</span><span class="muted">${stops(r)} stops</span></div>`).join('') || '<div class="muted">— geen van de 5 gevonden —</div>';
+  document.getElementById('del-count').textContent = `Verwijderen (${delRows.length}):`;
+  document.getElementById('list-del').innerHTML = delRows.map(r =>
+    `<div><span>${r.name}</span><span class="muted">${stops(r)} stops</span></div>`).join('') || '<div class="muted">— niets te verwijderen —</div>';
+  document.getElementById('run-clean').disabled = delRows.length === 0;
+}
+
+async function checkSession() {
+  const { data } = await supa.auth.getSession();
+  if (data.session) {
+    document.getElementById('authbox').innerHTML = `<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>${data.session.user.email}</b></p>`;
+    document.getElementById('previewbox').style.display = 'block';
+    laadEnToon();
+  }
+}
+checkSession();
+
+document.getElementById('au-in').onclick = async () => {
+  const email = document.getElementById('au-mail').value.trim();
+  const password = document.getElementById('au-pw').value;
+  document.getElementById('au-status').textContent = 'Bezig met inloggen…';
+  const { error } = await supa.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('au-status').textContent = 'Inloggen mislukt: ' + error.message; return; }
+  checkSession();
+};
+
+document.getElementById('run-clean').onclick = async () => {
+  const btn = document.getElementById('run-clean');
+  btn.disabled = true; btn.textContent = 'Bezig…';
+  try {
+    const when = new Date().toISOString();
+    const rows = teVerwijderen.map(name => ({ name, data: { __deleted: true }, updated_at: when }));
+    const { error } = await supa.from('routes').upsert(rows);
+    if (error) throw error;
+    showStatus(`✅ Klaar. ${rows.length} route(s) verwijderd. Open de app op je laptop én telefoon om de opgeschoonde lijst overal te laten doorkomen.`, true);
+    btn.textContent = '✅ Opgeschoond';
+  } catch (e) {
+    showStatus('❌ Mislukt: ' + e.message, false);
+    btn.disabled = false; btn.textContent = '🧹 Opschonen — verwijder de rest';
+  }
+};
+</script>
+</body>
+</html>

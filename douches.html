@@ -93,21 +93,17 @@
   </section>
   <section>
     <div class="muted">
-      Duitsland: Sanifair-locaties met vrachtwagenchauffeursdouche (bron: sanifair.com, juli 2026) +
-      1 extra onafhankelijke truckparking (Bitburg). Nederland (11): 2 wegrestaurants met douche
-      (OSM) + 9 beveiligde truckparkings met douche (bron: officiële NDW-truckparkingdata,
-      opendata.ndw.nu, + Truckparking Duiven/Deventer via nieuwsberichten) — in Nederland zitten
-      truckerdouches vooral bij dit soort beveiligde truckparkings, niet bij gewone tankstations,
-      vandaar dat een simpele tankstation-zoekopdracht in OSM daar bijna niets oplevert. Overige
-      landen: OpenStreetMap-data voor tank-/wegrestaurants met douche (shower=yes/hgv), juli 2026 —
-      België, Zwitserland en Luxemburg zijn hier nog dun gedekt (Luxemburg: 0 treffers) en hebben
-      mogelijk ook zo'n aparte beveiligde-truckparking-databron die nog niet is meegenomen. Zwembaden-
-      laag: publieke binnenbaden/zwemhallen via OSM (amenity=public_bath / sports_centre+swimming),
-      geen prijsdata beschikbaar in de bron. Campings-laag (7530 locaties, alle 9 landen): dit is
-      verreweg de grootste categorie douche-locaties in OSM — veruit de meeste campings staan
-      niet-gasten toe om tegen een kleine vergoeding te douchen, maar dat is geen harde garantie per
-      locatie, dus even bellen/checken wordt aangeraden. Controleer prijs/openingstijden altijd via
-      de website- of Google Maps-link, want niet elke locatie is gratis.
+      Alleen vrij toegankelijke douches: afgesloten/privé en uitsluitend-voor-vrachtwagens
+      truckparkings (access=private/customers/hgv-only in OSM) zijn er bewust uitgefilterd.
+      Duitsland: Sanifair-douches bij openbare Autobahn-verzorgingsplaatsen (bron: sanifair.com,
+      juli 2026). Overige landen: OpenStreetMap-data voor openbare tank-/wegrestaurants met douche
+      (shower=yes), juli 2026 — België, Nederland, Zwitserland en Luxemburg zijn hier dun gedekt.
+      Openingstijden en website worden getoond waar OSM/Sanifair die vermeldt (niet overal bekend).
+      Zwembaden-laag: publieke binnenbaden/zwemhallen via OSM (amenity=public_bath /
+      sports_centre+swimming), geen prijsdata in de bron. Campings-laag (7530 locaties): veruit de
+      grootste categorie — de meeste campings laten niet-gasten tegen een kleine vergoeding douchen,
+      maar geen harde garantie per locatie, dus even bellen/checken. Controleer prijs/openingstijden
+      altijd via de website- of Google Maps-link, want niet elke locatie is gratis.
     </div>
     <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a>
   </section>
@@ -151,10 +147,13 @@ setTimeout(() => map.invalidateSize(), 400);
 
 function popupHtml(s) {
   const adres = [s.street, s.postcode, s.city].filter(Boolean).join(', ');
+  // openingstijden alleen tonen als het geen kaal "24/7" is (dat staat al als badge)
+  const oh = s.opening_hours && s.opening_hours !== '24/7' ? s.opening_hours : '';
   return `<b>${s.name}</b>${s.hours24 ? '<span class="badge247">24/7</span>' : ''}<br>
     <span style="color:#9aa3af">${adres || 'Adres onbekend'}${s.country ? ' · ' + s.country : ''}</span><br>
     ${s.highway ? `<span style="color:#9aa3af">🛣️ ${s.highway}</span><br>` : ''}
     ${s.brand ? `<span style="color:#9aa3af">🚿 ${s.brand}</span><br>` : ''}
+    ${oh ? `<span style="color:#9aa3af">🕐 ${oh}</span><br>` : ''}
     <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank">🧭 Google Maps</a>
     ${s.website ? ` · <a href="${s.website}" target="_blank">Website</a>` : ''}`;
 }

@@ -98,6 +98,8 @@
       Duitsland: Sanifair-douches bij openbare Autobahn-verzorgingsplaatsen (bron: sanifair.com,
       juli 2026). Overige landen: OpenStreetMap-data voor openbare tank-/wegrestaurants met douche
       (shower=yes), juli 2026 — België, Nederland, Zwitserland en Luxemburg zijn hier dun gedekt.
+      Denemarken (301): veel openbare haven-/strandouches (OSM amenity=shower) — vaak gratis of een
+      paar kroner (fee getoond waar bekend); let op dat sommige koude buitendouches kunnen zijn.
       Openingstijden en website worden getoond waar OSM/Sanifair die vermeldt (niet overal bekend).
       Zwembaden-laag: publieke binnenbaden/zwemhallen via OSM (amenity=public_bath /
       sports_centre+swimming), geen prijsdata in de bron. Campings-laag (7530 locaties): veruit de
@@ -147,12 +149,13 @@ setTimeout(() => map.invalidateSize(), 400);
 
 function popupHtml(s) {
   const adres = [s.street, s.postcode, s.city].filter(Boolean).join(', ');
-  // openingstijden alleen tonen als het geen kaal "24/7" is (dat staat al als badge)
-  const oh = s.opening_hours && s.opening_hours !== '24/7' ? s.opening_hours : '';
+  // openingstijden alleen tonen als het niet al 24/7 is (dat staat al als badge)
+  const oh = (s.opening_hours && !s.hours24) ? s.opening_hours : '';
   return `<b>${s.name}</b>${s.hours24 ? '<span class="badge247">24/7</span>' : ''}<br>
     <span style="color:#9aa3af">${adres || 'Adres onbekend'}${s.country ? ' · ' + s.country : ''}</span><br>
     ${s.highway ? `<span style="color:#9aa3af">🛣️ ${s.highway}</span><br>` : ''}
     ${s.brand ? `<span style="color:#9aa3af">🚿 ${s.brand}</span><br>` : ''}
+    ${s.fee ? `<span style="color:#9aa3af">💶 ${s.fee}</span><br>` : ''}
     ${oh ? `<span style="color:#9aa3af">🕐 ${oh}</span><br>` : ''}
     <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank">🧭 Google Maps</a>
     ${s.website ? ` · <a href="${s.website}" target="_blank">Website</a>` : ''}`;

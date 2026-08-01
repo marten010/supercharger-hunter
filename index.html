@@ -1220,23 +1220,45 @@ function optimizeCurrentRoute() {
   }
 }
 
-// visiting order within each day reversed — start/end points per day stay
-// fixed, only the order of the stops in between flips. Handy when roadworks
-// cause congestion in one direction only: driving the same stops the other
-// way round can dodge it.
+// Exact dezelfde route, andersom gereden. Handig bij werkzaamheden/file die maar
+// in één rijrichting zitten.
+//
+// Let op: per dag de stops omdraaien is NIET genoeg — dan blijft de dagvolgorde
+// staan en ontstaan er sprongen tussen de dagen die in het origineel niet bestaan
+// (dag 1 eindigde bij zijn eerste stop, dag 2 begon bij zijn laatste, enz.).
+// Daarom draaien we de héle stopvolgorde over alle dagen heen om en spiegelen we
+// daarna de dagindeling, zodat de rijbelasting per dag vergelijkbaar blijft.
 function reverseRoute() {
   if (!plannedDays.length) return;
   snapshotRoute();
-  plannedDays.forEach((day, i) => {
-    day.stops.reverse();
-    // dag N start waar dag N-1 nu daadwerkelijk eindigt — die stop is door het
-    // omdraaien van dag N-1 veranderd, dus dit moet ná die reversal opnieuw gekoppeld worden
-    if (i > 0) {
-      const prevDay = plannedDays[i - 1];
-      day.start = prevDay.endPoint || prevDay.stops[prevDay.stops.length - 1];
-    }
-    recomputeDay(day);
-  });
+
+  const wasLus = !!plannedDays[plannedDays.length - 1].back;
+  const alleStops = plannedDays.flatMap(d => d.stops).reverse();
+  const dagGroottes = plannedDays.map(d => d.stops.length).reverse();
+  // eigen overnachtingen ook spiegelen: dezelfde slaapplekken, in omgekeerde volgorde
+  const nachten = plannedDays.slice(0, -1).map(d => d.endPoint).reverse();
+
+  const nieuw = [];
+  let idx = 0;
+  for (let i = 0; i < dagGroottes.length; i++) {
+    const stops = alleStops.slice(idx, idx + dagGroottes[i]);
+    idx += dagGroottes[i];
+    if (!stops.length) continue;
+    const isLaatste = i === dagGroottes.length - 1;
+    const vorige = nieuw[nieuw.length - 1];
+    nieuw.push({
+      stops,
+      km: 0, min: 0,
+      // vertrek blijft het startpunt; daarna sluit elke dag aan op het einde van de vorige
+      start: vorige ? (vorige.endPoint || vorige.stops[vorige.stops.length - 1]) : startPoint,
+      endPoint: isLaatste
+        ? (wasLus ? { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' } : null)
+        : (nachten[i] || null),
+      back: isLaatste && wasLus,
+    });
+  }
+  plannedDays = nieuw;
+  plannedDays.forEach(recomputeDay);
   drawRoute();
   renderDays();
 }

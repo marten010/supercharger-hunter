@@ -157,8 +157,10 @@ function bouwLijst() {
 document.getElementById('alles-aan').onclick = () => { lagen.forEach(l => l.zichtbaar = true); pasZichtbaarheidToe(); bouwLijst(); };
 document.getElementById('alles-uit').onclick = () => { lagen.forEach(l => l.zichtbaar = false); pasZichtbaarheidToe(); bouwLijst(); };
 
-// verse routes uit de cloud halen (zelfde bron als de hoofdapp)
-document.getElementById('ververs').onclick = async () => {
+// verse routes uit de cloud halen (zelfde bron als de hoofdapp). routesdata.js is
+// maar een momentopname, dus dit gebeurt ook automatisch bij het laden — anders
+// blijft een verwijderde of hernoemde route hier gewoon staan.
+async function verversUitCloud(automatisch) {
   const st = document.getElementById('status');
   st.textContent = 'Ophalen…';
   try {
@@ -169,18 +171,22 @@ document.getElementById('ververs').onclick = async () => {
     const { data, error } = await supa.from('routes').select('name, data');
     if (error) throw error;
     routes = (data || []).filter(r => r.data && !r.data.__deleted && r.data.days).map(r => ({
-      name: r.name,
+      name: r.name.trim(),
       start: r.data.days[0] ? r.data.days[0].start : null,
       stops: r.data.days.flatMap(d => d.stops),
       end: r.data.days[r.data.days.length - 1] ? r.data.days[r.data.days.length - 1].end : null,
     }));
-    tekenRoutes();
+    tekenRoutes();   // ruimt de oude lagen zelf op en bouwt ze opnieuw op
     bouwLijst();
-    st.textContent = `☁️ ${routes.length} route(s) opgehaald.`;
+    st.textContent = `☁️ ${routes.length} route(s) — actueel.`;
   } catch (e) {
-    st.textContent = 'Ophalen mislukt — de opgeslagen momentopname blijft zichtbaar.';
+    st.textContent = automatisch
+      ? 'Kon de cloud niet bereiken — momentopname zichtbaar (kan verouderd zijn).'
+      : 'Ophalen mislukt — de opgeslagen momentopname blijft zichtbaar.';
   }
-};
+}
+document.getElementById('ververs').onclick = () => verversUitCloud(false);
+verversUitCloud(true);
 
 window.addEventListener('resize', () => map.invalidateSize());
 setTimeout(() => map.invalidateSize(), 400);

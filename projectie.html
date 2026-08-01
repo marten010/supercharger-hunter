@@ -125,10 +125,13 @@ let bezocht = new Set(SITES.filter(s => s.visited).map(s => s.id));   // baselin
 let inRoutes = new Set();
 let markers = new Map();
 let alleenRest = false;
+// routesdata.js is maar een momentopname; laadCloud() vervangt dit door de
+// actuele routes, zodat een verwijderde/hernoemde route hier niet blijft hangen
+let routes = SAVED_ROUTES;
 
 function berekenRoutes() {
   inRoutes = new Set();
-  for (const r of SAVED_ROUTES) {
+  for (const r of routes) {
     for (const pt of r.stops) {
       const s = resolveSite(pt);
       if (s && !bezocht.has(s.id)) inRoutes.add(s.id);
@@ -145,7 +148,7 @@ const MAKKELIJK_KM = 25;
 
 function berekenAanvullingen() {
   const routePunten = [];
-  for (const r of SAVED_ROUTES) {
+  for (const r of routes) {
     if (r.start) routePunten.push({ lat: r.start.lat, lng: r.start.lng });
     for (const pt of r.stops) routePunten.push({ lat: pt[0], lng: pt[1] });
   }
@@ -199,7 +202,7 @@ function render() {
   document.getElementById('bar-nu').style.width = Math.min(100, nu / DOEL * 100) + '%';
   document.getElementById('bar-straks').style.width = Math.min(100 - nu / DOEL * 100, nieuw / DOEL * 100) + '%';
   document.getElementById('doeltekst').textContent = tekort > 0
-    ? `Na alle ${SAVED_ROUTES.length} geplande routes zit je op ${straks} van ${DOEL} — nog ${tekort} te gaan.`
+    ? `Na alle ${routes.length} geplande routes zit je op ${straks} van ${DOEL} — nog ${tekort} te gaan.`
     : `Na alle geplande routes haal je het doel van ${DOEL} ruim (${straks}).`;
 
   // makkelijkste aanvullingen: precies zoveel als je nog tekortkomt, plus wat marge
@@ -256,9 +259,20 @@ async function laadCloud() {
       if (!s) continue;
       if (r.visited) bezocht.add(s.id); else bezocht.delete(s.id);
     }
+    // ook de routes zelf live ophalen; grafsteen-rijen (verwijderde routes) overslaan
+    const rr = await supa.from('routes').select('name, data');
+    if (!rr.error && rr.data) {
+      const levend = rr.data.filter(r => r.data && !r.data.__deleted && r.data.days);
+      routes = levend.map(r => ({
+        name: r.name.trim(),
+        start: r.data.days[0] ? r.data.days[0].start : null,
+        stops: r.data.days.flatMap(d => d.stops),
+        end: r.data.days[r.data.days.length - 1] ? r.data.days[r.data.days.length - 1].end : null,
+      }));
+    }
     document.getElementById('bron').textContent =
-      'Berekend uit de opgeslagen routes + je actuele bezoek-status (live uit de cloud). Locaties die in meerdere routes voorkomen tellen één keer mee.';
-  } catch (e) { /* baseline uit data.js blijft staan */ }
+      `Live uit de cloud: ${routes.length} opgeslagen route(s) + je actuele bezoek-status. Locaties die in meerdere routes voorkomen tellen één keer mee.`;
+  } catch (e) { /* baseline uit data.js / routesdata.js blijft staan */ }
   berekenRoutes();
   berekenAanvullingen();
   render();

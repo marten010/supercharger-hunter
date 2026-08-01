@@ -1006,6 +1006,74 @@ function gmapsLinks(day) {
   return links;
 }
 
+// Landen met afstandsafhankelijke tol (péage/pedaggio) — daar loont het om per dag
+// af te wegen. Vignetlanden (AT/CH/SI/HU) betaal je één keer, dus daar valt niets
+// te kiezen; tolvrije landen (DE/NL/BE/DK/LU) al helemaal niet.
+const TOLLANDEN = new Set(['France','Italy','Spain','Portugal','Croatia','Greece','Turkey','Serbia']);
+
+// Stops die fysiek óp een tol-verzorgingsplaats liggen: die zijn onbereikbaar
+// als je de tolweg mijdt, dus in het tolvrije scenario vallen ze weg.
+const opTolwegPlaats = s => /\baire\b|autogrill|area di servizio|\bservices\b/i.test(s.name || '');
+
+// Schat per dag wat tolvrij rijden kost. Alleen op lange trajecten levert een
+// autoroute echt tijd op: korte hops tussen nabijgelegen stops rijd je toch al
+// over secundaire wegen, en daar staat de tolpoort-overhead tegenover. In het
+// tolvrije scenario vervallen de stops op verzorgingsplaatsen — dat scheelt
+// laadtijd, wat het verschil deels (soms helemaal) compenseert.
+function tolAdvies(day) {
+  const F_AUTO = 1.25, F_VRIJ = 1.35, V_AUTO = 118, V_VRIJ = 68, V_AFRIT = 50, AFRIT_KM = 4, POORT_MIN = 1.5;
+  const inTolland = day.stops.filter(s => TOLLANDEN.has(s.country)).length;
+  if (!day.stops.length || inTolland / day.stops.length < 0.4) return null;   // niet relevant voor deze dag
+  const chargeMin = +document.getElementById('p-charge').value || 8;
+
+  function reistijd(stops, tolvrij) {
+    const pts = [day.start, ...stops, ...(day.endPoint ? [day.endPoint] : [])];
+    let t = 0, poorten = 0, langKm = 0, totKm = 0;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const h = hav(pts[i], pts[i + 1]);
+      totKm += h;
+      if (h <= 40 || tolvrij) {
+        t += h * F_VRIJ / V_VRIJ;
+        if (h > 40) langKm += h;
+      } else {
+        langKm += h;
+        const hoofdrit = Math.max(0, h * F_AUTO - 2 * AFRIT_KM);
+        t += 2 * AFRIT_KM / V_AFRIT + hoofdrit / V_AUTO + 2 * POORT_MIN / 60;
+        poorten++;
+      }
+    }
+    return { t: t + stops.length * chargeMin / 60, poorten, langKm, totKm };
+  }
+
+  const vrijeStops = day.stops.filter(s => !opTolwegPlaats(s));
+  const metTol = reistijd(day.stops, false);
+  const zonderTol = reistijd(vrijeStops, true);
+  return {
+    extraUren: zonderTol.t - metTol.t,
+    poorten: metTol.poorten,
+    stopsKwijt: day.stops.length - vrijeStops.length,
+    pctLang: metTol.totKm ? Math.round(metTol.langKm / metTol.totKm * 100) : 0,
+  };
+}
+
+function tolRegel(day) {
+  const t = tolAdvies(day);
+  if (!t) return '';
+  const min = Math.round(t.extraUren * 60);
+  const kosten = t.extraUren < 0.05 ? 'costs you nothing'
+    : t.extraUren < 1 ? `costs +${min} min`
+    : `costs +${t.extraUren.toFixed(1)} h`;
+  const kwijt = t.stopsKwijt
+    ? ` · you'd drop ${t.stopsKwijt} stop${t.stopsKwijt === 1 ? '' : 's'} sitting on the motorway itself`
+    : '';
+  const poorten = ` · ${t.poorten} toll gate${t.poorten === 1 ? '' : 's'}`;
+  if (t.extraUren < 0.5)
+    return `<br><span style="color:var(--green)">🚫 Toll-free ${kosten} here — skip the motorway${poorten} avoided${kwijt}</span>`;
+  if (t.extraUren < 1.5)
+    return `<br><span style="color:var(--text)">≈ Toll-free ${kosten} — your call${poorten}${kwijt}</span>`;
+  return `<br><span style="color:var(--accent)">🛣️ Use the toll road: toll-free ${kosten} (${t.pctLang}% long-haul)${kwijt}</span>`;
+}
+
 function renderDays(chargeMin, speed) {
   const el = document.getElementById('daylist');
   if (!plannedDays.length) { el.innerHTML = '<span class="muted">No route planned yet.</span>'; return; }
@@ -1019,7 +1087,7 @@ function renderDays(chargeMin, speed) {
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
       <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? ' · 🛣️ real roads' : ' · straight-line'}<br>
-        Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}</div>
+        Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}${tolRegel(day)}</div>
       <div>${links}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}
         <button class="exbtn" data-mv="-1:${s.id}" title="Move earlier in the route">↑</button>

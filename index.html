@@ -1276,7 +1276,7 @@ window.routePlanToggle = function(id) {
 };
 
 document.getElementById('p-plan').onclick = () => { loadedRouteName = null; snapshotRoute(); planRoute(false); };
-document.getElementById('p-clear').onclick = () => { loadedRouteName = null; plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); };
+document.getElementById('p-clear').onclick = () => { loadedRouteName = null; plannedDays = []; routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderDays(); renderManual(); };
 
 // ---------- opgeslagen routes ----------
 // Bewust wél permanent opgeslagen (net als bezocht-status): een bewaarde route
@@ -1746,14 +1746,20 @@ function renderManual() {
     el.innerHTML = '<span class="muted">Step 1: click markers and choose "➕ Route" to add stops here. Step 2: once you\'re done, press "📅 To day plan" below to turn them into an actual route.</span>';
     return;
   }
-  // stippellijn + nummers op de kaart
-  const pts = [[startPoint.lat, startPoint.lng], ...manualRoute.map(id => [SITES[id].lat, SITES[id].lng])];
-  manualLayers.push(L.polyline(pts, { color: '#2ecc71', weight: 3, opacity: 0.9, dashArray: '6 6' }).addTo(map));
-  manualRoute.forEach((id, j) => {
-    manualLayers.push(L.marker([SITES[id].lat, SITES[id].lng], {
-      icon: L.divIcon({ className: '', html: `<div style="background:#2ecc71;color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
-    }).bindPopup(() => popupHtml(SITES[id]), POPUP_OPTS).addTo(map));
-  });
+  // Groene stippellijn + nummers zijn een VOORBEELDweergave van de selectie die je
+  // aan het samenstellen bent. Zodra er een dagplanning op de kaart ligt is díe de
+  // weergave die telt (eigen kleuren per dag) — de groene lijn zou er dan alleen
+  // maar dwars overheen liggen. De lijst hieronder blijft wel gewoon zichtbaar,
+  // zodat je de selectie kunt blijven aanpassen en opnieuw kunt omzetten.
+  if (!plannedDays.length) {
+    const pts = [[startPoint.lat, startPoint.lng], ...manualRoute.map(id => [SITES[id].lat, SITES[id].lng])];
+    manualLayers.push(L.polyline(pts, { color: '#2ecc71', weight: 3, opacity: 0.9, dashArray: '6 6' }).addTo(map));
+    manualRoute.forEach((id, j) => {
+      manualLayers.push(L.marker([SITES[id].lat, SITES[id].lng], {
+        icon: L.divIcon({ className: '', html: `<div style="background:#2ecc71;color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
+      }).bindPopup(() => popupHtml(SITES[id]), POPUP_OPTS).addTo(map));
+    });
+  }
   // totalen op basis van de planner-instellingen
   const factor = +document.getElementById('p-factor').value;
   const speed = +document.getElementById('p-speed').value;
@@ -1798,12 +1804,11 @@ function renderManual() {
     snapshotRoute();
     const n = manualRoute.length;
     planRoute(true, manualRoute.map(id => SITES[id]));
-    // de groene stippellijn/nummers van de eigen-route-weergave verwijderen: de
-    // dagplanning (met eigen kleuren) is nu de weergave die telt. De selectie
-    // zelf (manualRoute) blijft intact, zodat je na het ophogen van dagen/uren
-    // gewoon opnieuw op "To day plan" kunt klikken zonder alles opnieuw te kiezen.
-    manualLayers.forEach(l => map.removeLayer(l));
-    manualLayers = [];
+    // opnieuw tekenen: er ligt nu een dagplanning, dus renderManual() haalt de
+    // groene voorbeeldlijn weg (de dagkleuren zijn nu de weergave die telt). De
+    // selectie zelf blijft intact, zodat je na het ophogen van dagen/uren gewoon
+    // opnieuw op "To day plan" kunt klikken zonder alles opnieuw te kiezen.
+    renderManual();
     const gepland = plannedDays.reduce((a, d) => a + d.stops.length, 0);
     if (gepland < n) alert(`Note: ${n - gepland} of the ${n} stops don't fit within the time budget (days × hours/day). Increase the number of days or hours and click "To day plan" again.`);
   };

@@ -289,7 +289,8 @@ let plannedDays = [];
 // plannedDays bewaren is niet genoeg — vandaar een echte (ondiepe) kopie per stap.
 let routeHistory = [];
 function cloneDays(days) {
-  return days.map(d => ({ stops: d.stops.slice(), km: d.km, min: d.min, start: d.start, endPoint: d.endPoint, back: d.back, avoidTolls: d.avoidTolls }));
+  return days.map(d => ({ stops: d.stops.slice(), km: d.km, min: d.min, start: d.start, endPoint: d.endPoint, back: d.back,
+                          avoidTolls: d.avoidTolls, _tolStops: d._tolStops ? d._tolStops.map(x => ({ ...x })) : null }));
 }
 function snapshotRoute() {
   if (!plannedDays.length) return;
@@ -1057,17 +1058,34 @@ function tolAdvies(day) {
   };
 }
 
-// standaardkeuze per dag: mijd de tol waar dat weinig tijd kost. Blijft daarna
-// staan als je 'm handmatig omzet (de dag onthoudt zijn eigen keuze).
-function zetTolKeuzeStandaard(day) {
-  if (day.avoidTolls !== undefined) return;
-  const t = tolAdvies(day);
-  day.avoidTolls = !!t && t.extraUren < 0.75;
+// Dag omzetten naar tolvrij (of terug). Tolvrij haalt meteen de stops weg die
+// fysiek op een verzorgingsplaats langs de tolweg liggen — die zijn zonder
+// tolweg niet te bereiken. Terugzetten herstelt ze op hun oude plek in de dag.
+function zetTolvrij(day, tolvrij) {
+  if (!!day.avoidTolls === !!tolvrij) return;
+  day.avoidTolls = tolvrij;
+  if (tolvrij) {
+    day._tolStops = [];
+    for (let i = day.stops.length - 1; i >= 0; i--) {
+      if (opTolwegPlaats(day.stops[i])) {
+        day._tolStops.unshift({ i, s: day.stops[i] });
+        day.stops.splice(i, 1);
+      }
+    }
+  } else if (day._tolStops) {
+    day._tolStops.forEach(({ i, s }) => day.stops.splice(i, 0, s));   // oplopende index: klopt bij terugplaatsen
+    day._tolStops = null;
+  }
+  recomputeDay(day);
 }
 
 function tolRegel(day) {
   const t = tolAdvies(day);
   if (!t) return '';
+  if (day.avoidTolls) {
+    const n = (day._tolStops || []).length;
+    return `<br><span style="color:var(--green)">🚫 Toll-free day${n ? ` · ${n} motorway-only stop${n === 1 ? '' : 's'} removed` : ''} · Maps routes around the tolls</span>`;
+  }
   const min = Math.round(t.extraUren * 60);
   const kosten = t.extraUren < 0.05 ? 'costs you nothing'
     : t.extraUren < 1 ? `costs +${min} min`
@@ -1090,14 +1108,18 @@ function renderDays(chargeMin, speed) {
   let totKm = 0, totStops = 0;
   plannedDays.forEach((day, i) => {
     totKm += day.km; totStops += day.stops.length;
-    zetTolKeuzeStandaard(day);
     const div = document.createElement('div');
     div.className = 'day';
     const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps part ${j+1}</a>`).join('');
     // knop alleen tonen waar tol daadwerkelijk speelt (tolAdvies geeft null in
     // tolvrije landen en vignetlanden)
+    const aires = day.avoidTolls ? (day._tolStops || []).length : day.stops.filter(opTolwegPlaats).length;
     const tolKnop = tolAdvies(day)
-      ? `<button class="small" data-toll="${i}" style="margin-left:8px" title="Adds &avoid=tolls to the Maps links for this day">${day.avoidTolls ? '🚫 Maps: avoiding tolls' : '🛣️ Maps: tolls allowed'}</button>`
+      ? `<button class="small" data-toll="${i}" style="margin-left:8px" title="Switches the Maps links for this day and adds/removes the stops that sit on motorway service areas">${
+          day.avoidTolls
+            ? `🛣️ Allow tolls${aires ? ` (restore ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
+            : `🚫 Go toll-free${aires ? ` (drops ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
+        }</button>`
       : '';
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
@@ -1112,7 +1134,9 @@ function renderDays(chargeMin, speed) {
   });
   el.querySelectorAll('[data-toll]').forEach(b => b.onclick = () => {
     const d = plannedDays[+b.dataset.toll];
-    d.avoidTolls = !d.avoidTolls;
+    snapshotRoute();                       // stops verdwijnen/komen terug: undo mogelijk houden
+    zetTolvrij(d, !d.avoidTolls);
+    drawRoute();
     renderDays();
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {

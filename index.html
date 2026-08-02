@@ -289,7 +289,7 @@ let plannedDays = [];
 // plannedDays bewaren is niet genoeg — vandaar een echte (ondiepe) kopie per stap.
 let routeHistory = [];
 function cloneDays(days) {
-  return days.map(d => ({ stops: d.stops.slice(), km: d.km, min: d.min, start: d.start, endPoint: d.endPoint, back: d.back }));
+  return days.map(d => ({ stops: d.stops.slice(), km: d.km, min: d.min, start: d.start, endPoint: d.endPoint, back: d.back, avoidTolls: d.avoidTolls }));
 }
 function snapshotRoute() {
   if (!plannedDays.length) return;
@@ -995,13 +995,14 @@ function gmapsLinks(day) {
   // Google Maps ondersteunt ~10 waypoints per link
   const pts = [day.start, ...day.stops];
   if (day.endPoint) pts.push(day.endPoint);
+  const mijdTol = day.avoidTolls ? '&avoid=tolls' : '';
   const links = [];
   for (let i = 0; i + 1 < pts.length; i += 9) {
     const chunk = pts.slice(i, i + 10);
     const origin = `${chunk[0].lat},${chunk[0].lng}`;
     const dest = `${chunk[chunk.length-1].lat},${chunk[chunk.length-1].lng}`;
     const wps = chunk.slice(1, -1).map(p => `${p.lat},${p.lng}`).join('|');
-    links.push(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${wps ? '&waypoints=' + encodeURIComponent(wps) : ''}&travelmode=driving`);
+    links.push(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${wps ? '&waypoints=' + encodeURIComponent(wps) : ''}&travelmode=driving${mijdTol}`);
   }
   return links;
 }
@@ -1056,6 +1057,14 @@ function tolAdvies(day) {
   };
 }
 
+// standaardkeuze per dag: mijd de tol waar dat weinig tijd kost. Blijft daarna
+// staan als je 'm handmatig omzet (de dag onthoudt zijn eigen keuze).
+function zetTolKeuzeStandaard(day) {
+  if (day.avoidTolls !== undefined) return;
+  const t = tolAdvies(day);
+  day.avoidTolls = !!t && t.extraUren < 0.75;
+}
+
 function tolRegel(day) {
   const t = tolAdvies(day);
   if (!t) return '';
@@ -1081,19 +1090,30 @@ function renderDays(chargeMin, speed) {
   let totKm = 0, totStops = 0;
   plannedDays.forEach((day, i) => {
     totKm += day.km; totStops += day.stops.length;
+    zetTolKeuzeStandaard(day);
     const div = document.createElement('div');
     div.className = 'day';
     const links = gmapsLinks(day).map((u, j) => `<a href="${u}" target="_blank">Maps part ${j+1}</a>`).join('');
+    // knop alleen tonen waar tol daadwerkelijk speelt (tolAdvies geeft null in
+    // tolvrije landen en vignetlanden)
+    const tolKnop = tolAdvies(day)
+      ? `<button class="small" data-toll="${i}" style="margin-left:8px" title="Adds &avoid=tolls to the Maps links for this day">${day.avoidTolls ? '🚫 Maps: avoiding tolls' : '🛣️ Maps: tolls allowed'}</button>`
+      : '';
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
       <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? ' · 🛣️ real roads' : ' · straight-line'}<br>
         Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}${tolRegel(day)}</div>
-      <div>${links}</div>
+      <div>${links}${tolKnop}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}
         <button class="exbtn" data-mv="-1:${s.id}" title="Move earlier in the route">↑</button>
         <button class="exbtn" data-mv="1:${s.id}" title="Move later in the route">↓</button>
         <button class="exbtn" data-ex="${s.id}" title="Remove from route">✕</button></li>`).join('')}</ol>`;
     el.appendChild(div);
+  });
+  el.querySelectorAll('[data-toll]').forEach(b => b.onclick = () => {
+    const d = plannedDays[+b.dataset.toll];
+    d.avoidTolls = !d.avoidTolls;
+    renderDays();
   });
   el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
     const id = +b.dataset.ex;
@@ -1153,7 +1173,10 @@ function renderDays(chargeMin, speed) {
   nav.style.marginBottom = '8px';
   if (next) {
     nav.textContent = `🧭 Next stop: ${next.name}`;
-    nav.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${next.lat},${next.lng}&travelmode=driving`, '_blank');
+    // dezelfde tolkeuze aanhouden als de dag waarin deze stop valt
+    const dagVanNext = plannedDays.find(d => d.stops.some(s => s.id === next.id));
+    const mijdTol = dagVanNext && dagVanNext.avoidTolls ? '&avoid=tolls' : '';
+    nav.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${next.lat},${next.lng}&travelmode=driving${mijdTol}`, '_blank');
   } else {
     nav.textContent = '🎉 All stops on this route checked off!';
     nav.disabled = true;

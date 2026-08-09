@@ -1170,6 +1170,19 @@ function renderDays(chargeMin, speed) {
     <button class="small" id="rd-rev" title="Same stops per day, visited in reverse order — handy when roadworks cause congestion in one direction only">↔️ Reverse order</button>
     <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">🔁 Fill with new stops</button>`;
   el.prepend(knoppen);
+  // na een trip: al bezochte stops eruit en de vrijgekomen tijd vullen met nieuwe
+  // locaties langs dezelfde route — alleen tonen als er iets te verversen valt
+  const alBezocht = plannedDays.flatMap(d => d.stops).filter(isVisited).length;
+  if (alBezocht) {
+    const ver = document.createElement('button');
+    ver.className = 'small';
+    ver.style.width = '100%';
+    ver.style.marginBottom = '8px';
+    ver.title = 'Removes the stops you have already visited and fills the freed-up time with new unvisited locations along this same route';
+    ver.textContent = `♻️ Refresh route (${alBezocht} visited stop${alBezocht === 1 ? '' : 's'} to drop)`;
+    ver.onclick = refreshRoute;
+    el.prepend(ver);
+  }
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
   knoppen.querySelector('#rd-rev').onclick = reverseRoute;
   // reuseBounds=false: gebruik de HUIDIGE kaartweergave, niet de vastgezette
@@ -1333,6 +1346,77 @@ function optimizeCurrentRoute() {
     if (finalDays !== startDays) bits.push(`Days ${startDays} → ${finalDays}`);
     showToast(`Route optimized — ${bits.join(', ')} so all your chosen stops still fit.`);
   }
+}
+
+// Na een trip: al bezochte stops uit de route halen en de vrijgekomen tijd vullen
+// met nieuwe locaties lángs dezelfde route. Bewust géén herplanning vanaf nul —
+// de dagindeling, het startpunt en je eigen overnachtingen blijven staan, alleen
+// de inhoud van de dagen wordt bijgewerkt.
+const CORRIDOR_KM = 60;   // hoe ver van de bestaande route een nieuwe stop mag liggen
+function refreshRoute() {
+  if (!plannedDays.length) return;
+  snapshotRoute();
+  const chargeMin = +document.getElementById('p-charge').value;
+  const speed = +document.getElementById('p-speed').value;
+  const factor = +document.getElementById('p-factor').value;
+  const maxDetourKm = +document.getElementById('p-maxdetour').value || 0;
+  const dayBudgetMin = +document.getElementById('p-hours').value * 60;
+
+  // 1. bezochte stops eruit
+  let verwijderd = 0;
+  for (const day of plannedDays) {
+    const voor = day.stops.length;
+    day.stops = day.stops.filter(s => !isVisited(s));
+    verwijderd += voor - day.stops.length;
+    recomputeDay(day);
+  }
+  plannedDays = plannedDays.filter(d => d.stops.length || d.endPoint);
+  if (!plannedDays.length) { drawRoute(); renderDays(); return; }
+
+  // 2. kandidaten: onbezocht, niet uitgesloten, nog niet in deze route, en binnen de
+  //    corridor van de bestaande route — anders trekt een dag met veel vrije tijd
+  //    zomaar een locatie van honderden kilometers verderop naar binnen
+  const inRoute = new Set(plannedDays.flatMap(d => d.stops).map(s => s.id));
+  const ankers = plannedDays.flatMap(d => [d.start, ...d.stops, ...(d.endPoint ? [d.endPoint] : [])]);
+  const gereserveerd = document.getElementById('p-noroutes').checked ? sitesInOtherSavedRoutes() : new Set();
+  const pool = SITES.filter(s =>
+    !isVisited(s) && !excluded.has(s.id) && !inRoute.has(s.id) && !gereserveerd.has(s.id) &&
+    ankers.some(a => hav(a, s) <= CORRIDOR_KM));
+
+  // 3. goedkoopste invoeging binnen het dagbudget (zelfde aanpak als de opraapronde)
+  let toegevoegd = 0;
+  for (const day of plannedDays) {
+    let changed = true;
+    while (changed && pool.length) {
+      changed = false;
+      const pts = day.endPoint ? [day.start, ...day.stops, day.endPoint] : [day.start, ...day.stops];
+      let best = null;
+      for (let p = 0; p < pool.length; p++) {
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const extra = (hav(pts[i], pool[p]) + hav(pool[p], pts[i+1]) - hav(pts[i], pts[i+1])) * factor;
+          if (!best || extra < best.extra) best = { p, i, extra };
+        }
+        if (!day.endPoint) {   // ook achteraan de dag kunnen plakken
+          const extra = hav(pts[pts.length-1], pool[p]) * factor;
+          if (!best || extra < best.extra) best = { p, i: pts.length - 1, extra };
+        }
+      }
+      if (best && (!maxDetourKm || best.extra <= maxDetourKm)) {
+        const extraMin = best.extra / speed * 60 + chargeMin;
+        if (day.min + extraMin <= dayBudgetMin) {
+          day.stops.splice(best.i, 0, pool[best.p]);
+          day.km += best.extra;
+          day.min += extraMin;
+          pool.splice(best.p, 1);
+          toegevoegd++;
+          changed = true;
+        }
+      }
+    }
+  }
+  drawRoute();
+  renderDays();
+  showToast(`Route refreshed — ${verwijderd} visited stop${verwijderd === 1 ? '' : 's'} removed, ${toegevoegd} new one${toegevoegd === 1 ? '' : 's'} added along the same route.`, 8000);
 }
 
 // Exact dezelfde route, andersom gereden. Handig bij werkzaamheden/file die maar

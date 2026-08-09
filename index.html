@@ -1233,6 +1233,18 @@ function recomputeDay(day) {
   day.min = km / speed * 60 + day.stops.length * chargeMin;
 }
 
+// Dag N vertrekt waar dag N-1 daadwerkelijk eindigt. Elke bewerking die de laatste
+// stop van een dag verandert (verwijderen, toevoegen, verplaatsen, verversen,
+// omdraaien) moet dit opnieuw koppelen — anders blijft de volgende dag vertrekken
+// vanaf het oude punt en ontstaat er een gat: de route lijkt dan dood te lopen.
+function relinkDayStarts() {
+  for (let i = 1; i < plannedDays.length; i++) {
+    const vorige = plannedDays[i - 1];
+    plannedDays[i].start = vorige.endPoint || vorige.stops[vorige.stops.length - 1];
+  }
+  plannedDays.forEach(recomputeDay);
+}
+
 // één stop uit de huidige route halen zónder de rest te wijzigen
 function removeStopFromRoute(id) {
   snapshotRoute();
@@ -1244,6 +1256,7 @@ function removeStopFromRoute(id) {
     break;
   }
   plannedDays = plannedDays.filter(d => d.stops.length);
+  relinkDayStarts();
   drawRoute();
   renderDays();
 }
@@ -1285,6 +1298,7 @@ function addStopToRoute(id) {
   }
   day.stops.splice(best.i, 0, s);
   recomputeDay(day);
+  relinkDayStarts();
   drawRoute();
   renderDays();
 }
@@ -1414,6 +1428,7 @@ function refreshRoute() {
       }
     }
   }
+  relinkDayStarts();   // dagen weer op elkaar aansluiten na alle wijzigingen
   drawRoute();
   renderDays();
   showToast(`Route refreshed — ${verwijderd} visited stop${verwijderd === 1 ? '' : 's'} removed, ${toegevoegd} new one${toegevoegd === 1 ? '' : 's'} added along the same route.`, 8000);
@@ -1482,6 +1497,7 @@ function moveStopInRoute(id, dir) {
       recomputeDay(buurDag);
       plannedDays = plannedDays.filter(x => x.stops.length);
     }
+    relinkDayStarts();
     drawRoute();
     renderDays();
     return;

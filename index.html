@@ -1167,6 +1167,7 @@ function renderDays(chargeMin, speed) {
   knoppen.style.marginBottom = '8px';
   knoppen.innerHTML = `
     <button class="small" id="rd-opt" title="Same stops, only the shortest order — adds nothing">✨ Optimize order</button>
+    <button class="small" id="rd-bal" title="Keeps your visiting order exactly as it is — only moves the day boundaries so each day takes about the same time">⚖️ Balance days</button>
     <button class="small" id="rd-rev" title="Same stops per day, visited in reverse order — handy when roadworks cause congestion in one direction only">↔️ Reverse order</button>
     <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">🔁 Fill with new stops</button>`;
   el.prepend(knoppen);
@@ -1184,6 +1185,7 @@ function renderDays(chargeMin, speed) {
     el.prepend(ver);
   }
   knoppen.querySelector('#rd-opt').onclick = optimizeCurrentRoute;
+  knoppen.querySelector('#rd-bal').onclick = balanceDays;
   knoppen.querySelector('#rd-rev').onclick = reverseRoute;
   // reuseBounds=false: gebruik de HUIDIGE kaartweergave, niet de vastgezette
   // begrenzing van de vorige planactie — anders blijft een regio die je net
@@ -1442,6 +1444,66 @@ function refreshRoute() {
 // (dag 1 eindigde bij zijn eerste stop, dag 2 begon bij zijn laatste, enz.).
 // Daarom draaien we de héle stopvolgorde over alle dagen heen om en spiegelen we
 // daarna de dagindeling, zodat de rijbelasting per dag vergelijkbaar blijft.
+// Zelfde volgorde, alleen de dagovergangen verschuiven zodat de dagen even lang
+// worden. Anders dan "Optimize order", die de hele route opnieuw berekent en je
+// zorgvuldig gekozen volgorde dus omgooit — dit raakt de volgorde niet aan.
+// Gebruikt lineaire partitie (DP) om de langste dag zo kort mogelijk te maken.
+function balanceDays() {
+  if (plannedDays.length < 2) return;
+  if (plannedDays.slice(0, -1).some(d => d.endPoint) &&
+      !confirm('This route has custom overnight stops. Balancing moves the day boundaries, so those overnight points are dropped (the route itself stays identical). Continue?')) return;
+  snapshotRoute();
+
+  const speed = +document.getElementById('p-speed').value;
+  const factor = +document.getElementById('p-factor').value;
+  const chargeMin = +document.getElementById('p-charge').value;
+  const stops = plannedDays.flatMap(d => d.stops);
+  const dagen = plannedDays.length;
+  const n = stops.length;
+  if (n < dagen) return;
+  const wasLus = !!plannedDays[dagen - 1].back;
+  const home = { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.label || 'starting point' };
+
+  // legKm[i]: afstand naar stops[i] vanaf het vorige punt (startpunt voor i=0).
+  // Daardoor is de afstand van een dag a..b gewoon prefix[b+1] - prefix[a].
+  const prefix = [0];
+  stops.forEach((s, i) => prefix.push(prefix[i] + hav(i === 0 ? startPoint : stops[i - 1], s) * factor));
+  const thuisKm = wasLus ? hav(stops[n - 1], home) * factor : 0;
+  const dagTijd = (a, b) => {
+    const km = prefix[b + 1] - prefix[a] + (b === n - 1 ? thuisKm : 0);
+    return km / speed * 60 + (b - a + 1) * chargeMin;
+  };
+
+  // DP: minimaliseer de duur van de langste dag
+  const best = Array.from({ length: dagen + 1 }, () => new Array(n + 1).fill(Infinity));
+  const keuze = Array.from({ length: dagen + 1 }, () => new Array(n + 1).fill(-1));
+  best[0][0] = 0;
+  for (let k = 1; k <= dagen; k++)
+    for (let i = k; i <= n; i++)
+      for (let j = k - 1; j < i; j++) {
+        if (best[k - 1][j] === Infinity) continue;
+        const kost = Math.max(best[k - 1][j], dagTijd(j, i - 1));
+        if (kost < best[k][i]) { best[k][i] = kost; keuze[k][i] = j; }
+      }
+
+  const grenzen = [];
+  for (let k = dagen, i = n; k >= 1; k--) { const j = keuze[k][i]; grenzen.unshift([j, i - 1]); i = j; }
+
+  const oudeSpreiding = plannedDays.map(d => d.min / 60);
+  plannedDays = grenzen.map(([a, b], idx) => ({
+    stops: stops.slice(a, b + 1), km: 0, min: 0, start: null,
+    endPoint: idx === grenzen.length - 1 && wasLus ? home : null,
+    back: idx === grenzen.length - 1 && wasLus,
+  }));
+  plannedDays[0].start = startPoint;
+  relinkDayStarts();
+  drawRoute();
+  renderDays();
+  const nu = plannedDays.map(d => d.min / 60);
+  showToast(`Days balanced: ${Math.min(...nu).toFixed(1)}–${Math.max(...nu).toFixed(1)} h per day ` +
+            `(was ${Math.min(...oudeSpreiding).toFixed(1)}–${Math.max(...oudeSpreiding).toFixed(1)} h). Visiting order unchanged.`, 9000);
+}
+
 function reverseRoute() {
   if (!plannedDays.length) return;
   snapshotRoute();

@@ -397,7 +397,7 @@ function popupHtml(s) {
   if (!document.body.classList.contains('ingelogd')) return info;
   return `${info}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
-      <button class="small" onclick="toggleVisited(${s.id})">${v ? '✘ Not visited' : '✔ Visited'}</button>
+      <button class="small" onclick="toggleVisited(${s.id})">${v ? '↩ Mark as NOT visited' : '✔ Mark as visited'}</button>
       <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
       <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Remove from route' : '➕ Route'}</button>
       ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? '✕ Remove from day plan' : '➕ Add to day plan'}</button>` : ''}

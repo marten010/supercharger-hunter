@@ -5,7 +5,14 @@
 // Gebruik: node build-master.js
 const path = require('path');
 const fs = require('fs');
-const XLSX = require(path.join(process.env.TEMP, 'claude', 'C--Users-mailm-Desktop-Supercharger-Tesla', 'f0db9ba9-1f29-4cfa-9716-35074ee35ab2', 'scratchpad', 'node_modules', 'xlsx'));
+// xlsx is alleen nodig voor de Excel-export, niet voor data.js (het bestand waar
+// de app op draait). Het zat eerder vast aan een sessie-specifieke scratchpad-map
+// die telkens verdween; nu optioneel: ontbreekt het, dan slaan we alleen de Excel
+// over en werkt de rest gewoon. Installeren kan met: npm install xlsx
+let XLSX = null;
+for (const kandidaat of ['xlsx', path.join(__dirname, 'node_modules', 'xlsx')]) {
+  try { XLSX = require(kandidaat); break; } catch (e) { /* volgende proberen */ }
+}
 
 const URL = 'https://supercharge.info/service/supercharge/allSites';
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -78,7 +85,11 @@ const hav = (a, b) => {
   fs.writeFileSync(path.join(__dirname, 'data.js'), 'const SITES = ' + JSON.stringify(sites) + ';\n');
   console.log(`data.js geschreven: ${sites.length} locaties, ${sites.filter(s => s.visited).length} bezocht`);
 
-  // 5. wegschrijven: nieuwe Excel-masterlijst
+  // 5. wegschrijven: nieuwe Excel-masterlijst (optioneel — app draait op data.js)
+  if (!XLSX) {
+    console.log('Excel overgeslagen: xlsx-package niet gevonden (npm install xlsx om het aan te zetten).');
+    return;
+  }
   const rows = sites.map(s => ({
     'Site Name': s.name, 'Street Address': s.address, 'City': s.city, 'State': s.state,
     'Zip': s.zip, 'Country': s.country, 'GPS': `${s.lat}, ${s.lng}`,

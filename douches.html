@@ -77,6 +77,16 @@
     <div id="nearbylist"></div>
   </section>
   <section>
+    <h2>Soort douche</h2>
+    <label class="chk"><input type="checkbox" id="w-ja" checked> ♨️ Warm / overdekt (<span id="n-ja">…</span>)</label>
+    <label class="chk"><input type="checkbox" id="w-onb"> ❓ Onbekend (<span id="n-onb">…</span>)</label>
+    <label class="chk"><input type="checkbox" id="w-nee"> ❄️ Koud / buiten (<span id="n-nee">…</span>)</label>
+    <div class="muted">OSM vult "warm water" maar bij een deel van de locaties in. <b>Warm/overdekt</b> = warm water
+      vermeld, óf een betaalde/overdekte voorziening, óf een wegrestaurant, tankstation, jachthaven of Sanifair.
+      <b>Koud/buiten</b> = expliciet als koud getagd (strand- en havendouches). <b>Onbekend</b> is niet getagd —
+      in de praktijk vaak een koude buitendouche, dus standaard verborgen.</div>
+  </section>
+  <section>
     <h2>Zoeken</h2>
     <input type="text" id="search" placeholder="Zoek op stad, naam of merk…">
     <label class="chk"><input type="checkbox" id="only247"> Alleen 24/7 open (douches)</label>
@@ -98,9 +108,8 @@
       SI, HR en RS. Bronnen: alle openbare douches uit OpenStreetMap
       (amenity=shower) plus jachthavens, strandbaden, wegrestaurants en tankstations met douche,
       aangevuld met de Duitse Sanifair-douches bij Autobahn-verzorgingsplaatsen (sanifair.com).
-      Het type staat in de popup (🛣️ openbare douche / jachthaven / wegrestaurant / strandbad).
-      Let op: een deel van de openbare douches zijn koude buitendouches bij stranden, havens of
-      sportvelden — de jachthavens en wegrestaurants zijn doorgaans warme binnendouches. Prijs (💶),
+      Het type staat in de popup (🛣️ openbare douche / jachthaven / wegrestaurant / strandbad), samen
+      met de soort (♨️ warm / ❄️ koud / ❓ onbekend) waarop je hierboven kunt filteren. Prijs (💶),
       openingstijden (🕐) en website worden getoond waar OSM/Sanifair die vermeldt; lang niet overal
       bekend, dus controleer via de website- of Google Maps-link. Zwembaden-laag: publieke
       binnenbaden/zwemhallen (amenity=public_bath / sports_centre+swimming), geen prijsdata in de
@@ -151,8 +160,12 @@ function popupHtml(s) {
   const adres = [s.street, s.postcode, s.city].filter(Boolean).join(', ');
   // openingstijden alleen tonen als het niet al 24/7 is (dat staat al als badge)
   const oh = (s.opening_hours && !s.hours24) ? s.opening_hours : '';
+  const soort = s.warm === 'ja' ? '<span style="color:#f97316">♨️ warm / overdekt</span>'
+    : s.warm === 'nee' ? '<span style="color:#38bdf8">❄️ koud / buiten (strand- of havendouche)</span>'
+    : '<span style="color:#9aa3af">❓ warm of koud niet bekend</span>';
   return `<b>${s.name}</b>${s.hours24 ? '<span class="badge247">24/7</span>' : ''}<br>
     <span style="color:#9aa3af">${adres || 'Adres onbekend'}${s.country ? ' · ' + s.country : ''}</span><br>
+    ${soort}<br>
     ${s.highway ? `<span style="color:#9aa3af">🛣️ ${s.highway}</span><br>` : ''}
     ${s.brand ? `<span style="color:#9aa3af">🚿 ${s.brand}</span><br>` : ''}
     ${s.fee ? `<span style="color:#9aa3af">💶 ${s.fee}</span><br>` : ''}
@@ -161,10 +174,13 @@ function popupHtml(s) {
     ${s.website ? ` · <a href="${s.website}" target="_blank">Website</a>` : ''}`;
 }
 
+// kleur per soort: warm springt eruit, koud is duidelijk anders
+const SOORT_KLEUR = { ja: '#f97316', nee: '#38bdf8', '?': '#64748b' };
 const markers = new Map();
 for (const s of SHOWER_SITES) {
   const m = L.circleMarker([s.lat, s.lon], {
-    radius: 5.5, weight: 1, color: '#0008', fillOpacity: 0.9, fillColor: '#0ea5e9'
+    radius: s.warm === 'ja' ? 5.5 : 4, weight: 1, color: '#0008', fillOpacity: 0.9,
+    fillColor: SOORT_KLEUR[s.warm] || '#0ea5e9'
   }).bindPopup(() => popupHtml(s), POPUP_OPTS);
   markers.set(s.id, m);
 }
@@ -203,7 +219,9 @@ let searchTerm = '';
 let only247 = false;
 let showPools = false;
 let showCamping = false;
+let toonSoort = { ja: true, '?': false, nee: false };   // standaard alleen warm/overdekt
 function matches(s) {
+  if (!toonSoort[s.warm]) return false;
   if (activeCountry && s.country !== activeCountry) return false;
   if (only247 && !s.hours24) return false;
   if (searchTerm && !(s.name + ' ' + s.city + ' ' + s.brand).toLowerCase().includes(searchTerm)) return false;
@@ -240,8 +258,9 @@ function refresh() {
   }
 }
 function buildCountryList() {
+  // tellingen volgen het soort-filter, anders klopt het lijstje niet met de kaart
   const per = {};
-  SHOWER_SITES.forEach(s => per[s.country] = (per[s.country] || 0) + 1);
+  SHOWER_SITES.filter(s => toonSoort[s.warm]).forEach(s => per[s.country] = (per[s.country] || 0) + 1);
   const el = document.getElementById('countrylist');
   el.innerHTML = '';
   Object.entries(per).sort((a, b) => b[1] - a[1]).forEach(([c, n]) => {
@@ -261,8 +280,25 @@ document.getElementById('only247').addEventListener('change', e => { only247 = e
 document.getElementById('showpools').addEventListener('change', e => { showPools = e.target.checked; refresh(); });
 document.getElementById('showcamping').addEventListener('change', e => { showCamping = e.target.checked; refresh(); });
 
-document.getElementById('st-total').textContent = SHOWER_SITES.length;
-document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.map(s => s.country)).size;
+// soort-filter: teller en landenlijst mee laten bewegen
+function werkSoortBij() {
+  const zichtbaar = SHOWER_SITES.filter(s => toonSoort[s.warm]).length;
+  document.getElementById('st-total').textContent = zichtbaar;
+  document.getElementById('st-countries').textContent =
+    new Set(SHOWER_SITES.filter(s => toonSoort[s.warm]).map(s => s.country)).size;
+  buildCountryList();
+  refresh();
+}
+[['w-ja', 'ja'], ['w-onb', '?'], ['w-nee', 'nee']].forEach(([id, sleutel]) => {
+  document.getElementById(id).addEventListener('change', e => { toonSoort[sleutel] = e.target.checked; werkSoortBij(); });
+});
+const telSoort = k => SHOWER_SITES.filter(s => s.warm === k).length;
+document.getElementById('n-ja').textContent = telSoort('ja');
+document.getElementById('n-onb').textContent = telSoort('?');
+document.getElementById('n-nee').textContent = telSoort('nee');
+
+document.getElementById('st-total').textContent = SHOWER_SITES.filter(s => toonSoort[s.warm]).length;
+document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.filter(s => toonSoort[s.warm]).map(s => s.country)).size;
 document.getElementById('st-pools').textContent = POOL_SITES.length + ' locaties';
 document.getElementById('st-camping').textContent = CAMPING_SITES.length + ' locaties';
 buildCountryList();

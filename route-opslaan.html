@@ -72,23 +72,28 @@ const supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
 
 // vooraf berekend: origineel beperkt tot het aangegeven gebied (geen AT/IT/CH/SK),
 // opnieuw geoptimaliseerd als lus en gelijk verdeeld over 5 dagen
-const ROUTE={"name":"DE BE FR kort","created":"2026-08-12","savedAt":"2026-08-12T10:09:14.739Z","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[51.62661,4.86995],[50.22314,5.33004],[49.77216,6.65757],[49.44174,7.70782],[49.4599,7.82134],[49.54734,8.45662],[49.53992,8.5952],[49.40987,8.5417]],"end":null,"back":false},{"start":{"lat":49.40987,"lng":8.5417,"name":"Brühl, Germany"},"stops":[[49.27381,8.69544],[49.21194,9.07732],[49.20448,9.48879],[49.18118,10.06934],[48.95916,10.17353],[49.26039,10.24257],[49.44519,10.247],[49.25795,10.50176],[49.1612,11.26049],[49.04195,11.3427],[48.81137,11.47989],[48.64561,11.5206],[48.51816,11.56212],[48.51072,11.58227],[48.42843,11.58429],[48.30647,11.63488],[48.13235,11.69112]],"end":null,"back":false},{"start":{"lat":48.13235,"lng":11.69112,"name":"München, Germany - Riem Arcaden"},"stops":[[48.10518,11.53684],[48.16155,11.60272],[48.19582,11.60606],[48.18447,11.53242],[48.14797,11.46472],[48.13529,11.41351],[48.09401,11.28252],[48.17331,11.26448],[48.08065,10.85863],[48.3937,11.07051],[48.29756,10.89914],[48.39892,10.86798],[48.40778,10.59947],[48.41107,10.44038],[48.21882,10.12763],[48.28495,10.11602],[48.37692,10.00653],[48.45669,10.03007],[48.51635,9.75748],[48.69587,9.68679],[48.81678,9.53857],[48.707,9.30641]],"end":null,"back":false},{"start":{"lat":48.707,"lng":9.30641,"name":"Denkendorf, Germany"},"stops":[[48.82158,9.29658],[48.95611,9.24542],[48.86046,9.19826],[48.78453,9.01928],[48.78519,9.01764],[48.69131,9.00374],[48.90504,8.65424],[49.13836,8.56242],[48.99909,8.42857],[49.00935,8.3537],[48.78351,8.19234],[48.72468,8.11045],[48.64132,8.03774],[48.46994,7.93194],[48.47305,7.92476],[48.53407,7.702],[48.65302,7.73189],[48.7728,7.24323],[49.23073,7.40809],[49.20803,7.0271]],"end":null,"back":false},{"start":{"lat":49.20803,"lng":7.0271,"name":"Saarbrücken, Germany"},"stops":[[49.11168,6.85532],[49.07958,6.10371],[49.21648,6.17112],[49.34766,6.12559],[49.58246,6.1262],[49.64798,5.81886],[49.73681,4.74408],[50.08383,4.52393]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
+const ROUTE={"name":"DE BE FR kort","created":"2026-08-12","savedAt":"2026-08-12T10:16:05.804Z","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[51.23597,4.05948],[51.09512,4.01187],[51.0181,3.7367],[50.9215,4.03255],[50.83786,4.28829],[50.66158,4.38047],[50.5887,4.30812],[50.45232,4.43037],[50.08383,4.52393],[49.73681,4.74408],[49.34766,6.12559]],"end":null,"back":false},{"start":{"lat":49.34766,"lng":6.12559,"name":"Terville, France"},"stops":[[49.21648,6.17112],[49.07958,6.10371],[49.11168,6.85532],[49.20803,7.0271],[48.7728,7.24323],[48.65302,7.73189],[48.53407,7.702],[48.47305,7.92476],[48.46994,7.93194],[48.64132,8.03774],[48.72468,8.11045],[48.78351,8.19234],[49.00935,8.3537],[48.99909,8.42857],[48.90504,8.65424]],"end":null,"back":false},{"start":{"lat":48.90504,"lng":8.65424,"name":"Pforzheim, Germany"},"stops":[[48.34345,8.66383],[48.69131,9.00374],[48.78519,9.01764],[48.78453,9.01928],[48.707,9.30641],[48.51635,9.75748],[48.45669,10.03007],[48.37692,10.00653],[48.28495,10.11602],[48.21882,10.12763],[48.41107,10.44038],[48.40778,10.59947],[48.39892,10.86798],[48.29756,10.89914],[48.3937,11.07051],[48.08065,10.85863]],"end":null,"back":false},{"start":{"lat":48.08065,"lng":10.85863,"name":"Kaufering, Germany"},"stops":[[48.17331,11.26448],[48.09401,11.28252],[48.13529,11.41351],[48.14797,11.46472],[48.18447,11.53242],[48.19582,11.60606],[48.16155,11.60272],[48.10518,11.53684],[48.13235,11.69112],[48.30647,11.63488],[48.42843,11.58429],[48.51072,11.58227],[48.51816,11.56212],[48.64561,11.5206],[48.81137,11.47989],[49.04195,11.3427],[49.1612,11.26049],[49.25795,10.50176],[49.44519,10.247],[49.26039,10.24257]],"end":null,"back":false},{"start":{"lat":49.26039,"lng":10.24257,"name":"Wörnitz, Germany"},"stops":[[49.18118,10.06934],[48.95916,10.17353],[48.69587,9.68679],[48.81678,9.53857],[48.82158,9.29658],[48.86046,9.19826],[48.95611,9.24542],[49.20448,9.48879],[49.21194,9.07732],[49.13836,8.56242],[49.27381,8.69544],[49.40987,8.5417],[49.53992,8.5952],[49.54734,8.45662],[49.4599,7.82134]],"end":null,"back":false},{"start":{"lat":49.4599,"lng":7.82134,"name":"Kaiserslautern, Germany"},"stops":[[49.44174,7.70782],[49.23073,7.40809],[49.77216,6.65757],[49.58246,6.1262],[49.64798,5.81886],[50.22314,5.33004]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
 
 const DAGINFO=[
-  {dag:1,stops:8,uren:11.1,km:616,traject:'Rotterdam → Oosterhout → Brühl'},
-  {dag:2,stops:17,uren:11.5,km:525,traject:'Brühl → Rauenberg → München'},
-  {dag:3,stops:22,uren:11.0,km:429,traject:'München → Augsburg/Ulm → Denkendorf'},
-  {dag:4,stops:20,uren:11.4,km:480,traject:'Denkendorf → Stuttgart/Karlsruhe → Saarbrücken'},
-  {dag:5,stops:8,uren:11.1,km:618,traject:'Saarbrücken → Luxemburg/Ardennen → Rotterdam'},
+  {dag:1,stops:11,uren:10.2,km:522,traject:'Rotterdam → Gent/Brussel/Charleroi → Terville'},
+  {dag:2,stops:15,uren:9.3,km:411,traject:'Terville → Metz/Saarbrücken/Straatsburg → Pforzheim'},
+  {dag:3,stops:16,uren:10.4,km:470,traject:'Pforzheim → Stuttgart/Ulm/Augsburg → Kaufering'},
+  {dag:4,stops:20,uren:10.3,km:410,traject:'Kaufering → München/Ingolstadt → Wörnitz'},
+  {dag:5,stops:15,uren:10.0,km:457,traject:'Wörnitz → Stuttgart/Heilbronn/Mannheim → Kaiserslautern'},
+  {dag:6,stops:6,uren:10.4,km:597,traject:'Kaiserslautern → Trier/Ardennen → Rotterdam'},
 ];
 
 const totStops=ROUTE.days.reduce((a,d)=>a+d.stops.length,0);
 const totKm=DAGINFO.reduce((a,d)=>a+d.km,0);
 document.getElementById('samenvatting').innerHTML =
-  `<b style="color:var(--text)">5 dagen · ${totStops} nieuwe locaties · ±${totKm} km · lus terug naar Rotterdam</b><br>
-   Oostenrijk, Italië, Zwitserland en Slowakije vallen af (117 stops), plus de Duitse
-   stops in de corridor richting Salzburg. Vier Belgische stops rond Brussel pasten
-   niet binnen het dagbudget.`;
+  `<b style="color:var(--text)">6 dagen · ${totStops} nieuwe locaties · ±${totKm} km · lus terug naar Rotterdam</b><br>
+   Oostenrijk, Italië, Zwitserland en Slowakije vallen af, plus de Duitse stops in de
+   corridor richting Salzburg. Alle nog onbezochte locaties binnen je gebied zijn
+   meegenomen, op Oosterhout en Uden na (pasten niet in het dagbudget).<br>
+   <b style="color:#f59e0b">Let op:</b> 10 stops zitten óók in je routes <i>FR 7 days</i>
+   (Charleroi, Couvin, Charleville-Mézières, Terville, Hauconcourt, Moulins-lès-Metz,
+   Arlon, Marche-en-Famenne) en <i>UK 10-8</i> (Stekene, Gent). Ze liggen precies op deze
+   route, dus ze zijn hier meegenomen — haal ze na deze trip uit die andere twee routes.`;
 document.getElementById('dagtabel').innerHTML =
   '<tr><th>Dag</th><th>Stops</th><th>Uren</th><th>km</th><th>Traject</th></tr>' +
   DAGINFO.map(d=>`<tr><td>${d.dag}</td><td>${d.stops}</td><td>${d.uren}</td><td>${d.km}</td><td>${d.traject}</td></tr>`).join('');

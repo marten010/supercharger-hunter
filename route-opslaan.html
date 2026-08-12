@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Route opslaan — DE BE FR kort</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 22px; }
+  p, li { line-height: 1.5; font-size: 14px; }
+  .box { background: var(--panel); border-radius: 10px; padding: 16px; margin: 14px 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  input[type=email], input[type=password], input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  #map { height: 320px; border-radius: 10px; margin-top: 10px; }
+  #status { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; }
+  #status.ok { background: #123a1c; color: var(--green); }
+  #status.err { background: #3a1414; color: #ff8080; }
+  a.backlink { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>💾 Route opslaan</h1>
+<div class="box">
+  <p>Deze pagina slaat de ingekorte route op als <b>nieuwe</b> route. Het origineel
+  (<i>IT 10-8 fixed</i>) blijft ongewijzigd staan.</p>
+  <p class="muted">Opslaan vereist inloggen — daarom deze pagina. Eenmalig bedoeld.</p>
+</div>
+
+<div class="box">
+  <h2>Wat wordt opgeslagen</h2>
+  <div id="samenvatting" class="muted">…</div>
+  <table id="dagtabel"></table>
+  <div id="map"></div>
+</div>
+
+<div class="box" id="authbox">
+  <h2>Stap 1: inloggen</h2>
+  <input type="email" id="au-mail" placeholder="Email" autocomplete="username">
+  <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password">
+  <button id="au-in">Inloggen</button>
+  <div id="au-status" class="muted" style="margin-top:8px"></div>
+</div>
+
+<div class="box" id="savebox" style="display:none">
+  <h2>Stap 2: opslaan</h2>
+  <label class="muted">Naam voor de nieuwe route</label>
+  <input type="text" id="naam" value="DE BE FR kort">
+  <button id="opslaan">💾 Opslaan als nieuwe route</button>
+  <div class="muted" style="margin-top:8px">Bestaat er al een route met deze naam, dan wordt die overschreven.</div>
+</div>
+
+<div id="status" style="display:none"></div>
+<p style="margin-top:20px"><a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a></p>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL='https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY='sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// vooraf berekend: origineel beperkt tot het aangegeven gebied (geen AT/IT/CH/SK),
+// opnieuw geoptimaliseerd als lus en gelijk verdeeld over 5 dagen
+const ROUTE={"name":"DE BE FR kort","created":"2026-08-12","savedAt":"2026-08-12T10:09:14.739Z","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[51.62661,4.86995],[50.22314,5.33004],[49.77216,6.65757],[49.44174,7.70782],[49.4599,7.82134],[49.54734,8.45662],[49.53992,8.5952],[49.40987,8.5417]],"end":null,"back":false},{"start":{"lat":49.40987,"lng":8.5417,"name":"Brühl, Germany"},"stops":[[49.27381,8.69544],[49.21194,9.07732],[49.20448,9.48879],[49.18118,10.06934],[48.95916,10.17353],[49.26039,10.24257],[49.44519,10.247],[49.25795,10.50176],[49.1612,11.26049],[49.04195,11.3427],[48.81137,11.47989],[48.64561,11.5206],[48.51816,11.56212],[48.51072,11.58227],[48.42843,11.58429],[48.30647,11.63488],[48.13235,11.69112]],"end":null,"back":false},{"start":{"lat":48.13235,"lng":11.69112,"name":"München, Germany - Riem Arcaden"},"stops":[[48.10518,11.53684],[48.16155,11.60272],[48.19582,11.60606],[48.18447,11.53242],[48.14797,11.46472],[48.13529,11.41351],[48.09401,11.28252],[48.17331,11.26448],[48.08065,10.85863],[48.3937,11.07051],[48.29756,10.89914],[48.39892,10.86798],[48.40778,10.59947],[48.41107,10.44038],[48.21882,10.12763],[48.28495,10.11602],[48.37692,10.00653],[48.45669,10.03007],[48.51635,9.75748],[48.69587,9.68679],[48.81678,9.53857],[48.707,9.30641]],"end":null,"back":false},{"start":{"lat":48.707,"lng":9.30641,"name":"Denkendorf, Germany"},"stops":[[48.82158,9.29658],[48.95611,9.24542],[48.86046,9.19826],[48.78453,9.01928],[48.78519,9.01764],[48.69131,9.00374],[48.90504,8.65424],[49.13836,8.56242],[48.99909,8.42857],[49.00935,8.3537],[48.78351,8.19234],[48.72468,8.11045],[48.64132,8.03774],[48.46994,7.93194],[48.47305,7.92476],[48.53407,7.702],[48.65302,7.73189],[48.7728,7.24323],[49.23073,7.40809],[49.20803,7.0271]],"end":null,"back":false},{"start":{"lat":49.20803,"lng":7.0271,"name":"Saarbrücken, Germany"},"stops":[[49.11168,6.85532],[49.07958,6.10371],[49.21648,6.17112],[49.34766,6.12559],[49.58246,6.1262],[49.64798,5.81886],[49.73681,4.74408],[50.08383,4.52393]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
+
+const DAGINFO=[
+  {dag:1,stops:8,uren:11.1,km:616,traject:'Rotterdam → Oosterhout → Brühl'},
+  {dag:2,stops:17,uren:11.5,km:525,traject:'Brühl → Rauenberg → München'},
+  {dag:3,stops:22,uren:11.0,km:429,traject:'München → Augsburg/Ulm → Denkendorf'},
+  {dag:4,stops:20,uren:11.4,km:480,traject:'Denkendorf → Stuttgart/Karlsruhe → Saarbrücken'},
+  {dag:5,stops:8,uren:11.1,km:618,traject:'Saarbrücken → Luxemburg/Ardennen → Rotterdam'},
+];
+
+const totStops=ROUTE.days.reduce((a,d)=>a+d.stops.length,0);
+const totKm=DAGINFO.reduce((a,d)=>a+d.km,0);
+document.getElementById('samenvatting').innerHTML =
+  `<b style="color:var(--text)">5 dagen · ${totStops} nieuwe locaties · ±${totKm} km · lus terug naar Rotterdam</b><br>
+   Oostenrijk, Italië, Zwitserland en Slowakije vallen af (117 stops), plus de Duitse
+   stops in de corridor richting Salzburg. Vier Belgische stops rond Brussel pasten
+   niet binnen het dagbudget.`;
+document.getElementById('dagtabel').innerHTML =
+  '<tr><th>Dag</th><th>Stops</th><th>Uren</th><th>km</th><th>Traject</th></tr>' +
+  DAGINFO.map(d=>`<tr><td>${d.dag}</td><td>${d.stops}</td><td>${d.uren}</td><td>${d.km}</td><td>${d.traject}</td></tr>`).join('');
+
+const map=L.map('map',{preferCanvas:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+const KLEUR=['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899'];
+const alles=[];
+ROUTE.days.forEach((d,i)=>{
+  const pts=[[d.start.lat,d.start.lng],...d.stops.map(s=>[s[0],s[1]])];
+  if(d.end) pts.push([d.end.lat,d.end.lng]);
+  L.polyline(pts,{color:KLEUR[i%KLEUR.length],weight:3,opacity:.85}).addTo(map);
+  d.stops.forEach(s=>{ L.circleMarker([s[0],s[1]],{radius:4,weight:1,color:'#0006',
+    fillColor:KLEUR[i%KLEUR.length],fillOpacity:.9}).addTo(map); alles.push([s[0],s[1]]); });
+});
+map.fitBounds(L.latLngBounds(alles).pad(0.1));
+
+function toon(msg,ok){ const el=document.getElementById('status');
+  el.style.display='block'; el.className=ok?'ok':'err'; el.textContent=msg; }
+
+async function check(){
+  const {data}=await supa.auth.getSession();
+  if(data.session){
+    document.getElementById('authbox').innerHTML=`<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>${data.session.user.email}</b></p>`;
+    document.getElementById('savebox').style.display='block';
+  }
+}
+check();
+
+document.getElementById('au-in').onclick=async()=>{
+  document.getElementById('au-status').textContent='Bezig met inloggen…';
+  const {error}=await supa.auth.signInWithPassword({
+    email:document.getElementById('au-mail').value.trim(),
+    password:document.getElementById('au-pw').value});
+  if(error){ document.getElementById('au-status').textContent='Inloggen mislukt: '+error.message; return; }
+  check();
+};
+
+document.getElementById('opslaan').onclick=async()=>{
+  const btn=document.getElementById('opslaan');
+  const naam=document.getElementById('naam').value.trim();
+  if(!naam){ toon('Geef eerst een naam op.',false); return; }
+  btn.disabled=true; btn.textContent='Bezig…';
+  try{
+    const r={...ROUTE, name:naam, savedAt:new Date().toISOString()};
+    const {error}=await supa.from('routes').upsert({name:naam, data:r, updated_at:new Date().toISOString()});
+    if(error) throw error;
+    toon(`✅ Opgeslagen als "${naam}". Open de app en klik ▶ bij deze route om hem te laden. Het origineel staat er nog gewoon.`,true);
+    btn.textContent='✅ Opgeslagen';
+  }catch(e){
+    toon('❌ Mislukt: '+e.message,false);
+    btn.disabled=false; btn.textContent='💾 Opslaan als nieuwe route';
+  }
+};
+</script>
+</body>
+</html>

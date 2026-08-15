@@ -85,6 +85,10 @@
     <label class="chk"><input type="checkbox" id="w-ja" checked> ♨️ Warm / overdekt (<span id="n-ja">…</span>)</label>
     <label class="chk"><input type="checkbox" id="w-onb"> ❓ Onbekend (<span id="n-onb">…</span>)</label>
     <label class="chk"><input type="checkbox" id="w-nee"> ❄️ Koud / buiten (<span id="n-nee">…</span>)</label>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" id="only-snelweg"> 🛣️ Alleen snelweg &amp; truckstop (<span id="n-snelweg">…</span>)</label>
+    <div class="muted">Sanifair, Autohof/Raststätte, Franse aires, wegrestaurants en tankstations —
+      de warme, betaalde douches waar truckers zich wassen. Allemaal <b>vrij toegankelijk</b>:
+      afgesloten truckersterreinen staan sowieso niet in deze lijst.</div>
     <div class="muted">OSM vult "warm water" maar bij een deel van de locaties in. <b>Warm/overdekt</b> = warm water
       vermeld, óf een betaalde/overdekte voorziening, óf een wegrestaurant, tankstation, jachthaven of Sanifair.
       <b>Koud/buiten</b> = expliciet als koud getagd (strand- en havendouches). <b>Onbekend</b> is niet getagd —
@@ -224,8 +228,22 @@ let only247 = false;
 let showPools = false;
 let showCamping = false;
 let toonSoort = { ja: true, '?': false, nee: false };   // standaard alleen warm/overdekt
+
+// Snelweg- en truckstopdouches: Sanifair, Autohof/Raststätte, Franse aires,
+// wegrestaurants en tankstations. Dit zijn de warme betaalde voorzieningen waar
+// truckers douchen, en ze zijn stuk voor stuk publiek toegankelijk — afgesloten
+// truckersterreinen zitten niet in de data, want access=private/no/permit is bij
+// het ophalen uit OSM al weggefilterd.
+const SNELWEG_NAAM = /sanifair|autohof|rasthof|rastst[äa]tte|autobahn|truck ?stop|truckhaven|lkw|\baire\b|autogrill/i;
+const isSnelweg = s => /sanifair/i.test(s.brand || '')
+  || SNELWEG_NAAM.test((s.name || '') + ' ' + (s.brand || ''))
+  || ['wegrestaurant', 'tankstation'].includes(s.highway || '')
+  || /^A\d+$/.test(s.highway || '');
+let alleenSnelweg = false;
+const inSoort = s => toonSoort[s.warm] && (!alleenSnelweg || isSnelweg(s));
+
 function matches(s) {
-  if (!toonSoort[s.warm]) return false;
+  if (!inSoort(s)) return false;
   if (activeCountry && s.country !== activeCountry) return false;
   if (only247 && !s.hours24) return false;
   if (searchTerm && !(s.name + ' ' + s.city + ' ' + s.brand).toLowerCase().includes(searchTerm)) return false;
@@ -264,7 +282,7 @@ function refresh() {
 function buildCountryList() {
   // tellingen volgen het soort-filter, anders klopt het lijstje niet met de kaart
   const per = {};
-  SHOWER_SITES.filter(s => toonSoort[s.warm]).forEach(s => per[s.country] = (per[s.country] || 0) + 1);
+  SHOWER_SITES.filter(inSoort).forEach(s => per[s.country] = (per[s.country] || 0) + 1);
   const el = document.getElementById('countrylist');
   el.innerHTML = '';
   Object.entries(per).sort((a, b) => b[1] - a[1]).forEach(([c, n]) => {
@@ -286,23 +304,26 @@ document.getElementById('showcamping').addEventListener('change', e => { showCam
 
 // soort-filter: teller en landenlijst mee laten bewegen
 function werkSoortBij() {
-  const zichtbaar = SHOWER_SITES.filter(s => toonSoort[s.warm]).length;
+  const zichtbaar = SHOWER_SITES.filter(inSoort).length;
   document.getElementById('st-total').textContent = zichtbaar;
   document.getElementById('st-countries').textContent =
-    new Set(SHOWER_SITES.filter(s => toonSoort[s.warm]).map(s => s.country)).size;
+    new Set(SHOWER_SITES.filter(inSoort).map(s => s.country)).size;
   buildCountryList();
   refresh();
 }
 [['w-ja', 'ja'], ['w-onb', '?'], ['w-nee', 'nee']].forEach(([id, sleutel]) => {
   document.getElementById(id).addEventListener('change', e => { toonSoort[sleutel] = e.target.checked; werkSoortBij(); });
 });
+document.getElementById('only-snelweg').addEventListener('change', e => { alleenSnelweg = e.target.checked; werkSoortBij(); });
+document.getElementById('n-snelweg').textContent = SHOWER_SITES.filter(isSnelweg).length;
+
 const telSoort = k => SHOWER_SITES.filter(s => s.warm === k).length;
 document.getElementById('n-ja').textContent = telSoort('ja');
 document.getElementById('n-onb').textContent = telSoort('?');
 document.getElementById('n-nee').textContent = telSoort('nee');
 
-document.getElementById('st-total').textContent = SHOWER_SITES.filter(s => toonSoort[s.warm]).length;
-document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.filter(s => toonSoort[s.warm]).map(s => s.country)).size;
+document.getElementById('st-total').textContent = SHOWER_SITES.filter(inSoort).length;
+document.getElementById('st-countries').textContent = new Set(SHOWER_SITES.filter(inSoort).map(s => s.country)).size;
 document.getElementById('st-pools').textContent = POOL_SITES.length + ' locaties';
 document.getElementById('st-camping').textContent = CAMPING_SITES.length + ' locaties';
 buildCountryList();

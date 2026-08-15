@@ -97,7 +97,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="data.js"></script>
-<script src="routesdata.js"></script>
+<script>
+// routesdata.js is bewust verwijderd: dat was een momentopname van complete routes
+// in een publieke repo. Routes komen nu uitsluitend live uit de cloud, achter login.
+const SAVED_ROUTES = [];
+</script>
 <script>
 const DOEL = 800;
 const map = L.map('map', { preferCanvas: true }).setView([50, 8], 5);

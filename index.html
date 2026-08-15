@@ -1595,6 +1595,21 @@ let deletedRoutes = {};   // naam -> ISO-tijdstip van verwijderen
 try { deletedRoutes = JSON.parse(localStorage.getItem(LS_DELETED_ROUTES)) || {}; } catch (e) {}
 const saveDeletedRoutes = () => localStorage.setItem(LS_DELETED_ROUTES, JSON.stringify(deletedRoutes));
 
+// prullenbak: verwijderen mag nooit onherstelbaar zijn. Een misklik onderweg op de
+// telefoon kostte anders een complete route — de grafsteen overschreef de stops en
+// plantte zich via de sync ook nog eens voort naar de andere apparaten. De inhoud
+// blijft nu bewaard, zowel hier als in de grafsteen-rij zelf (data.backup).
+const LS_TRASH = 'sc_route_trash_v1';
+let routeTrash = [];   // [{ name, deletedAt, route }], nieuwste eerst
+try { routeTrash = JSON.parse(localStorage.getItem(LS_TRASH)) || []; } catch (e) {}
+const saveTrash = () => localStorage.setItem(LS_TRASH, JSON.stringify(routeTrash.slice(0, 20)));
+function toTrash(route, when) {
+  if (!route || !route.days) return;
+  routeTrash = routeTrash.filter(t => t.name !== route.name);
+  routeTrash.unshift({ name: route.name, deletedAt: when, route });
+  saveTrash();
+}
+
 // routes meesyncen naar de cloud (tabel "routes"); ontbreekt die, dan blijft alles gewoon lokaal werken
 async function pushRouteCloud(r) {
   if (!supa) return;
@@ -1609,9 +1624,13 @@ async function pushRouteCloud(r) {
 // ánder apparaat dat de route nog lokaal heeft 'm bij de eerstvolgende sync weer
 // omhoog duwt ("staat niet in de cloud → dus pushen"). Een grafsteen-rij blijft
 // staan en zegt tegen élk apparaat: deze route is bewust weg.
-async function deleteRouteCloud(name, when) {
+// De grafsteen draagt de route-inhoud mee (data.backup), zodat terugzetten ook kan
+// vanaf een ánder apparaat dan waar je hem weggooide.
+async function deleteRouteCloud(name, when, backup) {
   if (!supa) return;
-  try { await supa.from('routes').upsert({ name, data: { __deleted: true }, updated_at: when || new Date().toISOString() }); } catch (e) {}
+  const tomb = { __deleted: true };
+  if (backup && backup.days) tomb.backup = backup;
+  try { await supa.from('routes').upsert({ name, data: tomb, updated_at: when || new Date().toISOString() }); } catch (e) {}
 }
 const routeSavedAt = r => (r && r.savedAt) || '1970-01-01T00:00:00Z';   // legacy routes zonder tijd = heel oud
 async function syncRoutes() {
@@ -1622,8 +1641,12 @@ async function syncRoutes() {
     const rows = data || [];
     // cloud opsplitsen in echte routes en grafstenen (bewust verwijderd)
     const cloudLive = [], cloudTomb = new Map();   // grafsteen: naam -> tijdstip
+    const cloudBackup = new Map();                 // grafsteen mét bewaarde inhoud: naam -> route
     for (const row of rows) {
-      if (row.data && row.data.__deleted) cloudTomb.set(row.name, row.updated_at || '');
+      if (row.data && row.data.__deleted) {
+        cloudTomb.set(row.name, row.updated_at || '');
+        if (row.data.backup && row.data.backup.days) cloudBackup.set(row.name, row.data.backup);
+      }
       else cloudLive.push(row);
     }
     // cloud-grafstenen samenvoegen met de lokale lijst (nieuwste tijd wint), zodat
@@ -1633,6 +1656,17 @@ async function syncRoutes() {
       if (!deletedRoutes[name] || deletedRoutes[name] < t) { deletedRoutes[name] = t; tombChanged = true; }
     }
     if (tombChanged) saveDeletedRoutes();
+
+    // elders weggegooide routes waarvan de inhoud bewaard is, in de lokale prullenbak
+    // zetten — zo kun je een misklik op de telefoon ook thuis nog terugdraaien
+    let trashChanged = false;
+    for (const [name, route] of cloudBackup) {
+      if (!routeTrash.some(t => t.name === name)) {
+        routeTrash.unshift({ name, deletedAt: cloudTomb.get(name) || '', route });
+        trashChanged = true;
+      }
+    }
+    if (trashChanged) { routeTrash.sort((a, b) => a.deletedAt < b.deletedAt ? 1 : -1); saveTrash(); }
 
     // lokale route weggooien als er een (cloud- of lokale) grafsteen is die
     // nieuwer is dan het moment waarop die route lokaal is opgeslagen
@@ -1652,7 +1686,7 @@ async function syncRoutes() {
     // opruimen — bijv. als een oud apparaat 'm net vóór onze grafsteen terugduwde
     for (const row of cloudLive) {
       const t = deletedRoutes[row.name];
-      if (t && t >= (row.updated_at || '')) deleteRouteCloud(row.name, t);
+      if (t && t >= (row.updated_at || '')) deleteRouteCloud(row.name, t, row.data);
     }
 
     // samengevoegde lijst: cloud-routes die niet (nieuwer) verwijderd zijn + lokale extra's
@@ -1728,8 +1762,13 @@ function routeLink(r) {
 }
 function renderSavedRoutes() {
   const el = document.getElementById('savedlist');
-  if (!savedRoutes.length) { el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click "Save current route". Use 🔗 to send it to your phone.</span>'; return; }
   el.innerHTML = '';
+  // ook zónder actieve routes de prullenbak tonen — juist dán heb je hem nodig
+  if (!savedRoutes.length) {
+    el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click "Save current route". Use 🔗 to send it to your phone.</span>';
+    renderTrash(el);
+    return;
+  }
   savedRoutes.forEach((r, i) => {
     const stops = r.days.reduce((a, d) => a + d.stops.length, 0);
     const row = document.createElement('div');
@@ -1746,14 +1785,58 @@ function renderSavedRoutes() {
       else prompt('Copy this link:', url);
     };
     row.querySelector('[data-a=del]').onclick = () => {
-      if (!confirm(`Delete route "${r.name}"?`)) return;
+      // naam intypen i.p.v. één keer OK: een misklik onderweg kan zo geen route kosten.
+      // Een wachtwoord zou hier niets toevoegen — deze pagina is publiek, dus het zou
+      // gewoon in de broncode staan.
+      const typed = prompt(`Delete route "${r.name}"?\n\nThis cannot happen by accident: type the route name exactly to confirm.\nYou can still restore it afterwards from Recently deleted.`);
+      if (typed === null) return;
+      if (typed.trim() !== r.name) { alert('Name did not match — route kept.'); return; }
       const when = new Date().toISOString();
+      toTrash(r, when);                 // inhoud bewaren vóór we hem uit de lijst halen
       savedRoutes.splice(i, 1);
       saveRoutesStore();
       deletedRoutes[r.name] = when;
       saveDeletedRoutes();
-      deleteRouteCloud(r.name, when);   // zelfde tijdstip lokaal én in de cloud-grafsteen
+      deleteRouteCloud(r.name, when, r);   // zelfde tijdstip lokaal én in de cloud-grafsteen
       renderSavedRoutes();
+      showToast(`"${r.name}" deleted — restore it under Recently deleted.`, 8000);
+    };
+    el.appendChild(row);
+  });
+  renderTrash(el);
+}
+
+// Prullenbak onder de routelijst: alles wat verwijderd is en waarvan we de inhoud
+// nog hebben, met één knop terug te zetten.
+function renderTrash(el) {
+  if (!routeTrash.length) return;
+  const kop = document.createElement('div');
+  kop.className = 'muted';
+  kop.style.cssText = 'margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em';
+  kop.textContent = `Recently deleted (${routeTrash.length})`;
+  el.appendChild(kop);
+  routeTrash.forEach((t, i) => {
+    const stops = t.route.days.reduce((a, d) => a + d.stops.length, 0);
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.style.opacity = '.7';
+    row.innerHTML = `
+      <div class="info"><b>${t.name}</b><span>${t.route.days.length} days · ${stops} stops · deleted ${String(t.deletedAt).slice(0, 10)}</span></div>
+      <button class="small" data-a="restore" title="Restore this route">↩</button>`;
+    row.querySelector('[data-a=restore]').onclick = () => {
+      // opnieuw opslaan mét nieuw tijdstip: dat is nieuwer dan de grafsteen, dus de
+      // sync ziet hem als bewust teruggezet en gooit hem niet meteen weer weg
+      const hersteld = { ...t.route, savedAt: new Date().toISOString() };
+      savedRoutes = savedRoutes.filter(x => x.name !== hersteld.name);
+      savedRoutes.push(hersteld);
+      saveRoutesStore();
+      delete deletedRoutes[hersteld.name];
+      saveDeletedRoutes();
+      routeTrash.splice(i, 1);
+      saveTrash();
+      pushRouteCloud(hersteld);
+      renderSavedRoutes();
+      showToast(`"${hersteld.name}" restored.`, 6000);
     };
     el.appendChild(row);
   });

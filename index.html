@@ -246,7 +246,11 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="slot.js"></script>
+<!-- Bewust géén slot.js hier: de startpagina moet gewoon opengaan met de kaart en
+     de bezochte locaties, net als het dashboard. Routes zijn niet zichtbaar voor
+     bezoekers omdat de RLS-policy op de tabel "routes" dat afdwingt — niet omdat
+     er een scherm voor staat. Inloggen (rechtsboven) laat ze verschijnen. -->
+
 <script src="data.js"></script>
 <script>
 // ---------- state ----------
@@ -1636,6 +1640,10 @@ async function deleteRouteCloud(name, when, backup) {
 const routeSavedAt = r => (r && r.savedAt) || '1970-01-01T00:00:00Z';   // legacy routes zonder tijd = heel oud
 async function syncRoutes() {
   if (!supa) return;
+  // zonder sessie helemaal geen routes ophalen: dan komt er ook niets in de
+  // localStorage van een bezoeker terecht
+  const { data: s } = await supa.auth.getSession();
+  if (!s || !s.session) return;
   try {
     const { data, error } = await supa.from('routes').select('name, data, updated_at');
     if (error) throw error;
@@ -1764,6 +1772,13 @@ function routeLink(r) {
 function renderSavedRoutes() {
   const el = document.getElementById('savedlist');
   el.innerHTML = '';
+  // Kijken mag, maar routes zijn privé. De database-regel op tabel "routes" is wat
+  // dat afdwingt; dit zorgt dat het scherm hetzelfde zegt, óók als die regel er nog
+  // niet is of als er nog iets in localStorage van een eerdere sessie staat.
+  if (!document.body.classList.contains('ingelogd')) {
+    el.innerHTML = '<span class="muted">🔒 Your saved routes are private. Log in above to see them.</span>';
+    return;
+  }
   // ook zónder actieve routes de prullenbak tonen — juist dán heb je hem nodig
   if (!savedRoutes.length) {
     el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click "Save current route". Use 🔗 to send it to your phone.</span>';
@@ -1965,7 +1980,8 @@ function renderAuth() {
   supa.auth.getSession().then(({ data }) => {
     const sessie = data.session;
     document.body.classList.toggle('ingelogd', !!sessie);
-    renderLastVisit();   // tijdsnotitie tonen/verbergen o.b.v. login-status
+    renderLastVisit();     // tijdsnotitie tonen/verbergen o.b.v. login-status
+    renderSavedRoutes();   // routelijst pas tonen zodra de sessie bekend is
     if (sessie) {
       el.innerHTML = `<div>🔓 Logged in as <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Log out</button>`;

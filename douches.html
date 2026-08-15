@@ -86,9 +86,12 @@
     <label class="chk"><input type="checkbox" id="w-onb"> ❓ Onbekend (<span id="n-onb">…</span>)</label>
     <label class="chk"><input type="checkbox" id="w-nee"> ❄️ Koud / buiten (<span id="n-nee">…</span>)</label>
     <label class="chk" style="margin-top:8px"><input type="checkbox" id="only-snelweg"> 🛣️ Alleen snelweg &amp; truckstop (<span id="n-snelweg">…</span>)</label>
-    <div class="muted">Sanifair, Autohof/Raststätte, Franse aires, wegrestaurants en tankstations —
-      de warme, betaalde douches waar truckers zich wassen. Allemaal <b>vrij toegankelijk</b>:
-      afgesloten truckersterreinen staan sowieso niet in deze lijst.</div>
+    <div class="muted">Sanifair, Autohof, Raststätte, Franse aires, wegrestaurants en tankstations —
+      de warme, betaalde douches waar truckers zich wassen, meestal rond de €3 tot €5.
+      Allemaal <b>vrij toegankelijk</b>: afgesloten truckersterreinen staan niet in deze lijst.
+      <br><b>Let op:</b> van de 312 Duitse Autohöfe heeft er maar een handvol de douche
+      daadwerkelijk in OpenStreetMap staan. De rest staat onder <b>Onbekend</b> — in de praktijk
+      heeft vrijwel elke Autohof er een, dus vink dat aan als je in Duitsland zoekt.</div>
     <div class="muted">OSM vult "warm water" maar bij een deel van de locaties in. <b>Warm/overdekt</b> = warm water
       vermeld, óf een betaalde/overdekte voorziening, óf een wegrestaurant, tankstation, jachthaven of Sanifair.
       <b>Koud/buiten</b> = expliciet als koud getagd (strand- en havendouches). <b>Onbekend</b> is niet getagd —
@@ -237,7 +240,7 @@ let toonSoort = { ja: true, '?': false, nee: false };   // standaard alleen warm
 const SNELWEG_NAAM = /sanifair|autohof|rasthof|rastst[äa]tte|autobahn|truck ?stop|truckhaven|lkw|\baire\b|autogrill/i;
 const isSnelweg = s => /sanifair/i.test(s.brand || '')
   || SNELWEG_NAAM.test((s.name || '') + ' ' + (s.brand || ''))
-  || ['wegrestaurant', 'tankstation'].includes(s.highway || '')
+  || ['wegrestaurant', 'tankstation', 'autohof'].includes(s.highway || '')
   || /^A\d+$/.test(s.highway || '');
 let alleenSnelweg = false;
 const inSoort = s => toonSoort[s.warm] && (!alleenSnelweg || isSnelweg(s));

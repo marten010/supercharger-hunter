@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171c">
+<title>Bezoeken migreren naar de cloud</title>
+<style>
+  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 720px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 22px; }
+  p, li { line-height: 1.5; font-size: 14px; }
+  .box { background: var(--panel); border-radius: 10px; padding: 16px; margin: 14px 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  input[type=email], input[type=password] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  #status { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; }
+  #status.ok { background: #123a1c; color: var(--green); }
+  #status.err { background: #3a1414; color: #ff8080; }
+  .lijst { max-height: 240px; overflow: auto; background: var(--panel2); border-radius: 8px; padding: 10px; font-size: 12px; line-height: 1.7; margin-top: 8px; }
+  .cijfer { font-size: 26px; font-weight: 700; }
+  a.backlink { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>☁️ Bezoeken migreren naar de cloud</h1>
+<div class="box">
+  <p><code>data.js</code> draagt nu nog een deel van je bezocht-status, en dat bestand staat in
+  een publieke repo. Voordat die vlag eruit kan, moeten die bezoeken in Supabase staan —
+  anders zakt je stand.</p>
+  <p class="muted">Deze pagina zet alleen ontbrekende bezoeken op <b>visited = true</b>.
+  Er wordt niets op false gezet en niets verwijderd.</p>
+</div>
+
+<div class="box">
+  <h2>Wat er gemigreerd wordt</h2>
+  <div id="analyse" class="muted">Analyseren…</div>
+</div>
+
+<div class="box" id="authbox">
+  <h2>Stap 1: inloggen</h2>
+  <input type="email" id="au-mail" placeholder="Email" autocomplete="username">
+  <input type="password" id="au-pw" placeholder="Wachtwoord" autocomplete="current-password">
+  <button id="au-in">Inloggen</button>
+  <div id="au-status" class="muted" style="margin-top:8px"></div>
+</div>
+
+<div class="box" id="doebox" style="display:none">
+  <h2>Stap 2: migreren</h2>
+  <button id="doen">☁️ Ontbrekende bezoeken naar de cloud schrijven</button>
+</div>
+
+<div id="status" style="display:none"></div>
+<p style="margin-top:20px"><a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="data.js"></script>
+<script>
+const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// exact dezelfde sleutel als index.html gebruikt
+const siteKey = s => s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+let teMigreren = [];
+
+async function analyseer() {
+  const el = document.getElementById('analyse');
+  try {
+    const { data, error } = await supa.from('visits').select('site_key,visited');
+    if (error) throw error;
+    const cloudTrue = new Set(data.filter(r => r.visited === true).map(r => r.site_key));
+    const cloudFalse = new Set(data.filter(r => r.visited === false).map(r => r.site_key));
+    const baseline = SITES.filter(s => s.visited);
+    // een locatie die je later bewust op NIET bezocht hebt gezet, laten we met rust
+    teMigreren = baseline.filter(s => !cloudTrue.has(siteKey(s)) && !cloudFalse.has(siteKey(s)));
+    const overgeslagen = baseline.filter(s => cloudFalse.has(siteKey(s)));
+    const standNu = SITES.filter(s => {
+      const k = siteKey(s);
+      return cloudTrue.has(k) ? true : (cloudFalse.has(k) ? false : s.visited);
+    }).length;
+    el.innerHTML = `
+      <div><span class="cijfer" style="color:var(--text)">${teMigreren.length}</span> bezoeken staan alleen in data.js en gaan naar de cloud.</div>
+      <div style="margin-top:6px">Huidige stand: <b style="color:var(--text)">${standNu}</b> — die blijft na migratie exact gelijk.
+      In de cloud staan nu ${cloudTrue.size} op bezocht en ${cloudFalse.size} bewust op niet-bezocht.</div>
+      ${overgeslagen.length ? `<div style="margin-top:6px;color:#f59e0b">${overgeslagen.length} locatie(s) sla ik over: die staan in data.js op bezocht maar heb je later handmatig op niet-bezocht gezet. Die correctie blijft staan.</div>` : ''}
+      <div class="lijst">${teMigreren.map(s => s.name).join('<br>') || '— niets te doen —'}</div>`;
+    if (!teMigreren.length) document.getElementById('doen').disabled = true;
+  } catch (e) {
+    el.textContent = 'Kon de cloud niet lezen: ' + e.message;
+  }
+}
+analyseer();
+
+function toon(msg, ok) {
+  const el = document.getElementById('status');
+  el.style.display = 'block'; el.className = ok ? 'ok' : 'err'; el.textContent = msg;
+}
+
+async function check() {
+  const { data } = await supa.auth.getSession();
+  if (data.session) {
+    document.getElementById('authbox').innerHTML = `<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>${data.session.user.email}</b></p>`;
+    document.getElementById('doebox').style.display = 'block';
+  }
+}
+check();
+
+document.getElementById('au-in').onclick = async () => {
+  document.getElementById('au-status').textContent = 'Bezig met inloggen…';
+  const { error } = await supa.auth.signInWithPassword({
+    email: document.getElementById('au-mail').value.trim(),
+    password: document.getElementById('au-pw').value });
+  if (error) { document.getElementById('au-status').textContent = 'Inloggen mislukt: ' + error.message; return; }
+  check();
+};
+
+document.getElementById('doen').onclick = async () => {
+  const btn = document.getElementById('doen');
+  btn.disabled = true; btn.textContent = 'Bezig…';
+  const nu = new Date().toISOString();
+  try {
+    // in blokken, anders wordt het één hele grote request
+    for (let i = 0; i < teMigreren.length; i += 100) {
+      const blok = teMigreren.slice(i, i + 100).map(s => ({ site_key: siteKey(s), visited: true, updated_at: nu }));
+      const { error } = await supa.from('visits').upsert(blok);
+      if (error) throw error;
+      btn.textContent = `Bezig… ${Math.min(i + 100, teMigreren.length)}/${teMigreren.length}`;
+    }
+    // controleren dat het echt staat
+    const { data } = await supa.from('visits').select('site_key,visited');
+    const cloudTrue = new Set((data || []).filter(r => r.visited === true).map(r => r.site_key));
+    const nogMissend = teMigreren.filter(s => !cloudTrue.has(siteKey(s))).length;
+    if (nogMissend) throw new Error(nogMissend + ' locatie(s) staan er nog niet in');
+    toon(`✅ ${teMigreren.length} bezoeken staan nu in de cloud. Totaal op bezocht: ${cloudTrue.size}. De bezocht-vlag mag nu uit data.js.`, true);
+    btn.textContent = '✅ Klaar';
+    analyseer();
+  } catch (e) {
+    toon('❌ Mislukt: ' + e.message, false);
+    btn.disabled = false; btn.textContent = '☁️ Ontbrekende bezoeken naar de cloud schrijven';
+  }
+};
+</script>
+</body>
+</html>

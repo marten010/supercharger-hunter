@@ -252,6 +252,7 @@
      er een scherm voor staat. Inloggen (rechtsboven) laat ze verschijnen. -->
 
 <script src="data.js"></script>
+<script src="tarieven.js"></script>
 <script>
 // ---------- state ----------
 // site-key (genormaliseerde naam) i.p.v. numeriek site-id: dat id is alleen een
@@ -393,10 +394,44 @@ function markerStyle(s) {
     color: '#0008', weight: 2, fillOpacity: 0.9
   };
 }
+// ---------- laadtarieven ----------
+// Handmatig afgelezen uit de Tesla-app (tarieven.js). Toont wat je nú betaalt en,
+// als er een goedkoper tijdvak is, tot hoe laat dat loopt — dat is het getal waar
+// je 's ochtends op stuurt.
+const tariefPerKey = new Map((typeof TARIEVEN !== 'undefined' ? TARIEVEN : []).map(t => [
+  t.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(), t]));
+const tariefVoor = s => tariefPerKey.get(siteKey(s));
+function prijsOp(t, uur) {
+  if (!t) return null;
+  if (t.vast != null) return t.vast;
+  const b = t.bands.find(([a, z]) => uur >= a && uur < z);
+  return b ? b[2] : null;
+}
+// het goedkoopste tijdvak dat vanaf 4 uur 's ochtends loopt, en tot hoe laat
+function ochtenddal(t) {
+  if (!t || t.vast != null) return null;
+  const ochtend = t.bands.filter(([a, z]) => a >= 4 && a < 12).sort((x, y) => x[0] - y[0])[0];
+  if (!ochtend) return null;
+  const piek = Math.max(...t.bands.map(b => b[2]));
+  return ochtend[2] < piek ? { prijs: ochtend[2], tot: ochtend[1], piek } : null;
+}
+function tariefRegel(s) {
+  const t = tariefVoor(s);
+  if (!t) return '';
+  const nu = new Date().getHours();
+  const p = prijsOp(t, nu);
+  if (t.vast != null) return `<div style="margin-top:4px">⚡ <b>€${t.vast.toFixed(2)}</b>/kWh · vast tarief</div>`;
+  const dal = ochtenddal(t);
+  const kleur = dal && p <= dal.prijs ? '#2ecc71' : '#f59e0b';
+  return `<div style="margin-top:4px">⚡ nu <b style="color:${kleur}">€${p.toFixed(2)}</b>/kWh` +
+    (dal ? ` · dal <b>€${dal.prijs.toFixed(2)}</b> tot <b>${String(dal.tot).padStart(2, '0')}:00</b>` : '') + `</div>`;
+}
+
 function popupHtml(s) {
   const v = isVisited(s);
   const info = `<b>${s.name}</b><br>
-    <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span><br>
+    <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span>
+    ${tariefRegel(s)}<br>
     <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Visited' : '✘ Not yet visited'}</span>`;
   // guests see info only; actions appear after login
   if (!document.body.classList.contains('ingelogd')) return info;

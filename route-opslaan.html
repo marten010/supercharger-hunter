@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Route opslaan — IT 10-8 fixed over 12 dagen</title>
+<title>Route opslaan — IT 15-8 over 14 dagen</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
   * { box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; max-width: 720px; margin: 0 auto; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 760px; }
   h1 { font-size: 20px; }
   h2 { font-size: 15px; margin-top: 22px; }
   p, li { line-height: 1.5; font-size: 14px; }
@@ -17,7 +17,6 @@
   .muted { color: var(--muted); font-size: 13px; }
   input[type=email], input[type=password], input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
   button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-  button:hover { filter: brightness(1.1); }
   button:disabled { opacity: .5; cursor: not-allowed; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
   th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
@@ -32,11 +31,11 @@
 </style>
 </head>
 <body>
-<h1>💾 IT 10-8 fixed — uitgesmeerd over 12 dagen</h1>
+<h1>💾 IT 15-8 — uitgesmeerd over 14 dagen</h1>
 <div class="box">
-  <p>Dezelfde route, dezelfde <b>volgorde</b>, dezelfde <b>192 stops</b> — alleen de
-  dagovergangen liggen anders. Er is niets herplant, niets weggelaten en niets omgedraaid.</p>
-  <p class="muted">Opslaan vereist inloggen — daarom deze pagina.</p>
+  <p>Dezelfde route, dezelfde <b>volgorde</b>, dezelfde <b>201 stops</b>. Alleen de
+  dagovergangen liggen anders, zodat er tijd overblijft om onderweg iets te zien.</p>
+  <p class="muted">Er is niets herplant, niets weggelaten en niets omgedraaid.</p>
 </div>
 
 <div class="box">
@@ -57,12 +56,9 @@
 <div class="box" id="savebox" style="display:none">
   <h2>Stap 2: opslaan</h2>
   <label class="muted">Naam</label>
-  <input type="text" id="naam" value="IT 10-8 fixed">
-  <div class="waarschuw">
-    Met de naam hierboven ongewijzigd <b>vervang</b> je de bestaande 10-daagse versie —
-    dat is wat je vroeg. Wil je beide bewaren, zet er dan bijvoorbeeld
-    <i>IT 10-8 fixed 12d</i> neer.
-  </div>
+  <input type="text" id="naam" value="IT 15-8">
+  <div class="waarschuw">Met deze naam ongewijzigd <b>vervang</b> je de 12-daagse versie.
+    Wil je beide houden, maak er dan bijvoorbeeld <i>IT 15-8 14d</i> van.</div>
   <button id="opslaan">💾 Opslaan</button>
 </div>
 
@@ -76,33 +72,38 @@ const SUPA_URL='https://kgnfkuqzmdfstbdryfcy.supabase.co';
 const SUPA_KEY='sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
 const supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
 
-// De stopvolgorde is exact overgenomen uit de opgeslagen route "IT 10-8 fixed".
-// Alleen de dagsnedes zijn opnieuw gelegd, met een DP-partitie die de langste dag
-// zo kort mogelijk maakt (12 min per stop, 65 km/u, wegfactor 1.3, lus terug naar huis).
-const ROUTE={"name":"IT 10-8 fixed","created":"2026-08-10","savedAt":"2026-08-12","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[50.83786,4.28829],[50.66158,4.38047],[50.5887,4.30812],[50.45232,4.43037],[50.08383,4.52393],[49.73681,4.74408],[49.34766,6.12559],[49.21648,6.17112],[49.07958,6.10371],[49.11168,6.85532]],"end":null,"back":false},{"start":{"lat":49.11168,"lng":6.85532,"name":"Farébersviller, France"},"stops":[[48.7728,7.24323],[48.90504,8.65424],[49.27381,8.69544],[49.21194,9.07732],[49.20448,9.48879],[48.95916,10.17353],[49.18118,10.06934],[49.26039,10.24257],[49.44519,10.247],[49.25795,10.50176],[49.1612,11.26049]],"end":null,"back":false},{"start":{"lat":49.1612,"lng":11.26049,"name":"Hilpoltstein, Germany"},"stops":[[49.04195,11.3427],[48.81137,11.47989],[48.64561,11.5206],[48.51816,11.56212],[48.51072,11.58227],[48.42843,11.58429],[48.30647,11.63488],[48.19582,11.60606],[48.1466,11.79025],[48.13235,11.69112],[48.16155,11.60272],[48.18447,11.53242],[48.3937,11.07051],[48.39892,10.86798],[48.40778,10.59947],[48.41107,10.44038],[48.45669,10.03007],[48.69587,9.68679],[48.81678,9.53857],[48.82158,9.29658],[48.95611,9.24542]],"end":null,"back":false},{"start":{"lat":48.95611,"lng":9.24542,"name":"Murr, Germany"},"stops":[[48.86046,9.19826],[48.78453,9.01928],[48.78519,9.01764],[48.69131,9.00374],[48.707,9.30641],[48.51635,9.75748],[48.37692,10.00653],[48.28495,10.11602],[48.21882,10.12763],[47.88036,10.04049],[47.92331,10.20914],[47.81147,10.30314],[48.04248,10.62006],[48.08065,10.85863],[48.29756,10.89914],[48.17331,11.26448],[48.09401,11.28252],[48.13529,11.41351],[48.14797,11.46472],[48.10518,11.53684],[48.03967,11.66155]],"end":null,"back":false},{"start":{"lat":48.03967,"lng":11.66155,"name":"Brunnthal, Germany"},"stops":[[47.88111,11.70227],[47.86536,11.79081],[47.82646,11.89833],[47.82784,11.90301],[47.8144,12.11878],[47.81703,12.12042],[47.81439,12.3679],[47.82585,12.38645],[47.76413,12.90426],[47.83603,13.05907],[47.9288,13.50226],[48.18346,13.78536],[48.03932,13.9911],[48.14587,13.97523],[48.18036,14.0636],[48.24494,14.23422],[48.2213,14.40666],[48.04959,14.41449],[48.18367,15.41793],[48.20576,15.61843]],"end":null,"back":false},{"start":{"lat":48.20576,"lng":15.61843,"name":"St. Pölten, Austria"},"stops":[[48.38858,16.18096],[48.24712,16.46433],[48.16736,17.17884],[48.13214,17.10844],[47.97937,16.84383],[48.16742,16.34801],[48.10277,16.31827],[47.82559,16.53195],[47.80456,16.21048],[47.28142,15.99363],[47.07095,15.57813],[47.03348,15.41462],[46.6823,14.67918]],"end":null,"back":false},{"start":{"lat":46.6823,"lng":14.67918,"name":"Völkermarkt, Austria"},"stops":[[46.73033,14.37864],[46.62729,14.34462],[46.60178,13.88329],[46.60408,13.86908],[46.63135,13.8258],[46.36809,13.07299],[46.08702,13.17982],[45.84018,13.48795],[45.88423,13.345],[45.94597,12.72411],[45.88018,12.31716],[45.66716,12.53746],[45.58465,12.28737],[45.45433,11.85637],[45.5085,11.62611]],"end":null,"back":false},{"start":{"lat":45.5085,"lng":11.62611,"name":"Torri di Quartesolo, Italy"},"stops":[[45.39817,10.97237],[45.41232,10.97022],[45.55132,10.78726],[45.42321,10.71101],[45.08657,10.85619],[44.71657,10.63615],[44.82109,10.33658],[44.88191,10.09414],[45.04024,9.75197],[44.73558,8.83976],[44.91665,8.59961],[44.98336,7.70724]],"end":null,"back":false},{"start":{"lat":44.98336,"lng":7.70724,"name":"Moncalieri, Italy - Corso Savona"},"stops":[[45.05868,7.61262],[45.12746,7.7374],[45.20241,7.89684],[45.38946,8.12992],[45.46751,8.46223],[45.38862,9.25892],[45.27675,9.45861],[45.5107,9.63617],[45.51155,9.63484],[45.63322,9.85216],[45.65224,9.61884],[45.56736,9.36236],[45.545,9.3276],[45.4768,9.15962],[45.56139,9.05583],[45.63429,8.83569],[45.76905,9.05675]],"end":null,"back":false},{"start":{"lat":45.76905,"lng":9.05675,"name":"Grandate, Italy"},"stops":[[45.84439,9.01591],[45.95423,8.95058],[45.97479,8.92796],[46.16671,8.79604],[46.13924,8.90721],[46.15205,8.93727],[46.23267,9.04009],[46.51517,8.6706],[46.52395,8.60168],[46.91292,8.62286],[46.97108,8.45916],[47.01745,8.30146],[47.27112,8.43964],[47.27204,8.43778],[47.45188,8.70452],[47.41306,8.61677],[47.40802,8.59817],[47.41793,8.39653],[47.3107,7.9349],[47.32704,7.80551],[47.52458,7.68009],[47.58963,7.59322]],"end":null,"back":false},{"start":{"lat":47.58963,"lng":7.59322,"name":"Weil am Rhein, Germany"},"stops":[[47.62669,7.59945],[47.60517,7.54328],[47.782,7.38707],[47.98358,7.71925],[48.0397,7.86109],[48.22709,7.75369],[48.24971,7.76576],[48.28135,7.77755],[48.46994,7.93194],[48.47305,7.92476],[48.53407,7.702],[48.65302,7.73189],[48.64132,8.03774],[48.72468,8.11045],[48.78351,8.19234],[49.00935,8.3537],[48.99909,8.42857],[49.13836,8.56242],[49.40987,8.5417],[49.53992,8.5952],[49.54734,8.45662],[49.4599,7.82134]],"end":null,"back":false},{"start":{"lat":49.4599,"lng":7.82134,"name":"Kaiserslautern, Germany"},"stops":[[49.44174,7.70782],[49.23073,7.40809],[49.20803,7.0271],[49.77216,6.65757],[49.58246,6.1262],[49.64798,5.81886],[50.22314,5.33004],[51.62661,4.86995]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
+// Stopvolgorde exact overgenomen uit de opgeslagen route "IT 15-8". Alleen de
+// dagsnedes zijn opnieuw gelegd met een DP-partitie die de langste dag zo kort
+// mogelijk maakt (12 min per stop, 65 km/u, wegfactor 1.3, lus terug naar huis).
+const ROUTE={"name":"IT 15-8","created":"2026-08-15","savedAt":"2026-08-16","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[50.83786,4.28829],[50.66158,4.38047],[50.5887,4.30812],[50.45232,4.43037],[50.08383,4.52393],[49.73681,4.74408],[49.34766,6.12559],[49.21648,6.17112],[49.07958,6.10371]],"end":null,"back":false},{"start":{"lat":49.07958,"lng":6.10371,"name":"Moulins-lès-Metz, France"},"stops":[[49.11168,6.85532],[48.7728,7.24323],[48.90504,8.65424],[49.27381,8.69544],[49.21194,9.07732],[49.20448,9.48879],[48.95916,10.17353],[49.18118,10.06934],[49.26039,10.24257]],"end":null,"back":false},{"start":{"lat":49.26039,"lng":10.24257,"name":"Wörnitz, Germany"},"stops":[[49.44519,10.247],[49.25795,10.50176],[49.1612,11.26049],[48.99981,12.14847],[48.8383,12.11922],[48.62564,12.32022],[48.78871,12.89756],[48.76547,13.04667],[48.68955,13.21256],[48.39422,13.4265],[48.28274,12.55484],[48.27256,12.54989]],"end":null,"back":false},{"start":{"lat":48.27256,"lng":12.54989,"name":"Mühldorf, Germany"},"stops":[[49.04195,11.3427],[48.81137,11.47989],[48.64561,11.5206],[48.51816,11.56212],[48.51072,11.58227],[48.42843,11.58429],[48.30647,11.63488],[48.19582,11.60606],[48.1466,11.79025],[48.13235,11.69112],[48.16155,11.60272],[48.18447,11.53242],[48.3937,11.07051],[48.39892,10.86798],[48.40778,10.59947],[48.41107,10.44038]],"end":null,"back":false},{"start":{"lat":48.41107,"lng":10.44038,"name":"Jettingen, Germany"},"stops":[[48.45669,10.03007],[48.69587,9.68679],[48.81678,9.53857],[48.82158,9.29658],[48.95611,9.24542],[48.86046,9.19826],[48.78453,9.01928],[48.78519,9.01764],[48.69131,9.00374],[48.707,9.30641],[48.51635,9.75748],[48.37692,10.00653],[48.28495,10.11602],[48.21882,10.12763],[47.88036,10.04049],[47.92331,10.20914],[47.81147,10.30314],[48.04248,10.62006]],"end":null,"back":false},{"start":{"lat":48.04248,"lng":10.62006,"name":"Türkheim, Germany"},"stops":[[48.08065,10.85863],[48.29756,10.89914],[48.17331,11.26448],[48.09401,11.28252],[48.13529,11.41351],[48.14797,11.46472],[48.10518,11.53684],[48.03967,11.66155],[47.88111,11.70227],[47.86536,11.79081],[47.82646,11.89833],[47.82784,11.90301],[47.8144,12.11878],[47.81703,12.12042],[47.81439,12.3679],[47.82585,12.38645],[47.76413,12.90426],[47.83603,13.05907],[47.9288,13.50226],[48.18346,13.78536]],"end":null,"back":false},{"start":{"lat":48.18346,"lng":13.78536,"name":"Meggenhofen, Austria"},"stops":[[48.03932,13.9911],[48.14587,13.97523],[48.18036,14.0636],[48.24494,14.23422],[48.2213,14.40666],[48.04959,14.41449],[48.18367,15.41793],[48.20576,15.61843],[48.38858,16.18096],[48.24712,16.46433],[48.16736,17.17884],[48.13214,17.10844],[47.97937,16.84383],[48.16742,16.34801]],"end":null,"back":false},{"start":{"lat":48.16742,"lng":16.34801,"name":"Wien, Austria - Wienerberg"},"stops":[[48.10277,16.31827],[47.82559,16.53195],[47.80456,16.21048],[47.28142,15.99363],[47.07095,15.57813],[47.03348,15.41462],[46.6823,14.67918],[46.73033,14.37864],[46.62729,14.34462],[46.60178,13.88329],[46.60408,13.86908],[46.63135,13.8258],[46.36809,13.07299]],"end":null,"back":false},{"start":{"lat":46.36809,"lng":13.07299,"name":"Valli di Carnia, Italy"},"stops":[[46.08702,13.17982],[45.84018,13.48795],[45.88423,13.345],[45.94597,12.72411],[45.88018,12.31716],[45.66716,12.53746],[45.58465,12.28737],[45.45433,11.85637],[45.5085,11.62611],[45.39817,10.97237],[45.41232,10.97022],[45.55132,10.78726],[45.42321,10.71101]],"end":null,"back":false},{"start":{"lat":45.42321,"lng":10.71101,"name":"Castelnuovo del Garda, Italy"},"stops":[[45.08657,10.85619],[44.71657,10.63615],[44.82109,10.33658],[44.88191,10.09414],[45.04024,9.75197],[44.73558,8.83976],[44.91665,8.59961],[44.98336,7.70724],[45.05868,7.61262],[45.12746,7.7374],[45.20241,7.89684],[45.38946,8.12992]],"end":null,"back":false},{"start":{"lat":45.38946,"lng":8.12992,"name":"Cavaglià, Italy"},"stops":[[45.46751,8.46223],[45.38862,9.25892],[45.27675,9.45861],[45.5107,9.63617],[45.51155,9.63484],[45.63322,9.85216],[45.65224,9.61884],[45.56736,9.36236],[45.545,9.3276],[45.4768,9.15962],[45.56139,9.05583],[45.63429,8.83569],[45.76905,9.05675],[45.84439,9.01591],[45.95423,8.95058],[45.97479,8.92796],[46.16671,8.79604],[46.13924,8.90721]],"end":null,"back":false},{"start":{"lat":46.13924,"lng":8.90721,"name":"Monte Ceneri, Switzerland"},"stops":[[46.15205,8.93727],[46.23267,9.04009],[46.51517,8.6706],[46.52395,8.60168],[46.91292,8.62286],[46.97108,8.45916],[47.01745,8.30146],[47.27112,8.43964],[47.27204,8.43778],[47.45188,8.70452],[47.41306,8.61677],[47.40802,8.59817],[47.41793,8.39653],[47.3107,7.9349],[47.32704,7.80551],[47.52458,7.68009],[47.58963,7.59322],[47.62669,7.59945],[47.60517,7.54328],[47.782,7.38707]],"end":null,"back":false},{"start":{"lat":47.782,"lng":7.38707,"name":"Mulhouse, France - Rue des Cévennes"},"stops":[[47.98358,7.71925],[48.0397,7.86109],[48.22709,7.75369],[48.24971,7.76576],[48.28135,7.77755],[48.46994,7.93194],[48.47305,7.92476],[48.53407,7.702],[48.65302,7.73189],[48.64132,8.03774],[48.72468,8.11045],[48.78351,8.19234],[49.00935,8.3537],[48.99909,8.42857],[49.13836,8.56242],[49.40987,8.5417],[49.53992,8.5952],[49.54734,8.45662],[49.4599,7.82134],[49.44174,7.70782]],"end":null,"back":false},{"start":{"lat":49.44174,"lng":7.70782,"name":"Kaiserslautern, Germany - Merkurstraße"},"stops":[[49.23073,7.40809],[49.20803,7.0271],[49.77216,6.65757],[49.58246,6.1262],[49.64798,5.81886],[50.22314,5.33004],[51.62661,4.86995]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
 
 const DAGINFO=[
-  {dag:1, stops:10, uren:10.9, km:581, traject:'Rotterdam → Brussel · Charleroi · Ardennen → Farébersviller'},
-  {dag:2, stops:11, uren:11.3, km:590, traject:'Farébersviller → Karlsruhe · Heilbronn · Neurenberg → Hilpoltstein'},
-  {dag:3, stops:21, uren:11.3, km:460, traject:'Hilpoltstein → Ingolstadt · München-noord · Augsburg → Murr'},
-  {dag:4, stops:21, uren:11.4, km:468, traject:'Murr → Stuttgart · Ulm · Allgäu · München → Brunnthal'},
-  {dag:5, stops:20, uren:11.5, km:486, traject:'Brunnthal → Salzburg · Linz → St. Pölten'},
-  {dag:6, stops:13, uren:11.6, km:583, traject:'St. Pölten → Wenen · Bratislava · Graz → Völkermarkt'},
-  {dag:7, stops:15, uren:11.2, km:531, traject:'Völkermarkt → Villach · Udine · Venetië → Torri di Quartesolo'},
-  {dag:8, stops:12, uren:11.0, km:560, traject:'Torri di Quartesolo → Verona · Parma · Piemonte → Moncalieri'},
-  {dag:9, stops:17, uren:10.2, km:443, traject:'Moncalieri → Turijn · Milaan → Grandate'},
-  {dag:10, stops:22, uren:11.5, km:460, traject:'Grandate → Lugano · Gotthard · Luzern · Zürich → Weil am Rhein'},
-  {dag:11, stops:22, uren:11.6, km:465, traject:'Weil am Rhein → Freiburg · Straatsburg · Karlsruhe · Mannheim → Kaiserslautern'},
-  {dag:12, stops:8, uren:11.2, km:622, traject:'Kaiserslautern → Trier · Luxemburg · Ardennen → Rotterdam'},
+  {dag:1,  stops:9,  uren:9.6,  km:509, traject:'Rotterdam → Brussel · Charleroi · Ardennen → Metz'},
+  {dag:2,  stops:9,  uren:9.9,  km:525, traject:'Metz → Lotharingen · Karlsruhe · Heilbronn → Wörnitz'},
+  {dag:3,  stops:12, uren:10.3, km:511, traject:'Wörnitz → Regensburg · Passau → Mühldorf'},
+  {dag:4,  stops:16, uren:10.1, km:448, traject:'Mühldorf → Ingolstadt · München-noord · Augsburg → Jettingen'},
+  {dag:5,  stops:18, uren:10.8, km:471, traject:'Jettingen → Ulm · Stuttgart · Allgäu → Türkheim'},
+  {dag:6,  stops:20, uren:10.2, km:403, traject:'Türkheim → München · Salzburg → Meggenhofen'},
+  {dag:7,  stops:14, uren:10.4, km:495, traject:'Meggenhofen → Linz · St. Pölten · Wenen · Bratislava → Wien'},
+  {dag:8,  stops:13, uren:10.4, km:504, traject:'Wien → Graz · Klagenfurt · Villach → Karnië (IT)'},
+  {dag:9,  stops:13, uren:9.8,  km:466, traject:'Karnië → Udine · Venetië · Verona → Gardameer'},
+  {dag:10, stops:12, uren:10.5, km:529, traject:'Gardameer → Mantua · Parma · Turijn → Cavaglià'},
+  {dag:11, stops:18, uren:10.2, km:432, traject:'Cavaglià → Milaan · Como · Ticino → Monte Ceneri'},
+  {dag:12, stops:20, uren:10.6, km:426, traject:'Monte Ceneri → Gotthard · Luzern · Zürich · Basel → Mulhouse'},
+  {dag:13, stops:20, uren:10.7, km:434, traject:'Mulhouse → Freiburg · Straatsburg · Karlsruhe · Mannheim → Kaiserslautern'},
+  {dag:14, stops:7,  uren:10.8, km:611, traject:'Kaiserslautern → Trier · Luxemburg · Ardennen → Rotterdam'},
 ];
 
 const totStops=ROUTE.days.reduce((a,d)=>a+d.stops.length,0);
 const totKm=DAGINFO.reduce((a,d)=>a+d.km,0);
+const gem=(DAGINFO.reduce((a,d)=>a+d.uren,0)/DAGINFO.length).toFixed(1);
 document.getElementById('samenvatting').innerHTML =
-  `<b style="color:var(--text)">12 dagen · ${totStops} stops · ±${totKm} km · lus terug naar Rotterdam</b><br>
-   Alle 192 stops staan er nog, in exact dezelfde volgorde als in de 10-daagse versie.
-   De dagen lopen nu van <b>10,2 tot 11,6 uur</b>; in de 10-daagse indeling was dat
-   9 tot 14 uur. Vooral de oude dag 4 (26 stops) en dag 9 (27 stops) waren te zwaar.`;
+  `<b style="color:var(--text)">14 dagen · ${totStops} stops · ±${totKm} km · lus terug naar Rotterdam</b><br>
+   Alle 201 stops staan er nog, in exact dezelfde volgorde als in de 12-daagse versie.
+   De dagen lopen nu van <b>9,6 tot 10,8 uur</b>, gemiddeld ${gem} — in de 12-daagse indeling
+   was dat 11,7 tot 12,3. Dat scheelt zo'n <b>1,7 uur per dag</b> om iets te zien.<br>
+   Je rijdt exact dezelfde ${totKm} km, dus de twee extra dagen kosten geen kilometer,
+   alleen twee nachten.`;
 document.getElementById('dagtabel').innerHTML =
   '<tr><th>Dag</th><th class="num">Stops</th><th class="num">Uren</th><th class="num">km</th><th>Traject</th></tr>' +
   DAGINFO.map(d=>`<tr><td>${d.dag}</td><td class="num">${d.stops}</td><td class="num">${d.uren.toFixed(1)}</td><td class="num">${d.km}</td><td>${d.traject}</td></tr>`).join('');
@@ -110,7 +111,7 @@ document.getElementById('dagtabel').innerHTML =
 const map=L.map('map',{preferCanvas:true});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
-const KLEUR=['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6','#f97316','#10b981'];
+const KLEUR=['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6','#f97316','#10b981','#60a5fa','#fb7185'];
 const alles=[];
 ROUTE.days.forEach((d,i)=>{
   const pts=[[d.start.lat,d.start.lng],...d.stops.map(s=>[s[0],s[1]])];
@@ -151,7 +152,7 @@ document.getElementById('opslaan').onclick=async()=>{
     const r={...ROUTE, name:naam, savedAt:new Date().toISOString()};
     const {error}=await supa.from('routes').upsert({name:naam, data:r, updated_at:new Date().toISOString()});
     if(error) throw error;
-    toon(`✅ Opgeslagen als "${naam}" — 12 dagen, 192 stops. Open de app en klik ▶ bij deze route om hem te laden.`,true);
+    toon(`✅ Opgeslagen als "${naam}" — 14 dagen, 201 stops. Open de app en klik ▶ bij deze route om hem te laden.`,true);
     btn.textContent='✅ Opgeslagen';
   }catch(e){
     toon('❌ Mislukt: '+e.message,false);

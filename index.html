@@ -279,7 +279,28 @@ for (const k of Object.keys(overrides)) {
 }
 const ovVal = o => (o && typeof o === 'object') ? o.v : o;
 const ovTime = o => (o && typeof o === 'object' && o.t) ? o.t : '1970-01-01T00:00:00Z';
-const isVisited = s => (siteKey(s) in overrides) ? ovVal(overrides[siteKey(s)]) : s.visited;
+// Locaties worden in de bron soms hernoemd (Lübeck, Germany → Lübeck - Stockelsdorf).
+// Een afvinking staat dan nog op de oude sleutel en past nergens meer op, waardoor
+// een bezoek stilzwijgend verdwijnt bij de eerstvolgende data-ververs. Deze tabel
+// houdt oude sleutels geldig: oud → nieuw.
+const SLEUTEL_ALIAS = {
+  'lubeck germany': 'lubeck germany stockelsdorf',
+  'lubeck germany danischburger landstra e': 'lubeck germany danischburg',
+};
+// omgekeerd opzoeken: welke oude sleutels wijzen naar deze locatie?
+const aliasNaarOud = new Map();
+for (const [oud, nieuw] of Object.entries(SLEUTEL_ALIAS)) {
+  if (!aliasNaarOud.has(nieuw)) aliasNaarOud.set(nieuw, []);
+  aliasNaarOud.get(nieuw).push(oud);
+}
+// de override die voor deze locatie geldt: eigen sleutel eerst, anders een oude naam
+function overrideVoor(s) {
+  const k = siteKey(s);
+  if (k in overrides) return overrides[k];
+  for (const oud of (aliasNaarOud.get(k) || [])) if (oud in overrides) return overrides[oud];
+  return undefined;
+}
+const isVisited = s => { const o = overrideVoor(s); return o === undefined ? s.visited : ovVal(o); };
 const saveOverrides = () => localStorage.setItem(LS_KEY, JSON.stringify(overrides));
 
 let activeCountries = new Set();   // leeg = alle

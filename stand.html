@@ -30,6 +30,7 @@
   .crow .balk > div { height: 100%; background: var(--green); }
   .crow .pct { flex: 0 0 70px; text-align: right; color: var(--muted); font-size: 12px; }
   footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 20px; }
+  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
 </style>
 </head>
 <body>
@@ -62,8 +63,8 @@ const keyToSite = new Map(SITES.map(s => [norm(s.name), s]));
 const visited = new Set(SITES.filter(s => s.visited).map(s => s.id));
 
 const map = L.map('map', { preferCanvas: true }).setView([50.5, 8], 5);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap-bijdragers', maxZoom: 19
 }).addTo(map);
 const markers = new Map();
 for (const s of SITES) {

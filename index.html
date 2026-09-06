@@ -125,6 +125,10 @@
     .leaflet-popup-content b { font-size: 15px; }
     .leaflet-popup-content { font-size: 13px; }
   }
+  /* Achtergrondkaart temperen zodat de rode en groene stippen eruit springen.
+     Donkere modus is dezelfde kaart, omgekeerd — geen tweede tegelbron nodig. */
+  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
+  body.kaart-donker .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(0.6) brightness(0.95); }
 </style>
 </head>
 <body>
@@ -333,16 +337,22 @@ function undoRoute() {
 
 // ---------- kaart ----------
 const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
-const TILE_URLS = {
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  // Voyager: gedetailleerde stijl met duidelijk onderscheid tussen bebouwing,
-  // groen/natuur en wegtype (snelwegen oranje) — i.p.v. de vlakke light_all
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-};
+// CARTO vereist sinds september 2026 een API-sleutel: hun tegels komen nog binnen
+// met status 200 en een geldige PNG, maar met "API KEY REQUIRED" er dwars overheen.
+// Dat is niet aan de statuscode te zien, alleen aan de pixels — op een oceaantegel,
+// die effen hoort te zijn, telden we 12 kleuren. Beide CARTO-stijlen zijn aangetast,
+// dus binnen CARTO van stijl wisselen lost niets op.
+//
+// OpenStreetMap heeft geen sleutel nodig en is schoon (1 kleur op open zee). Licht
+// en donker komen van dezelfde bron; het verschil maakt een CSS-filter op het
+// tegelvlak. Dat scheelt meteen een tweede externe afhankelijkheid.
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTR = '&copy; OpenStreetMap-bijdragers';
 let mapStyle = localStorage.getItem('sc_map_style') || 'light';
-let tileLayer = L.tileLayer(TILE_URLS[mapStyle], {
-  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
-}).addTo(map);
+let tileLayer = L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(map);
+// licht/donker via een filter op het tegelvlak i.p.v. een tweede tegelbron
+const pasKaartstijlToe = () => document.body.classList.toggle('kaart-donker', mapStyle === 'dark');
+pasKaartstijlToe();
 
 const MapStyleControl = L.Control.extend({
   options: { position: 'bottomleft' },
@@ -354,8 +364,7 @@ const MapStyleControl = L.Control.extend({
     btn.onclick = () => {
       mapStyle = mapStyle === 'dark' ? 'light' : 'dark';
       localStorage.setItem('sc_map_style', mapStyle);
-      map.removeLayer(tileLayer);
-      tileLayer = L.tileLayer(TILE_URLS[mapStyle], { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19 }).addTo(map);
+      pasKaartstijlToe();
       btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
     };
     return btn;

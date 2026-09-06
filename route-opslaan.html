@@ -28,6 +28,7 @@
   #status.err { background: #3a1414; color: #ff8080; }
   a.backlink { color: var(--muted); font-size: 13px; }
   .waarschuw { background:#3a2e14; border-radius:8px; padding:10px 12px; font-size:13px; margin-top:10px; }
+  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
 </style>
 </head>
 <body>
@@ -109,7 +110,7 @@ document.getElementById('dagtabel').innerHTML =
   DAGINFO.map(d=>`<tr><td>${d.dag}</td><td class="num">${d.stops}</td><td class="num">${d.uren.toFixed(1)}</td><td class="num">${d.km}</td><td>${d.traject}</td></tr>`).join('');
 
 const map=L.map('map',{preferCanvas:true});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
 const KLEUR=['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6','#f97316','#10b981','#60a5fa','#fb7185'];
 const alles=[];

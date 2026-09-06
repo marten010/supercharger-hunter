@@ -42,6 +42,7 @@
     .rrow .info span, .muted { font-size: 14px; }
     button.small { padding: 11px 13px; font-size: 15px; }
   }
+  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
 </style>
 </head>
 <body>
@@ -81,8 +82,8 @@ const SAVED_ROUTES = [];
 </script>
 <script>
 const map = L.map('map', { preferCanvas: true }).setView([50, 6], 5);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap-bijdragers', maxZoom: 19
 }).addTo(map);
 
 // duidelijk onderscheidbare kleuren, ook naast elkaar op een lichte kaart

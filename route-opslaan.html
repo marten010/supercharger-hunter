@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Route opslaan &mdash; UK over 10 dagen</title>
+<title>Route opslaan — UK, 9 of 10 dagen</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
   * { box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 780px; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 820px; }
   h1 { font-size: 20px; }
   h2 { font-size: 15px; margin-top: 22px; }
   p, li { line-height: 1.5; font-size: 14px; }
@@ -17,55 +17,63 @@
   .muted { color: var(--muted); font-size: 13px; }
   input[type=email], input[type=password], input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; margin-top: 6px; }
   button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  button.kies { background: var(--panel2); border: 1px solid var(--border); }
+  button.kies.aan { background: #2b3446; border-color: #5b7cc4; }
   button:disabled { opacity: .5; cursor: not-allowed; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
   th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; }
   td.num { text-align: right; }
-  #map { height: 340px; border-radius: 10px; margin-top: 10px; }
+  tr.zwaar td { color: #f0a868; }
+  #map { height: 360px; border-radius: 10px; margin-top: 10px; }
+  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
   #status { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; }
   #status.ok { background: #123a1c; color: var(--green); }
   #status.err { background: #3a1414; color: #ff8080; }
   a.backlink { color: var(--muted); font-size: 13px; }
-  .waarschuw { background:#3a2e14; border-radius:8px; padding:10px 12px; font-size:13px; margin-top:10px; }
-  .leaflet-tile-pane { filter: saturate(0.5) brightness(1.04); }
+  .kolommen { display: flex; gap: 10px; flex-wrap: wrap; }
+  .kolommen > div { flex: 1; min-width: 240px; background: var(--panel2); border-radius: 8px; padding: 12px; }
+  .groot { font-size: 22px; font-weight: 700; }
 </style>
 </head>
 <body>
-<h1>&#128190; UK &mdash; 10 dagen met de veerboot</h1>
+<h1>💾 UK met de veerboot — 9 of 10 dagen</h1>
+
 <div class="box">
-  <p>Dezelfde route, dezelfde <b>volgorde</b>, verdeeld over tien dagen in plaats van acht.
-  Twee stops zijn eruit gehaald omdat ze <b>alleen met een Eurotunnel-ticket</b> bereikbaar zijn:
-  <i>Eurotunnel Flexiplus</i> (premiumticket vereist) en <i>Folkestone France Bound Only</i>
-  (alleen richting Frankrijk). De gewone <i>Eurotunnel Terminal</i>-paal in Coquelles zit er wel
-  in &mdash; die ligt in de openbare passagiersterminal en is vrij toegankelijk.</p>
-  <p class="muted">Van 141 naar <b>139 stops</b>. Niets herplant, niets omgedraaid.</p>
+  <p>Beide indelingen bevatten <b>dezelfde 139 stops in dezelfde volgorde</b>. Alleen de
+  dagovergangen liggen anders. Twee locaties zijn eruit gehaald omdat ze alleen met een
+  Eurotunnel-ticket bereikbaar zijn: <i>Eurotunnel Flexiplus</i> en
+  <i>Folkestone France Bound Only</i>. De gewone <i>Eurotunnel Terminal</i>-paal in Coquelles
+  staat er wel in — die ligt in de vrij toegankelijke passagiersterminal.</p>
+  <p class="muted">Gerekend met 12 min per stop, 65 km/u, wegfactor 1,52 en <b>3 uur per
+  overtocht</b> inclusief inchecken. De boot is Calais–Dover heen en Dover–Calais terug, en valt
+  bewust binnen de eerste en de laatste dag zodat je midden op de dag vaart.</p>
 </div>
 
 <div class="box">
-  <h2>Wat wordt opgeslagen</h2>
-  <div id="samenvatting" class="muted">
-    <b style="color:var(--text)">10 dagen &middot; 139 stops &middot; &plusmn;3461 km &middot; lus terug naar Rotterdam</b><br>
-    Gerekend met 12 min per stop, 65 km/u en wegfactor <b>1,52</b> &mdash; die factor komt uit jouw
-    eigen afstandscontrole van 3.533 km en past bij een route die met 139 stops door Engeland zigzagt.
-    De overtocht is <b>Calais&ndash;Dover</b> heen en <b>Dover&ndash;Calais</b> terug, elk gerekend als <b>3 uur</b> inclusief inchecken, en valt bewust <b>binnen</b> dag 1 en dag 10,
-    zodat je midden op de dag kunt varen.<br>
-    Acht van de tien dagen liggen tussen <b>7,9 en 8,5 uur</b>. Dag 1 en dag 10 zijn langer door
-    de overtocht; dag 10 is 500 km met drie stops - waarvan 180 km van Chelmsford naar Dover en 110 km van Calais naar Brugge - en dat is niet op te lossen met extra dagen.
+  <div class="kolommen">
+    <div>
+      <div class="muted">9 dagen</div>
+      <div class="groot">9,7 uur</div>
+      <div class="muted">gemiddeld · 335–485 km per dag · zeven dagen tussen 9,0 en 9,7</div>
+    </div>
+    <div>
+      <div class="muted">10 dagen</div>
+      <div class="groot">8,7 uur</div>
+      <div class="muted">gemiddeld · 300–485 km per dag · acht dagen tussen 8,1 en 8,4</div>
+    </div>
   </div>
-  <table id="dagtabel">
-  <tr><th>Dag</th><th class="num">Stops</th><th class="num">Uren</th><th class="num">km</th><th>Traject</th></tr>
-  <tr><td>1 &#9973;</td><td class="num">6</td><td class="num">10.1</td><td class="num">382</td><td>Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Eurotunnel-terminal &middot; <b>Calais</b> &rarr; veerboot &rarr; <b>Dover</b></td></tr>
-  <tr><td>2</td><td class="num">18</td><td class="num">8.4</td><td class="num">311</td><td>Faversham &rarr; Kent &middot; Londen-zuid &middot; Heathrow &rarr; West Drayton</td></tr>
-  <tr><td>3</td><td class="num">17</td><td class="num">8.3</td><td class="num">318</td><td>Heathrow &rarr; Guildford &middot; Reading &middot; Swindon &rarr; Bristol</td></tr>
-  <tr><td>4</td><td class="num">16</td><td class="num">8.4</td><td class="num">335</td><td>Michaelwood &rarr; Gloucester &middot; Birmingham &middot; Wolverhampton &rarr; Keele</td></tr>
-  <tr><td>5</td><td class="num">18</td><td class="num">8.2</td><td class="num">300</td><td>Keele &rarr; Liverpool &middot; Preston &middot; Manchester &rarr; Ashton New Road</td></tr>
-  <tr><td>6</td><td class="num">15</td><td class="num">8.1</td><td class="num">330</td><td>Birch &rarr; Burnley &middot; Leeds &middot; York &rarr; Thorne</td></tr>
-  <tr><td>7</td><td class="num">16</td><td class="num">7.9</td><td class="num">305</td><td>Thorne &rarr; Sheffield &middot; Nottingham &middot; Leicester &rarr; Rugby</td></tr>
-  <tr><td>8</td><td class="num">16</td><td class="num">8.0</td><td class="num">309</td><td>Rugby &rarr; Northampton &middot; Milton Keynes &middot; Londen-noord &rarr; Birchanger</td></tr>
-  <tr><td>9</td><td class="num">14</td><td class="num">8.5</td><td class="num">369</td><td>Birchanger &rarr; Cambridge &middot; Suffolk &middot; Ipswich &rarr; Braintree</td></tr>
-  <tr><td>10 &#9973;</td><td class="num">3</td><td class="num">11.3</td><td class="num">502</td><td>Chelmsford &rarr; <b>Dover</b> &rarr; veerboot &rarr; <b>Calais</b> &rarr; Brugge &middot; Middelburg &rarr; Rotterdam</td></tr>
-  </table>
+  <p class="muted" style="margin-top:12px">De twee overtochtdagen zijn in beide varianten
+  gelijk: <b>10,1 uur</b> op de heenweg en <b>10,9 uur</b> op de terugweg. Die zijn niet korter
+  te maken — dag 1 is 382 km plus drie uur boot, de slotdag 485 km plus drie uur boot. Een dag
+  extra inplannen verandert daar niets aan, het maakt alleen de dagen ertussen leger.</p>
+</div>
+
+<div class="box">
+  <h2>Kies een indeling</h2>
+  <button class="kies aan" id="k9">9 dagen</button>
+  <button class="kies" id="k10">10 dagen</button>
+  <table id="dagtabel"></table>
   <div id="map"></div>
 </div>
 
@@ -79,41 +87,97 @@
 
 <div class="box" id="savebox" style="display:none">
   <h2>Stap 2: opslaan</h2>
-  <label class="muted">Naam</label>
-  <input type="text" id="naam" value="UK 10-8">
-  <div class="waarschuw">Met deze naam ongewijzigd <b>vervang</b> je de 8-daagse versie met 141 stops.
-    Wil je beide houden, maak er dan bijvoorbeeld <i>UK 10 dagen boot</i> van.</div>
-  <button id="opslaan">&#128190; Opslaan</button>
+  <label class="muted">Naam voor de gekozen indeling</label>
+  <input type="text" id="naam" value="UK 9 dagen boot">
+  <div class="muted" style="margin-top:6px">Je kunt ze allebei opslaan: kies hierboven de
+  andere indeling en sla die onder zijn eigen naam ook op. Je bestaande <i>UK 10-8</i> met
+  141 stops blijft staan zolang je die naam niet gebruikt.</div>
+  <button id="opslaan">💾 Opslaan</button>
 </div>
 
 <div id="status" style="display:none"></div>
-<p style="margin-top:20px"><a class="backlink" href="index.html">&larr; Terug naar Supercharger Hunter</a></p>
+<p style="margin-top:20px"><a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a></p>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="routes-uk.js"></script>
 <script>
 var SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
 var SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
 var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-var ROUTE = {"name":"UK 10-8","created":"2026-08-10","savedAt":"2026-09-08","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[51.23597,4.05948],[51.0181,3.7367],[51.00509,2.28097],[50.93503,1.81305],[50.92424,1.80384],[51.1251,1.31585]],"end":null,"back":false},{"start":{"lat":51.1251,"lng":1.31585,"name":"Dover, UK"},"stops":[[51.30551,0.90214],[51.34183,0.60675],[51.28622,0.54578],[51.43805,0.26879],[51.45354,0.24668],[51.48946,0.28655],[51.4925,0.271],[51.57799,0.18502],[51.4128,0.1343],[51.30255,0.16142],[51.40423,0.01951],[51.37169,-0.11685],[51.35667,-0.11682],[51.41073,-0.30722],[51.4888,-0.38867],[51.4883,-0.3957],[51.54592,-0.47495],[51.51095,-0.46046]],"end":null,"back":false},{"start":{"lat":51.51095,"lng":-0.46046,"name":"London, UK - West Drayton (SC)"},"stops":[[51.48046,-0.44423],[51.24951,-0.5597],[51.22629,-0.7235],[51.29581,-0.85464],[51.29616,-0.85727],[51.42835,-0.89891],[51.43952,-0.96816],[51.42061,-0.98803],[51.42359,-1.03888],[51.4813,-1.5561],[51.4839,-1.5568],[51.56499,-1.79664],[51.51008,-2.15612],[51.4737,-2.56496],[51.47721,-2.70631],[51.52289,-2.60922],[51.52669,-2.59981]],"end":null,"back":false},{"start":{"lat":51.52669,"lng":-2.59981,"name":"Bristol, UK - Cribbs Causeway"},"stops":[[51.65593,-2.43195],[51.6572,-2.4269],[51.8188,-2.2244],[51.82,-2.22737],[52.37717,-1.7965],[52.40033,-1.81783],[52.44567,-1.74867],[52.44982,-1.84831],[52.3632,-1.94557],[52.42938,-2.01729],[52.48338,-2.1136],[52.64406,-2.05839],[52.64407,-2.05421],[52.68776,-2.01457],[52.96273,-2.19651],[52.993,-2.2903]],"end":null,"back":false},{"start":{"lat":52.993,"lng":-2.2903,"name":"Keele, UK - Northbound"},"stops":[[52.99412,-2.29078],[53.3589,-2.50638],[53.33951,-2.56936],[53.39847,-2.81143],[53.42797,-2.82581],[53.42892,-2.92042],[53.46625,-2.85378],[53.51367,-2.91019],[53.75172,-2.88155],[53.78687,-2.7796],[53.71895,-2.65386],[53.68647,-2.66855],[53.63116,-2.68921],[53.63056,-2.69258],[53.4176,-2.63961],[53.46693,-2.35403],[53.46175,-2.28582],[53.48204,-2.20385]],"end":null,"back":false},{"start":{"lat":53.48204,"lng":-2.20385,"name":"Manchester, UK - Ashton New Road (SC)"},"stops":[[53.56754,-2.22939],[53.56832,-2.23351],[53.72755,-2.53576],[53.75348,-2.44035],[53.78836,-2.26161],[53.85369,-2.192],[53.92893,-1.79466],[53.77045,-1.75051],[53.712,-1.747],[53.71431,-1.74376],[53.73566,-1.72137],[53.78449,-1.53241],[53.96227,-1.52861],[53.92426,-1.07803],[53.61572,-0.97708]],"end":null,"back":false},{"start":{"lat":53.61572,"lng":-0.97708,"name":"Thorne, UK"},"stops":[[53.5452,-1.08202],[53.69857,-1.26555],[53.65219,-1.52346],[53.5999,-1.54998],[53.48939,-1.48622],[53.40533,-1.41449],[53.39692,-1.35208],[53.31415,-1.2819],[53.10912,-1.31227],[53.06856,-1.25259],[52.95701,-1.14739],[52.9361,-1.1343],[52.66708,-1.16795],[52.59463,-1.1806],[52.4098,-1.251],[52.38584,-1.25978]],"end":null,"back":false},{"start":{"lat":52.38584,"lng":-1.25978,"name":"Rugby, UK - J1"},"stops":[[52.35317,-1.15935],[52.38685,-0.6969],[52.2425,-0.8341],[52.18573,-0.89127],[52.08431,-0.74847],[52.08255,-0.74848],[52.01384,-0.74558],[51.96163,-0.51223],[51.8719,-0.3973],[51.75182,-0.27529],[51.68754,-0.22355],[51.63031,-0.26378],[51.57753,-0.22375],[51.61136,-0.04317],[51.72027,-0.03731],[51.87085,0.19644]],"end":null,"back":false},{"start":{"lat":51.87085,"lng":0.19644,"name":"Birchanger Green, UK"},"stops":[[51.88747,-0.2078],[51.89933,-0.20782],[52.2024,-0.2915],[52.25635,0.01717],[52.1682,0.1091],[52.2622,0.3975],[52.38641,0.66461],[52.23181,0.89307],[52.17933,1.0064],[52.18263,1.01879],[52.0842,1.1175],[52.02545,1.13868],[51.8808,0.78862],[51.8526,0.5224]],"end":null,"back":false},{"start":{"lat":51.8526,"lng":0.5224,"name":"Braintree, UK - Gridserve Electric Forecourt"},"stops":[[51.7503,0.5114],[51.16997,3.19666],[51.48027,3.63648]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
+var INFO = {
+  9: { naam: 'UK 9 dagen boot', route: UK9, rijen: [
+    [1,  6, 10.1, 382, 'Rotterdam → Stekene · Gent · Duinkerke · Coquelles · Calais → veerboot → Dover', true],
+    [2, 20,  9.5, 357, 'Faversham → Maidstone · Dartford · Londen-zuid → Guildford'],
+    [3, 19,  9.0, 335, 'Tongham → Reading · Swindon · Bristol → Gloucester'],
+    [4, 18,  9.5, 385, 'Solihull → Birmingham · Wolverhampton · Stoke → Liverpool'],
+    [5, 20,  9.4, 353, 'Knowsley → Preston · Manchester · Burnley → Bradford'],
+    [6, 19,  9.6, 375, 'Hartshead Moor → Leeds · Sheffield · Chesterfield → Nottingham'],
+    [7, 19,  9.5, 368, 'Leicester → Northampton · Milton Keynes · Londen-noord → Cheshunt'],
+    [8, 16,  9.7, 421, 'Birchanger → Cambridge · Suffolk · Ipswich → Chelmsford'],
+    [9,  2, 10.9, 485, 'Chelmsford → Dover → veerboot → Calais → Brugge · Middelburg → Rotterdam', true]
+  ]},
+  10: { naam: 'UK 10 dagen boot', route: UK10, rijen: [
+    [1,  6, 10.1, 382, 'Rotterdam → Stekene · Gent · Duinkerke · Coquelles · Calais → veerboot → Dover', true],
+    [2, 18,  8.4, 311, 'Faversham → Maidstone · Dartford · Londen-zuid → West Drayton'],
+    [3, 17,  8.3, 318, 'Heathrow → Guildford · Reading · Swindon → Cribbs Causeway'],
+    [4, 16,  8.4, 335, 'Michaelwood → Gloucester · Birmingham · Wolverhampton → Keele'],
+    [5, 18,  8.2, 300, 'Keele → Liverpool · Preston → Manchester'],
+    [6, 15,  8.1, 330, 'Birch → Burnley · Leeds · York → Thorne'],
+    [7, 17,  8.3, 317, 'Doncaster → Sheffield · Nottingham · Leicester → Crick'],
+    [8, 16,  8.4, 340, 'Kettering → Northampton · Milton Keynes · Londen-noord → Stevenage'],
+    [9, 14,  8.1, 344, 'Stevenage → Cambridge · Suffolk · Ipswich → Chelmsford'],
+    [10, 2, 10.9, 485, 'Chelmsford → Dover → veerboot → Calais → Brugge · Middelburg → Rotterdam', true]
+  ]}
+};
 
+var keuze = 9;
 var map = L.map('map', { preferCanvas: true });
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+var lagen = [];
 var KLEUR = ['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6'];
-var alles = [];
-ROUTE.days.forEach(function (d, i) {
-  var pts = [[d.start.lat, d.start.lng]].concat(d.stops.map(function (s) { return [s[0], s[1]]; }));
-  if (d.end) pts.push([d.end.lat, d.end.lng]);
-  L.polyline(pts, { color: KLEUR[i % KLEUR.length], weight: 3, opacity: 0.85 }).addTo(map);
-  d.stops.forEach(function (s) {
-    L.circleMarker([s[0], s[1]], { radius: 4, weight: 1, color: '#0006',
-      fillColor: KLEUR[i % KLEUR.length], fillOpacity: 0.9 }).bindTooltip('Dag ' + (i + 1)).addTo(map);
-    alles.push([s[0], s[1]]);
+
+function teken() {
+  lagen.forEach(function (l) { map.removeLayer(l); });
+  lagen = [];
+  var alles = [];
+  INFO[keuze].route.days.forEach(function (d, i) {
+    var pts = [[d.start.lat, d.start.lng]].concat(d.stops.map(function (s) { return [s[0], s[1]]; }));
+    if (d.end) pts.push([d.end.lat, d.end.lng]);
+    var lijn = L.polyline(pts, { color: KLEUR[i % KLEUR.length], weight: 3, opacity: 0.85 }).addTo(map);
+    lagen.push(lijn);
+    d.stops.forEach(function (s) {
+      var m = L.circleMarker([s[0], s[1]], { radius: 4, weight: 1, color: '#0006',
+        fillColor: KLEUR[i % KLEUR.length], fillOpacity: 0.9 }).bindTooltip('Dag ' + (i + 1)).addTo(map);
+      lagen.push(m); alles.push([s[0], s[1]]);
+    });
   });
-});
-map.fitBounds(L.latLngBounds(alles).pad(0.1));
+  map.fitBounds(L.latLngBounds(alles).pad(0.08));
+}
+
+function tabel() {
+  var h = '<tr><th>Dag</th><th class="num">Stops</th><th class="num">Uren</th><th class="num">km</th><th>Traject</th></tr>';
+  INFO[keuze].rijen.forEach(function (r) {
+    h += '<tr class="' + (r[5] ? 'zwaar' : '') + '"><td>' + r[0] + (r[5] ? ' ⛴' : '') + '</td>' +
+      '<td class="num">' + r[1] + '</td><td class="num">' + r[2].toFixed(1).replace('.', ',') + '</td>' +
+      '<td class="num">' + r[3] + '</td><td>' + r[4] + '</td></tr>';
+  });
+  document.getElementById('dagtabel').innerHTML = h;
+}
+
+function zet(n) {
+  keuze = n;
+  document.getElementById('k9').className = 'kies' + (n === 9 ? ' aan' : '');
+  document.getElementById('k10').className = 'kies' + (n === 10 ? ' aan' : '');
+  document.getElementById('naam').value = INFO[n].naam;
+  tabel(); teken();
+}
+document.getElementById('k9').onclick = function () { zet(9); };
+document.getElementById('k10').onclick = function () { zet(10); };
+zet(9);
+setTimeout(function () { map.invalidateSize(); }, 300);
 
 function toon(msg, ok) {
   var el = document.getElementById('status');
@@ -121,10 +185,10 @@ function toon(msg, ok) {
 }
 
 function check() {
-  return supa.auth.getSession().then(function (r) {
+  supa.auth.getSession().then(function (r) {
     if (r.data.session) {
       document.getElementById('authbox').innerHTML =
-        '<h2>Stap 1: inloggen</h2><p>&#128275; Ingelogd als <b>' + r.data.session.user.email + '</b></p>';
+        '<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>' + r.data.session.user.email + '</b></p>';
       document.getElementById('savebox').style.display = 'block';
     }
   });
@@ -132,7 +196,7 @@ function check() {
 check();
 
 document.getElementById('au-in').onclick = function () {
-  document.getElementById('au-status').textContent = 'Bezig met inloggen...';
+  document.getElementById('au-status').textContent = 'Bezig met inloggen…';
   supa.auth.signInWithPassword({
     email: document.getElementById('au-mail').value.trim(),
     password: document.getElementById('au-pw').value
@@ -146,19 +210,19 @@ document.getElementById('opslaan').onclick = function () {
   var btn = document.getElementById('opslaan');
   var naam = document.getElementById('naam').value.trim();
   if (!naam) { toon('Geef eerst een naam op.', false); return; }
-  btn.disabled = true; btn.textContent = 'Bezig...';
-  var r = {};
-  Object.keys(ROUTE).forEach(function (k) { r[k] = ROUTE[k]; });
+  btn.disabled = true; btn.textContent = 'Bezig…';
+  var r = JSON.parse(JSON.stringify(INFO[keuze].route));
   r.name = naam; r.savedAt = new Date().toISOString();
   supa.from('routes').upsert({ name: naam, data: r, updated_at: new Date().toISOString() })
     .then(function (res) {
       if (res.error) throw res.error;
-      toon('Opgeslagen als "' + naam + '" - 10 dagen, 139 stops. Open de app en laad deze route.', true);
-      btn.textContent = 'Opgeslagen';
+      toon('✅ Opgeslagen als "' + naam + '" — ' + keuze + ' dagen, 139 stops. Open de app en klik ▶ bij deze route.', true);
+      btn.textContent = '✅ Opgeslagen';
+      setTimeout(function () { btn.disabled = false; btn.textContent = '💾 Opslaan'; }, 2500);
     })
     .catch(function (e) {
-      toon('Mislukt: ' + e.message, false);
-      btn.disabled = false; btn.textContent = 'Opslaan';
+      toon('❌ Mislukt: ' + e.message, false);
+      btn.disabled = false; btn.textContent = '💾 Opslaan';
     });
 };
 </script>

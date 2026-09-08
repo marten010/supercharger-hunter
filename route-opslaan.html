@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Route opslaan — IT 15-8 over 14 dagen</title>
+<title>Route opslaan &mdash; UK over 10 dagen</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
   * { box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 760px; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0 auto; padding: 20px; max-width: 780px; }
   h1 { font-size: 20px; }
   h2 { font-size: 15px; margin-top: 22px; }
   p, li { line-height: 1.5; font-size: 14px; }
@@ -32,17 +32,40 @@
 </style>
 </head>
 <body>
-<h1>💾 IT 15-8 — uitgesmeerd over 14 dagen</h1>
+<h1>&#128190; UK &mdash; 10 dagen met de veerboot</h1>
 <div class="box">
-  <p>Dezelfde route, dezelfde <b>volgorde</b>, dezelfde <b>201 stops</b>. Alleen de
-  dagovergangen liggen anders, zodat er tijd overblijft om onderweg iets te zien.</p>
-  <p class="muted">Er is niets herplant, niets weggelaten en niets omgedraaid.</p>
+  <p>Dezelfde route, dezelfde <b>volgorde</b>, verdeeld over tien dagen in plaats van acht.
+  Twee stops zijn eruit gehaald omdat ze <b>alleen met een Eurotunnel-ticket</b> bereikbaar zijn:
+  <i>Eurotunnel Flexiplus</i> (premiumticket vereist) en <i>Folkestone France Bound Only</i>
+  (alleen richting Frankrijk). De gewone <i>Eurotunnel Terminal</i>-paal in Coquelles zit er wel
+  in &mdash; die ligt in de openbare passagiersterminal en is vrij toegankelijk.</p>
+  <p class="muted">Van 141 naar <b>139 stops</b>. Niets herplant, niets omgedraaid.</p>
 </div>
 
 <div class="box">
   <h2>Wat wordt opgeslagen</h2>
-  <div id="samenvatting" class="muted">…</div>
-  <table id="dagtabel"></table>
+  <div id="samenvatting" class="muted">
+    <b style="color:var(--text)">10 dagen &middot; 139 stops &middot; &plusmn;3461 km &middot; lus terug naar Rotterdam</b><br>
+    Gerekend met 12 min per stop, 65 km/u en wegfactor <b>1,52</b> &mdash; die factor komt uit jouw
+    eigen afstandscontrole van 3.533 km en past bij een route die met 139 stops door Engeland zigzagt.
+    De overtocht telt als <b>3 uur</b> per keer en valt bewust <b>binnen</b> dag 1 en dag 10,
+    zodat je midden op de dag kunt varen.<br>
+    Acht van de tien dagen liggen tussen <b>7,9 en 8,5 uur</b>. Dag 1 en dag 10 zijn langer door
+    de overtocht; dag 10 is 500 km met drie stops en dat is niet op te lossen met extra dagen.
+  </div>
+  <table id="dagtabel">
+  <tr><th>Dag</th><th class="num">Stops</th><th class="num">Uren</th><th class="num">km</th><th>Traject</th></tr>
+  <tr><td>1 &#9973;</td><td class="num">6</td><td class="num">10.1</td><td class="num">382</td><td>Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Eurotunnel-terminal &middot; Calais &rarr; <b>Dover</b></td></tr>
+  <tr><td>2</td><td class="num">18</td><td class="num">8.4</td><td class="num">311</td><td>Faversham &rarr; Kent &middot; Londen-zuid &middot; Heathrow &rarr; West Drayton</td></tr>
+  <tr><td>3</td><td class="num">17</td><td class="num">8.3</td><td class="num">318</td><td>Heathrow &rarr; Guildford &middot; Reading &middot; Swindon &rarr; Bristol</td></tr>
+  <tr><td>4</td><td class="num">16</td><td class="num">8.4</td><td class="num">335</td><td>Michaelwood &rarr; Gloucester &middot; Birmingham &middot; Wolverhampton &rarr; Keele</td></tr>
+  <tr><td>5</td><td class="num">18</td><td class="num">8.2</td><td class="num">300</td><td>Keele &rarr; Liverpool &middot; Preston &middot; Manchester &rarr; Ashton New Road</td></tr>
+  <tr><td>6</td><td class="num">15</td><td class="num">8.1</td><td class="num">330</td><td>Birch &rarr; Burnley &middot; Leeds &middot; York &rarr; Thorne</td></tr>
+  <tr><td>7</td><td class="num">16</td><td class="num">7.9</td><td class="num">305</td><td>Thorne &rarr; Sheffield &middot; Nottingham &middot; Leicester &rarr; Rugby</td></tr>
+  <tr><td>8</td><td class="num">16</td><td class="num">8.0</td><td class="num">309</td><td>Rugby &rarr; Northampton &middot; Milton Keynes &middot; Londen-noord &rarr; Birchanger</td></tr>
+  <tr><td>9</td><td class="num">14</td><td class="num">8.5</td><td class="num">369</td><td>Birchanger &rarr; Cambridge &middot; Suffolk &middot; Ipswich &rarr; Braintree</td></tr>
+  <tr><td>10 &#9973;</td><td class="num">3</td><td class="num">11.3</td><td class="num">502</td><td>Chelmsford &rarr; <b>overtocht</b> &rarr; Brugge &middot; Middelburg &rarr; Rotterdam</td></tr>
+  </table>
   <div id="map"></div>
 </div>
 
@@ -57,108 +80,86 @@
 <div class="box" id="savebox" style="display:none">
   <h2>Stap 2: opslaan</h2>
   <label class="muted">Naam</label>
-  <input type="text" id="naam" value="IT 15-8">
-  <div class="waarschuw">Met deze naam ongewijzigd <b>vervang</b> je de 12-daagse versie.
-    Wil je beide houden, maak er dan bijvoorbeeld <i>IT 15-8 14d</i> van.</div>
-  <button id="opslaan">💾 Opslaan</button>
+  <input type="text" id="naam" value="UK 10-8">
+  <div class="waarschuw">Met deze naam ongewijzigd <b>vervang</b> je de 8-daagse versie met 141 stops.
+    Wil je beide houden, maak er dan bijvoorbeeld <i>UK 10 dagen boot</i> van.</div>
+  <button id="opslaan">&#128190; Opslaan</button>
 </div>
 
 <div id="status" style="display:none"></div>
-<p style="margin-top:20px"><a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a></p>
+<p style="margin-top:20px"><a class="backlink" href="index.html">&larr; Terug naar Supercharger Hunter</a></p>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const SUPA_URL='https://kgnfkuqzmdfstbdryfcy.supabase.co';
-const SUPA_KEY='sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
-const supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+var SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
+var SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
+var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// Stopvolgorde exact overgenomen uit de opgeslagen route "IT 15-8". Alleen de
-// dagsnedes zijn opnieuw gelegd met een DP-partitie die de langste dag zo kort
-// mogelijk maakt (12 min per stop, 65 km/u, wegfactor 1.3, lus terug naar huis).
-const ROUTE={"name":"IT 15-8","created":"2026-08-15","savedAt":"2026-08-16","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[50.83786,4.28829],[50.66158,4.38047],[50.5887,4.30812],[50.45232,4.43037],[50.08383,4.52393],[49.73681,4.74408],[49.34766,6.12559],[49.21648,6.17112],[49.07958,6.10371]],"end":null,"back":false},{"start":{"lat":49.07958,"lng":6.10371,"name":"Moulins-lès-Metz, France"},"stops":[[49.11168,6.85532],[48.7728,7.24323],[48.90504,8.65424],[49.27381,8.69544],[49.21194,9.07732],[49.20448,9.48879],[48.95916,10.17353],[49.18118,10.06934],[49.26039,10.24257]],"end":null,"back":false},{"start":{"lat":49.26039,"lng":10.24257,"name":"Wörnitz, Germany"},"stops":[[49.44519,10.247],[49.25795,10.50176],[49.1612,11.26049],[48.99981,12.14847],[48.8383,12.11922],[48.62564,12.32022],[48.78871,12.89756],[48.76547,13.04667],[48.68955,13.21256],[48.39422,13.4265],[48.28274,12.55484],[48.27256,12.54989]],"end":null,"back":false},{"start":{"lat":48.27256,"lng":12.54989,"name":"Mühldorf, Germany"},"stops":[[49.04195,11.3427],[48.81137,11.47989],[48.64561,11.5206],[48.51816,11.56212],[48.51072,11.58227],[48.42843,11.58429],[48.30647,11.63488],[48.19582,11.60606],[48.1466,11.79025],[48.13235,11.69112],[48.16155,11.60272],[48.18447,11.53242],[48.3937,11.07051],[48.39892,10.86798],[48.40778,10.59947],[48.41107,10.44038]],"end":null,"back":false},{"start":{"lat":48.41107,"lng":10.44038,"name":"Jettingen, Germany"},"stops":[[48.45669,10.03007],[48.69587,9.68679],[48.81678,9.53857],[48.82158,9.29658],[48.95611,9.24542],[48.86046,9.19826],[48.78453,9.01928],[48.78519,9.01764],[48.69131,9.00374],[48.707,9.30641],[48.51635,9.75748],[48.37692,10.00653],[48.28495,10.11602],[48.21882,10.12763],[47.88036,10.04049],[47.92331,10.20914],[47.81147,10.30314],[48.04248,10.62006]],"end":null,"back":false},{"start":{"lat":48.04248,"lng":10.62006,"name":"Türkheim, Germany"},"stops":[[48.08065,10.85863],[48.29756,10.89914],[48.17331,11.26448],[48.09401,11.28252],[48.13529,11.41351],[48.14797,11.46472],[48.10518,11.53684],[48.03967,11.66155],[47.88111,11.70227],[47.86536,11.79081],[47.82646,11.89833],[47.82784,11.90301],[47.8144,12.11878],[47.81703,12.12042],[47.81439,12.3679],[47.82585,12.38645],[47.76413,12.90426],[47.83603,13.05907],[47.9288,13.50226],[48.18346,13.78536]],"end":null,"back":false},{"start":{"lat":48.18346,"lng":13.78536,"name":"Meggenhofen, Austria"},"stops":[[48.03932,13.9911],[48.14587,13.97523],[48.18036,14.0636],[48.24494,14.23422],[48.2213,14.40666],[48.04959,14.41449],[48.18367,15.41793],[48.20576,15.61843],[48.38858,16.18096],[48.24712,16.46433],[48.16736,17.17884],[48.13214,17.10844],[47.97937,16.84383],[48.16742,16.34801]],"end":null,"back":false},{"start":{"lat":48.16742,"lng":16.34801,"name":"Wien, Austria - Wienerberg"},"stops":[[48.10277,16.31827],[47.82559,16.53195],[47.80456,16.21048],[47.28142,15.99363],[47.07095,15.57813],[47.03348,15.41462],[46.6823,14.67918],[46.73033,14.37864],[46.62729,14.34462],[46.60178,13.88329],[46.60408,13.86908],[46.63135,13.8258],[46.36809,13.07299]],"end":null,"back":false},{"start":{"lat":46.36809,"lng":13.07299,"name":"Valli di Carnia, Italy"},"stops":[[46.08702,13.17982],[45.84018,13.48795],[45.88423,13.345],[45.94597,12.72411],[45.88018,12.31716],[45.66716,12.53746],[45.58465,12.28737],[45.45433,11.85637],[45.5085,11.62611],[45.39817,10.97237],[45.41232,10.97022],[45.55132,10.78726],[45.42321,10.71101]],"end":null,"back":false},{"start":{"lat":45.42321,"lng":10.71101,"name":"Castelnuovo del Garda, Italy"},"stops":[[45.08657,10.85619],[44.71657,10.63615],[44.82109,10.33658],[44.88191,10.09414],[45.04024,9.75197],[44.73558,8.83976],[44.91665,8.59961],[44.98336,7.70724],[45.05868,7.61262],[45.12746,7.7374],[45.20241,7.89684],[45.38946,8.12992]],"end":null,"back":false},{"start":{"lat":45.38946,"lng":8.12992,"name":"Cavaglià, Italy"},"stops":[[45.46751,8.46223],[45.38862,9.25892],[45.27675,9.45861],[45.5107,9.63617],[45.51155,9.63484],[45.63322,9.85216],[45.65224,9.61884],[45.56736,9.36236],[45.545,9.3276],[45.4768,9.15962],[45.56139,9.05583],[45.63429,8.83569],[45.76905,9.05675],[45.84439,9.01591],[45.95423,8.95058],[45.97479,8.92796],[46.16671,8.79604],[46.13924,8.90721]],"end":null,"back":false},{"start":{"lat":46.13924,"lng":8.90721,"name":"Monte Ceneri, Switzerland"},"stops":[[46.15205,8.93727],[46.23267,9.04009],[46.51517,8.6706],[46.52395,8.60168],[46.91292,8.62286],[46.97108,8.45916],[47.01745,8.30146],[47.27112,8.43964],[47.27204,8.43778],[47.45188,8.70452],[47.41306,8.61677],[47.40802,8.59817],[47.41793,8.39653],[47.3107,7.9349],[47.32704,7.80551],[47.52458,7.68009],[47.58963,7.59322],[47.62669,7.59945],[47.60517,7.54328],[47.782,7.38707]],"end":null,"back":false},{"start":{"lat":47.782,"lng":7.38707,"name":"Mulhouse, France - Rue des Cévennes"},"stops":[[47.98358,7.71925],[48.0397,7.86109],[48.22709,7.75369],[48.24971,7.76576],[48.28135,7.77755],[48.46994,7.93194],[48.47305,7.92476],[48.53407,7.702],[48.65302,7.73189],[48.64132,8.03774],[48.72468,8.11045],[48.78351,8.19234],[49.00935,8.3537],[48.99909,8.42857],[49.13836,8.56242],[49.40987,8.5417],[49.53992,8.5952],[49.54734,8.45662],[49.4599,7.82134],[49.44174,7.70782]],"end":null,"back":false},{"start":{"lat":49.44174,"lng":7.70782,"name":"Kaiserslautern, Germany - Merkurstraße"},"stops":[[49.23073,7.40809],[49.20803,7.0271],[49.77216,6.65757],[49.58246,6.1262],[49.64798,5.81886],[50.22314,5.33004],[51.62661,4.86995]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
+var ROUTE = {"name":"UK 10-8","created":"2026-08-10","savedAt":"2026-09-08","days":[{"start":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"stops":[[51.23597,4.05948],[51.0181,3.7367],[51.00509,2.28097],[50.93503,1.81305],[50.92424,1.80384],[51.1251,1.31585]],"end":null,"back":false},{"start":{"lat":51.1251,"lng":1.31585,"name":"Dover, UK"},"stops":[[51.30551,0.90214],[51.34183,0.60675],[51.28622,0.54578],[51.43805,0.26879],[51.45354,0.24668],[51.48946,0.28655],[51.4925,0.271],[51.57799,0.18502],[51.4128,0.1343],[51.30255,0.16142],[51.40423,0.01951],[51.37169,-0.11685],[51.35667,-0.11682],[51.41073,-0.30722],[51.4888,-0.38867],[51.4883,-0.3957],[51.54592,-0.47495],[51.51095,-0.46046]],"end":null,"back":false},{"start":{"lat":51.51095,"lng":-0.46046,"name":"London, UK - West Drayton (SC)"},"stops":[[51.48046,-0.44423],[51.24951,-0.5597],[51.22629,-0.7235],[51.29581,-0.85464],[51.29616,-0.85727],[51.42835,-0.89891],[51.43952,-0.96816],[51.42061,-0.98803],[51.42359,-1.03888],[51.4813,-1.5561],[51.4839,-1.5568],[51.56499,-1.79664],[51.51008,-2.15612],[51.4737,-2.56496],[51.47721,-2.70631],[51.52289,-2.60922],[51.52669,-2.59981]],"end":null,"back":false},{"start":{"lat":51.52669,"lng":-2.59981,"name":"Bristol, UK - Cribbs Causeway"},"stops":[[51.65593,-2.43195],[51.6572,-2.4269],[51.8188,-2.2244],[51.82,-2.22737],[52.37717,-1.7965],[52.40033,-1.81783],[52.44567,-1.74867],[52.44982,-1.84831],[52.3632,-1.94557],[52.42938,-2.01729],[52.48338,-2.1136],[52.64406,-2.05839],[52.64407,-2.05421],[52.68776,-2.01457],[52.96273,-2.19651],[52.993,-2.2903]],"end":null,"back":false},{"start":{"lat":52.993,"lng":-2.2903,"name":"Keele, UK - Northbound"},"stops":[[52.99412,-2.29078],[53.3589,-2.50638],[53.33951,-2.56936],[53.39847,-2.81143],[53.42797,-2.82581],[53.42892,-2.92042],[53.46625,-2.85378],[53.51367,-2.91019],[53.75172,-2.88155],[53.78687,-2.7796],[53.71895,-2.65386],[53.68647,-2.66855],[53.63116,-2.68921],[53.63056,-2.69258],[53.4176,-2.63961],[53.46693,-2.35403],[53.46175,-2.28582],[53.48204,-2.20385]],"end":null,"back":false},{"start":{"lat":53.48204,"lng":-2.20385,"name":"Manchester, UK - Ashton New Road (SC)"},"stops":[[53.56754,-2.22939],[53.56832,-2.23351],[53.72755,-2.53576],[53.75348,-2.44035],[53.78836,-2.26161],[53.85369,-2.192],[53.92893,-1.79466],[53.77045,-1.75051],[53.712,-1.747],[53.71431,-1.74376],[53.73566,-1.72137],[53.78449,-1.53241],[53.96227,-1.52861],[53.92426,-1.07803],[53.61572,-0.97708]],"end":null,"back":false},{"start":{"lat":53.61572,"lng":-0.97708,"name":"Thorne, UK"},"stops":[[53.5452,-1.08202],[53.69857,-1.26555],[53.65219,-1.52346],[53.5999,-1.54998],[53.48939,-1.48622],[53.40533,-1.41449],[53.39692,-1.35208],[53.31415,-1.2819],[53.10912,-1.31227],[53.06856,-1.25259],[52.95701,-1.14739],[52.9361,-1.1343],[52.66708,-1.16795],[52.59463,-1.1806],[52.4098,-1.251],[52.38584,-1.25978]],"end":null,"back":false},{"start":{"lat":52.38584,"lng":-1.25978,"name":"Rugby, UK - J1"},"stops":[[52.35317,-1.15935],[52.38685,-0.6969],[52.2425,-0.8341],[52.18573,-0.89127],[52.08431,-0.74847],[52.08255,-0.74848],[52.01384,-0.74558],[51.96163,-0.51223],[51.8719,-0.3973],[51.75182,-0.27529],[51.68754,-0.22355],[51.63031,-0.26378],[51.57753,-0.22375],[51.61136,-0.04317],[51.72027,-0.03731],[51.87085,0.19644]],"end":null,"back":false},{"start":{"lat":51.87085,"lng":0.19644,"name":"Birchanger Green, UK"},"stops":[[51.88747,-0.2078],[51.89933,-0.20782],[52.2024,-0.2915],[52.25635,0.01717],[52.1682,0.1091],[52.2622,0.3975],[52.38641,0.66461],[52.23181,0.89307],[52.17933,1.0064],[52.18263,1.01879],[52.0842,1.1175],[52.02545,1.13868],[51.8808,0.78862],[51.8526,0.5224]],"end":null,"back":false},{"start":{"lat":51.8526,"lng":0.5224,"name":"Braintree, UK - Gridserve Electric Forecourt"},"stops":[[51.7503,0.5114],[51.16997,3.19666],[51.48027,3.63648]],"end":{"lat":51.9225,"lng":4.4792,"name":"Rotterdam (home)"},"back":true}]};
 
-const DAGINFO=[
-  {dag:1,  stops:9,  uren:9.6,  km:509, traject:'Rotterdam → Brussel · Charleroi · Ardennen → Metz'},
-  {dag:2,  stops:9,  uren:9.9,  km:525, traject:'Metz → Lotharingen · Karlsruhe · Heilbronn → Wörnitz'},
-  {dag:3,  stops:12, uren:10.3, km:511, traject:'Wörnitz → Regensburg · Passau → Mühldorf'},
-  {dag:4,  stops:16, uren:10.1, km:448, traject:'Mühldorf → Ingolstadt · München-noord · Augsburg → Jettingen'},
-  {dag:5,  stops:18, uren:10.8, km:471, traject:'Jettingen → Ulm · Stuttgart · Allgäu → Türkheim'},
-  {dag:6,  stops:20, uren:10.2, km:403, traject:'Türkheim → München · Salzburg → Meggenhofen'},
-  {dag:7,  stops:14, uren:10.4, km:495, traject:'Meggenhofen → Linz · St. Pölten · Wenen · Bratislava → Wien'},
-  {dag:8,  stops:13, uren:10.4, km:504, traject:'Wien → Graz · Klagenfurt · Villach → Karnië (IT)'},
-  {dag:9,  stops:13, uren:9.8,  km:466, traject:'Karnië → Udine · Venetië · Verona → Gardameer'},
-  {dag:10, stops:12, uren:10.5, km:529, traject:'Gardameer → Mantua · Parma · Turijn → Cavaglià'},
-  {dag:11, stops:18, uren:10.2, km:432, traject:'Cavaglià → Milaan · Como · Ticino → Monte Ceneri'},
-  {dag:12, stops:20, uren:10.6, km:426, traject:'Monte Ceneri → Gotthard · Luzern · Zürich · Basel → Mulhouse'},
-  {dag:13, stops:20, uren:10.7, km:434, traject:'Mulhouse → Freiburg · Straatsburg · Karlsruhe · Mannheim → Kaiserslautern'},
-  {dag:14, stops:7,  uren:10.8, km:611, traject:'Kaiserslautern → Trier · Luxemburg · Ardennen → Rotterdam'},
-];
-
-const totStops=ROUTE.days.reduce((a,d)=>a+d.stops.length,0);
-const totKm=DAGINFO.reduce((a,d)=>a+d.km,0);
-const gem=(DAGINFO.reduce((a,d)=>a+d.uren,0)/DAGINFO.length).toFixed(1);
-document.getElementById('samenvatting').innerHTML =
-  `<b style="color:var(--text)">14 dagen · ${totStops} stops · ±${totKm} km · lus terug naar Rotterdam</b><br>
-   Alle 201 stops staan er nog, in exact dezelfde volgorde als in de 12-daagse versie.
-   De dagen lopen nu van <b>9,6 tot 10,8 uur</b>, gemiddeld ${gem} — in de 12-daagse indeling
-   was dat 11,7 tot 12,3. Dat scheelt zo'n <b>1,7 uur per dag</b> om iets te zien.<br>
-   Je rijdt exact dezelfde ${totKm} km, dus de twee extra dagen kosten geen kilometer,
-   alleen twee nachten.`;
-document.getElementById('dagtabel').innerHTML =
-  '<tr><th>Dag</th><th class="num">Stops</th><th class="num">Uren</th><th class="num">km</th><th>Traject</th></tr>' +
-  DAGINFO.map(d=>`<tr><td>${d.dag}</td><td class="num">${d.stops}</td><td class="num">${d.uren.toFixed(1)}</td><td class="num">${d.km}</td><td>${d.traject}</td></tr>`).join('');
-
-const map=L.map('map',{preferCanvas:true});
+var map = L.map('map', { preferCanvas: true });
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
-const KLEUR=['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6','#f97316','#10b981','#60a5fa','#fb7185'];
-const alles=[];
-ROUTE.days.forEach((d,i)=>{
-  const pts=[[d.start.lat,d.start.lng],...d.stops.map(s=>[s[0],s[1]])];
-  if(d.end) pts.push([d.end.lat,d.end.lng]);
-  L.polyline(pts,{color:KLEUR[i%KLEUR.length],weight:3,opacity:.85}).addTo(map);
-  d.stops.forEach(s=>{ L.circleMarker([s[0],s[1]],{radius:4,weight:1,color:'#0006',
-    fillColor:KLEUR[i%KLEUR.length],fillOpacity:.9}).bindTooltip('Dag '+(i+1)).addTo(map); alles.push([s[0],s[1]]); });
+  { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+var KLEUR = ['#3b82f6','#f59e0b','#a855f7','#06b6d4','#ec4899','#22c55e','#ef4444','#eab308','#14b8a6','#8b5cf6'];
+var alles = [];
+ROUTE.days.forEach(function (d, i) {
+  var pts = [[d.start.lat, d.start.lng]].concat(d.stops.map(function (s) { return [s[0], s[1]]; }));
+  if (d.end) pts.push([d.end.lat, d.end.lng]);
+  L.polyline(pts, { color: KLEUR[i % KLEUR.length], weight: 3, opacity: 0.85 }).addTo(map);
+  d.stops.forEach(function (s) {
+    L.circleMarker([s[0], s[1]], { radius: 4, weight: 1, color: '#0006',
+      fillColor: KLEUR[i % KLEUR.length], fillOpacity: 0.9 }).bindTooltip('Dag ' + (i + 1)).addTo(map);
+    alles.push([s[0], s[1]]);
+  });
 });
 map.fitBounds(L.latLngBounds(alles).pad(0.1));
 
-function toon(msg,ok){ const el=document.getElementById('status');
-  el.style.display='block'; el.className=ok?'ok':'err'; el.textContent=msg; }
+function toon(msg, ok) {
+  var el = document.getElementById('status');
+  el.style.display = 'block'; el.className = ok ? 'ok' : 'err'; el.textContent = msg;
+}
 
-async function check(){
-  const {data}=await supa.auth.getSession();
-  if(data.session){
-    document.getElementById('authbox').innerHTML=`<h2>Stap 1: inloggen</h2><p>🔓 Ingelogd als <b>${data.session.user.email}</b></p>`;
-    document.getElementById('savebox').style.display='block';
-  }
+function check() {
+  return supa.auth.getSession().then(function (r) {
+    if (r.data.session) {
+      document.getElementById('authbox').innerHTML =
+        '<h2>Stap 1: inloggen</h2><p>&#128275; Ingelogd als <b>' + r.data.session.user.email + '</b></p>';
+      document.getElementById('savebox').style.display = 'block';
+    }
+  });
 }
 check();
 
-document.getElementById('au-in').onclick=async()=>{
-  document.getElementById('au-status').textContent='Bezig met inloggen…';
-  const {error}=await supa.auth.signInWithPassword({
-    email:document.getElementById('au-mail').value.trim(),
-    password:document.getElementById('au-pw').value});
-  if(error){ document.getElementById('au-status').textContent='Inloggen mislukt: '+error.message; return; }
-  check();
+document.getElementById('au-in').onclick = function () {
+  document.getElementById('au-status').textContent = 'Bezig met inloggen...';
+  supa.auth.signInWithPassword({
+    email: document.getElementById('au-mail').value.trim(),
+    password: document.getElementById('au-pw').value
+  }).then(function (r) {
+    if (r.error) { document.getElementById('au-status').textContent = 'Inloggen mislukt: ' + r.error.message; return; }
+    check();
+  });
 };
 
-document.getElementById('opslaan').onclick=async()=>{
-  const btn=document.getElementById('opslaan');
-  const naam=document.getElementById('naam').value.trim();
-  if(!naam){ toon('Geef eerst een naam op.',false); return; }
-  btn.disabled=true; btn.textContent='Bezig…';
-  try{
-    const r={...ROUTE, name:naam, savedAt:new Date().toISOString()};
-    const {error}=await supa.from('routes').upsert({name:naam, data:r, updated_at:new Date().toISOString()});
-    if(error) throw error;
-    toon(`✅ Opgeslagen als "${naam}" — 14 dagen, 201 stops. Open de app en klik ▶ bij deze route om hem te laden.`,true);
-    btn.textContent='✅ Opgeslagen';
-  }catch(e){
-    toon('❌ Mislukt: '+e.message,false);
-    btn.disabled=false; btn.textContent='💾 Opslaan';
-  }
+document.getElementById('opslaan').onclick = function () {
+  var btn = document.getElementById('opslaan');
+  var naam = document.getElementById('naam').value.trim();
+  if (!naam) { toon('Geef eerst een naam op.', false); return; }
+  btn.disabled = true; btn.textContent = 'Bezig...';
+  var r = {};
+  Object.keys(ROUTE).forEach(function (k) { r[k] = ROUTE[k]; });
+  r.name = naam; r.savedAt = new Date().toISOString();
+  supa.from('routes').upsert({ name: naam, data: r, updated_at: new Date().toISOString() })
+    .then(function (res) {
+      if (res.error) throw res.error;
+      toon('Opgeslagen als "' + naam + '" - 10 dagen, 139 stops. Open de app en laad deze route.', true);
+      btn.textContent = 'Opgeslagen';
+    })
+    .catch(function (e) {
+      toon('Mislukt: ' + e.message, false);
+      btn.disabled = false; btn.textContent = 'Opslaan';
+    });
 };
 </script>
 </body>

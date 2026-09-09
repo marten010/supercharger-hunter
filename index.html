@@ -1037,6 +1037,62 @@ function drawRoute() {
 // Async verfijning: de rechte lijnen worden vervangen zodra de data binnen is;
 // bij een storing blijven de rechte lijnen gewoon staan.
 let roadToken = 0;
+const osrmUrl = c => `https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&steps=false`;
+const puntStr = p => `${(+p.lng).toFixed(5)},${(+p.lat).toFixed(5)}`;
+
+// Douglas-Peucker: OSRM levert ~10.000 punten per dag, samen ruim 70.000 voor een
+// route als de Britse. Dat maakt de kaart op een telefoon traag terwijl je het
+// verschil niet ziet — 50 m tolerantie houdt de wegvorm en scheelt een factor 5.
+function vereenvoudig(pts, meters) {
+  if (pts.length < 3) return pts;
+  const tol = meters / 111320, k = Math.cos(pts[0][0] * Math.PI / 180);
+  const afst = (p, a, b) => {
+    const px = (p[1] - a[1]) * k, py = p[0] - a[0], bx = (b[1] - a[1]) * k, by = b[0] - a[0];
+    const L = bx * bx + by * by;
+    let t = L ? ((px * bx + py * by) / L) : 0; t = Math.max(0, Math.min(1, t));
+    const dx = px - t * bx, dy = py - t * by;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+  const rec = (s, e) => {
+    let max = 0, idx = -1;
+    for (let i = s + 1; i < e; i++) { const d = afst(pts[i], pts[s], pts[e]); if (d > max) { max = d; idx = i; } }
+    return max > tol ? rec(s, idx).slice(0, -1).concat(rec(idx, e)) : [pts[s], pts[e]];
+  };
+  return rec(0, pts.length - 1);
+}
+
+// Eén verzoek voor de hele dag is het snelst, maar OSRM struikelt soms over een
+// stop die op een ventweg ligt (Northampton Grange Park bijvoorbeeld): de losse
+// etappes lukken dan wel, de keten niet. Vandaar de terugval per etappe — dan
+// blijft hooguit één segment een rechte lijn in plaats van de hele dag.
+async function haalDag(pts) {
+  try {
+    const res = await fetch(osrmUrl(pts.map(puntStr).join(';')));
+    if (res.ok) {
+      const r = (await res.json()).routes?.[0];
+      if (r) return { km: r.distance / 1000, sec: r.duration, geo: r.geometry.coordinates.map(c => [c[1], c[0]]), heel: true };
+    }
+  } catch (e) { /* door naar de etappes */ }
+  let km = 0, sec = 0, geo = [], gelukt = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    try {
+      const res = await fetch(osrmUrl([pts[i], pts[i + 1]].map(puntStr).join(';')));
+      const r = res.ok ? (await res.json()).routes?.[0] : null;
+      if (r) {
+        km += r.distance / 1000; sec += r.duration; gelukt++;
+        const g = r.geometry.coordinates.map(c => [c[1], c[0]]);
+        geo = geo.length ? geo.concat(g.slice(1)) : g;
+        continue;
+      }
+    } catch (e) { /* deze etappe rechtdoor */ }
+    const a = [+pts[i].lat, +pts[i].lng], b = [+pts[i + 1].lat, +pts[i + 1].lng];
+    km += hav({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] }) * 1.3;
+    geo = geo.length ? geo.concat([b]) : [a, b];
+    await new Promise(r2 => setTimeout(r2, 120));
+  }
+  return gelukt ? { km, sec, geo, heel: false, gelukt, totaal: pts.length - 1 } : null;
+}
+
 async function fetchRoadGeometry() {
   const token = ++roadToken;
   const chargeMin = +document.getElementById('p-charge').value;
@@ -1044,19 +1100,14 @@ async function fetchRoadGeometry() {
     const pts = [day.start, ...day.stops];
     if (day.endPoint) pts.push(day.endPoint);
     if (pts.length < 2 || pts.length > 90) continue;
-    const coords = pts.map(p => `${(+p.lng).toFixed(5)},${(+p.lat).toFixed(5)}`).join(';');
-    try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`);
-      if (!res.ok) throw new Error('OSRM ' + res.status);
-      const data = await res.json();
-      if (token !== roadToken) return;   // er is inmiddels een nieuwe route
-      const r = data.routes && data.routes[0];
-      if (!r) continue;
-      day.km = r.distance / 1000;
-      day.min = r.duration / 60 * 1.08 + day.stops.length * chargeMin;  // + marge voor tanken/afritten
-      day.road = true;
-      if (day._line) day._line.setLatLngs(r.geometry.coordinates.map(c => [c[1], c[0]]));
-    } catch (e) { /* stil terugvallen op hemelsbrede lijnen */ }
+    const uit = await haalDag(pts);
+    if (token !== roadToken) return;   // er is inmiddels een nieuwe route
+    if (!uit) continue;
+    day.km = uit.km;
+    day.min = uit.sec / 60 * 1.08 + day.stops.length * chargeMin;  // + marge voor tanken/afritten
+    day.road = true;
+    day.roadDeels = !uit.heel;
+    if (day._line) day._line.setLatLngs(vereenvoudig(uit.geo, 50));
     await new Promise(r2 => setTimeout(r2, 350));   // netjes voor de gratis dienst
   }
   if (token === roadToken && plannedDays.length) renderDays();
@@ -1193,7 +1244,7 @@ function renderDays(chargeMin, speed) {
       : '';
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
-      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? ' · 🛣️ real roads' : ' · straight-line'}<br>
+      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? (day.roadDeels ? ' · 🛣️ real roads (part straight-line)' : ' · 🛣️ real roads') : ' · straight-line'}<br>
         Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}${tolRegel(day)}</div>
       <div>${links}${tolKnop}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}

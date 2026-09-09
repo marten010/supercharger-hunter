@@ -40,11 +40,7 @@
 <h1>💾 UK met de veerboot — 9 of 10 dagen</h1>
 
 <div class="box">
-  <p>Beide indelingen bevatten <b>dezelfde 139 stops in dezelfde volgorde</b>. Alleen de
-  dagovergangen liggen anders. Twee locaties zijn eruit gehaald omdat ze alleen met een
-  Eurotunnel-ticket bereikbaar zijn: <i>Eurotunnel Flexiplus</i> en
-  <i>Folkestone France Bound Only</i>. De gewone <i>Eurotunnel Terminal</i>-paal in Coquelles
-  staat er wel in — die ligt in de vrij toegankelijke passagiersterminal.</p>
+  <p>Beide indelingen bevatten <b>dezelfde 145 stops in dezelfde volgorde</b>. Alleen de dagovergangen liggen anders. Twee locaties zijn eruit gelaten omdat ze alleen met een Eurotunnel-ticket bereikbaar zijn: <i>Eurotunnel Flexiplus</i> en <i>Folkestone France Bound Only</i>. Zes locaties zijn juist <b>toegevoegd</b> omdat ze ontbraken: <i>Nottingham Trent Bridge</i> en <i>Medway Westbound</i> (beide +0 km), <i>Folkestone</i> aan de Cheriton High Street (+11 km) en de A1-ketting <i>Newark</i>, <i>Newark A1 Slip Road</i> en <i>Grantham</i> (+64, +6 en +27 km &mdash; los zouden die 64, 67 en 70 km kosten). Samen +109 km en 2,9 uur voor zes locaties.</p>
   <p class="muted">Gerekend met 12 min per stop, 65 km/u, wegfactor 1,52 en <b>3 uur per
   overtocht</b> inclusief inchecken. De boot is Calais–Dover heen en Dover–Calais terug, en valt
   bewust binnen de eerste en de laatste dag zodat je midden op de dag vaart.</p>
@@ -54,13 +50,13 @@
   <div class="kolommen">
     <div>
       <div class="muted">9 dagen</div>
-      <div class="groot">9,7 uur</div>
-      <div class="muted">gemiddeld · 335–485 km per dag · zeven dagen tussen 9,0 en 9,7</div>
+      <div class="groot">10,0 uur</div>
+      <div class="muted">gemiddeld &middot; 327&ndash;485 km per dag &middot; zeven dagen tussen 9,2 en 10,2</div>
     </div>
     <div>
       <div class="muted">10 dagen</div>
-      <div class="groot">8,7 uur</div>
-      <div class="muted">gemiddeld · 300–485 km per dag · acht dagen tussen 8,1 en 8,4</div>
+      <div class="groot">9,0 uur</div>
+      <div class="muted">gemiddeld &middot; 313&ndash;485 km per dag &middot; acht dagen tussen 8,2 en 8,9</div>
     </div>
   </div>
   <p class="muted" style="margin-top:12px">De twee overtochtdagen zijn in beide varianten
@@ -108,27 +104,27 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
   9: { naam: 'UK 9 dagen boot', route: UK9, rijen: [
-    [1,  6, 10.1, 382, 'Rotterdam → Stekene · Gent · Duinkerke · Coquelles · Calais → veerboot → Dover', true],
-    [2, 20,  9.5, 357, 'Faversham → Maidstone · Dartford · Londen-zuid → Guildford'],
-    [3, 19,  9.0, 335, 'Tongham → Reading · Swindon · Bristol → Gloucester'],
-    [4, 18,  9.5, 385, 'Solihull → Birmingham · Wolverhampton · Stoke → Liverpool'],
-    [5, 20,  9.4, 353, 'Knowsley → Preston · Manchester · Burnley → Bradford'],
-    [6, 19,  9.6, 375, 'Hartshead Moor → Leeds · Sheffield · Chesterfield → Nottingham'],
-    [7, 19,  9.5, 368, 'Leicester → Northampton · Milton Keynes · Londen-noord → Cheshunt'],
-    [8, 16,  9.7, 421, 'Birchanger → Cambridge · Suffolk · Ipswich → Chelmsford'],
-    [9,  2, 10.9, 485, 'Chelmsford → Dover → veerboot → Calais → Brugge · Middelburg → Rotterdam', true]
+    [1, 6, 10.1, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Coquelles &middot; Calais &rarr; veerboot &rarr; Dover', true],
+    [2, 21, 9.2, 327, 'Folkestone &rarr; Heathrow Airport - Terminals 2 & 3'],
+    [3, 20, 9.8, 376, 'Guildford &rarr; Gloucester - Northbound'],
+    [4, 20, 10.2, 404, 'Solihull &rarr; Maghull - Old Meadow'],
+    [5, 22, 10.1, 369, 'Warton &rarr; Leeds - Whitehouse St'],
+    [6, 17, 10.1, 433, 'Harrogate &rarr; Nottingham - Victoria Centre'],
+    [7, 21, 9.9, 372, 'Nottingham - Trent Bridge &rarr; Cheshunt'],
+    [8, 16, 9.7, 421, 'Birchanger Green &rarr; Chelmsford'],
+    [9, 2, 10.9, 485, 'Chelmsford &rarr; Dover &rarr; veerboot &rarr; Calais &rarr; Brugge &middot; Middelburg &rarr; Rotterdam', true]
   ]},
   10: { naam: 'UK 10 dagen boot', route: UK10, rijen: [
-    [1,  6, 10.1, 382, 'Rotterdam → Stekene · Gent · Duinkerke · Coquelles · Calais → veerboot → Dover', true],
-    [2, 18,  8.4, 311, 'Faversham → Maidstone · Dartford · Londen-zuid → West Drayton'],
-    [3, 17,  8.3, 318, 'Heathrow → Guildford · Reading · Swindon → Cribbs Causeway'],
-    [4, 16,  8.4, 335, 'Michaelwood → Gloucester · Birmingham · Wolverhampton → Keele'],
-    [5, 18,  8.2, 300, 'Keele → Liverpool · Preston → Manchester'],
-    [6, 15,  8.1, 330, 'Birch → Burnley · Leeds · York → Thorne'],
-    [7, 17,  8.3, 317, 'Doncaster → Sheffield · Nottingham · Leicester → Crick'],
-    [8, 16,  8.4, 340, 'Kettering → Northampton · Milton Keynes · Londen-noord → Stevenage'],
-    [9, 14,  8.1, 344, 'Stevenage → Cambridge · Suffolk · Ipswich → Chelmsford'],
-    [10, 2, 10.9, 485, 'Chelmsford → Dover → veerboot → Calais → Brugge · Middelburg → Rotterdam', true]
+    [1, 6, 10.1, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Coquelles &middot; Calais &rarr; veerboot &rarr; Dover', true],
+    [2, 19, 8.7, 316, 'Folkestone &rarr; Uxbridge'],
+    [3, 18, 8.6, 324, 'London - West Drayton &rarr; Bristol - Cribbs Causeway'],
+    [4, 17, 8.6, 335, 'Michaelwood - Northbound &rarr; Keele - Southbound'],
+    [5, 19, 8.6, 315, 'Lymm &rarr; Birch - Eastbound'],
+    [6, 15, 8.6, 363, 'Blackburn &rarr; Ferrybridge'],
+    [7, 17, 8.8, 351, 'Wakefield - Calder Park &rarr; Rugby'],
+    [8, 17, 8.2, 313, 'Rugby - J1 &rarr; Birchanger Green'],
+    [9, 15, 8.9, 386, 'Stevenage - Gridserve Electric Forecourt &rarr; Chelmsford'],
+    [10, 2, 10.9, 485, 'Chelmsford &rarr; Dover &rarr; veerboot &rarr; Calais &rarr; Brugge &middot; Middelburg &rarr; Rotterdam', true]
   ]}
 };
 
@@ -216,7 +212,7 @@ document.getElementById('opslaan').onclick = function () {
   supa.from('routes').upsert({ name: naam, data: r, updated_at: new Date().toISOString() })
     .then(function (res) {
       if (res.error) throw res.error;
-      toon('✅ Opgeslagen als "' + naam + '" — ' + keuze + ' dagen, 139 stops. Open de app en klik ▶ bij deze route.', true);
+      toon('✅ Opgeslagen als "' + naam + '" — ' + keuze + ' dagen, 145 stops. Open de app en klik ▶ bij deze route.', true);
       btn.textContent = '✅ Opgeslagen';
       setTimeout(function () { btn.disabled = false; btn.textContent = '💾 Opslaan'; }, 2500);
     })

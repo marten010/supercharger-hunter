@@ -2068,10 +2068,18 @@ function setSyncStatus(txt) {
 
 // cloud-rijen toepassen op de lokale status — nieuwste wijziging wint:
 // een cloud-rij wordt genegeerd als de lokale wijziging recenter is
+// Een cloud-rij kan nog op een oude naam staan nadat de bron een locatie hernoemd
+// heeft. keyToSite kent die naam niet meer, waardoor de rij stilzwijgend werd
+// overgeslagen en het bezoek uit de telling viel — precies wat er met de twee
+// Lübeck-palen gebeurde. Vertaal daarom eerst via SLEUTEL_ALIAS.
+function siteVoorSleutel(k) {
+  return keyToSite.get(k) || (SLEUTEL_ALIAS[k] ? keyToSite.get(SLEUTEL_ALIAS[k]) : null) || null;
+}
+
 function applyCloud(rows) {
   let changed = false;
   for (const r of rows || []) {
-    const s = keyToSite.get(r.site_key);
+    const s = siteVoorSleutel(r.site_key);
     if (!s) continue;
     const lokaal = overrides[siteKey(s)];
     if (lokaal && ovTime(lokaal) > (r.updated_at || '')) continue;   // lokaal is nieuwer
@@ -2149,11 +2157,14 @@ async function initSync() {
     const cloudByKey = new Map((data || []).map(r => [r.site_key, r]));
     const toPush = [];
     for (const [key, o] of Object.entries(overrides)) {
-      const s = keyToSite.get(key);
+      const s = siteVoorSleutel(key);
       if (!s) continue;
-      const rij = cloudByKey.get(key);
+      // altijd onder de huidige naam wegschrijven, zodat oude sleutels vanzelf
+      // uitsterven in plaats van zich te blijven voortplanten
+      const nu = siteKey(s);
+      const rij = cloudByKey.get(nu) || cloudByKey.get(key);
       if (!rij || ovTime(o) > (rij.updated_at || '')) {
-        toPush.push({ site_key: key, visited: ovVal(o), updated_at: ovTime(o) > '1971' ? ovTime(o) : new Date().toISOString() });
+        toPush.push({ site_key: nu, visited: ovVal(o), updated_at: ovTime(o) > '1971' ? ovTime(o) : new Date().toISOString() });
       }
     }
     if (toPush.length) await supa.from('visits').upsert(toPush);

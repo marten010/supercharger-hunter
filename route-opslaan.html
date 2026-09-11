@@ -40,7 +40,7 @@
 <h1>💾 UK met de veerboot — 9 of 10 dagen</h1>
 
 <div class="box">
-  <p>Beide indelingen bevatten <b>dezelfde 145 stops in dezelfde volgorde</b>. Alleen de dagovergangen liggen anders. Twee locaties zijn eruit gelaten omdat ze alleen met een Eurotunnel-ticket bereikbaar zijn: <i>Eurotunnel Flexiplus</i> en <i>Folkestone France Bound Only</i>. Zes locaties zijn juist <b>toegevoegd</b> omdat ze ontbraken: <i>Nottingham Trent Bridge</i> en <i>Medway Westbound</i> (beide +0 km), <i>Folkestone</i> aan de Cheriton High Street (+11 km) en de A1-ketting <i>Newark</i>, <i>Newark A1 Slip Road</i> en <i>Grantham</i> (+64, +6 en +27 km &mdash; los zouden die 64, 67 en 70 km kosten). Samen +109 km en 2,9 uur voor zes locaties.</p>
+  <p>Beide indelingen bevatten <b>dezelfde 144 stops in dezelfde volgorde</b>. Alleen de dagovergangen liggen anders. Drie locaties zitten er niet in omdat ze een Eurotunnel-ticket vereisen: <i>Eurotunnel Flexiplus</i>, <i>Folkestone France Bound Only</i> en &mdash; nu de veerboot geboekt is &mdash; ook <i>Eurotunnel France Terminal</i> in Coquelles. <i>Folkestone</i> aan de Chariton High Street en <i>Calais</i> op het retailpark blijven wel: die liggen buiten het tunnelterrein. Zes locaties zijn juist <b>toegevoegd</b> omdat ze ontbraken: <i>Nottingham Trent Bridge</i> en <i>Medway Westbound</i> (beide +0 km), <i>Folkestone</i> aan de Cheriton High Street (+11 km) en de A1-ketting <i>Newark</i>, <i>Newark A1 Slip Road</i> en <i>Grantham</i> (+64, +6 en +27 km &mdash; los zouden die 64, 67 en 70 km kosten). Samen +109 km en 2,9 uur voor zes locaties.</p>
   <p><b>Aangepast:</b> Romford, Thurrock en Grays stonden eerst in de aanloop naar Londen, ten noorden van de Theems, waarna de route weer zuidwaarts ging en pas bij Chelmsford weer noordelijk kwam. Dat kostte twee tolplichtige oversteken van de <b>Dartford Crossing</b>. Ze staan nu na Chelmsford, op de weg naar Dover: <b>38 km langer, maar nul Dartford-oversteken</b> en een volgorde die klopt met de kaart.</p>
   <p class="muted">Gerekend met 12 min per stop, 65 km/u, wegfactor 1,52 en <b>3 uur per
   overtocht</b> inclusief inchecken. De boot is Calais–Dover heen en Dover–Calais terug, en valt
@@ -61,7 +61,7 @@
     </div>
   </div>
   <p class="muted" style="margin-top:12px">De twee overtochtdagen zijn in beide varianten
-  gelijk: <b>10,1 uur</b> op de heenweg en <b>11,1 uur</b> op de terugweg. Die zijn niet korter
+  gelijk: <b>9,9 uur</b> op de heenweg en <b>11,1 uur</b> op de terugweg. Die zijn niet korter
   te maken — dag 1 is 382 km plus drie uur boot, de slotdag 498 km plus drie uur boot. Een dag
   extra inplannen verandert daar niets aan, het maakt alleen de dagen ertussen leger.</p>
 </div>
@@ -105,7 +105,7 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
   9: { naam: 'UK 9 dagen boot', route: UK9, rijen: [
-    [1, 6, 10.1, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Coquelles &middot; Calais &rarr; veerboot &rarr; Dover', true],
+    [1, 5, 9.9, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Calais &rarr; veerboot &rarr; Dover', true],
     [2, 22, 10.0, 364, 'Folkestone &rarr; Fleet - Northbound'],
     [3, 18, 9.9, 408, 'Wokingham &rarr; Solihull'],
     [4, 21, 9.8, 365, 'Birmingham Airport Services &rarr; Preston'],
@@ -116,7 +116,7 @@ var INFO = {
     [9, 2, 11.1, 498, 'Grays &rarr; Dover &rarr; veerboot &rarr; Calais &rarr; Brugge &middot; Middelburg &rarr; Rotterdam', true]
   ]},
   10: { naam: 'UK 10 dagen boot', route: UK10, rijen: [
-    [1, 6, 10.1, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Coquelles &middot; Calais &rarr; veerboot &rarr; Dover', true],
+    [1, 5, 9.9, 382, 'Rotterdam &rarr; Stekene &middot; Gent &middot; Duinkerke &middot; Calais &rarr; veerboot &rarr; Dover', true],
     [2, 19, 8.8, 327, 'Folkestone &rarr; Guildford'],
     [3, 18, 8.7, 335, 'Tongham &rarr; Gloucester - Southbound'],
     [4, 16, 8.5, 345, 'Gloucester - Northbound &rarr; Warrington'],
@@ -213,7 +213,7 @@ document.getElementById('opslaan').onclick = function () {
   supa.from('routes').upsert({ name: naam, data: r, updated_at: new Date().toISOString() })
     .then(function (res) {
       if (res.error) throw res.error;
-      toon('✅ Opgeslagen als "' + naam + '" — ' + keuze + ' dagen, 145 stops. Open de app en klik ▶ bij deze route.', true);
+      toon('✅ Opgeslagen als "' + naam + '" — ' + keuze + ' dagen, ' + r.days.reduce(function(a,d){return a+d.stops.length;},0) + ' stops. Open de app en klik ▶ bij deze route.', true);
       btn.textContent = '✅ Opgeslagen';
       setTimeout(function () { btn.disabled = false; btn.textContent = '💾 Opslaan'; }, 2500);
     })

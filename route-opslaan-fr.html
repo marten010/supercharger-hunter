@@ -39,9 +39,9 @@
 <h1>💾 Frankrijk — twee losse reizen</h1>
 
 <div class="box">
-  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> houdt alle <b>83 stops</b>;
-  Abbeville en de Aire de la Baie de Somme stonden op dag 1 met een omweg naar de kust en
-  staan nu op de terugweg, achter Dieppe.</p>
+  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>86 stops</b>: Mons,
+  Férin en Val-de-Reuil zijn erbij gekomen. Abbeville en de Aire de la Baie de Somme
+  stonden op dag 1 met een omweg naar de kust en staan nu op de terugweg, achter Dieppe.</p>
   <p><b>Frankrijk zuid</b> is gegroeid naar <b>89 stops</b>: Manosque eruit, en acht palen
   erbij die er nog niet in zaten — Oosterhout, Lexy, Bussigny, Crissier, Geneva, de tweede
   paal in Saint-Julien-en-Genevois, Bardonecchia en Le Cannet-des-Maures. Elk is ingevoegd
@@ -56,8 +56,8 @@
   <div class="kolommen">
     <div>
       <div class="muted">Normandië · 7 dagen</div>
-      <div class="groot">8,8 uur</div>
-      <div class="muted">83 stops · 3.498 km · dagen tussen 8,5 en 9,1</div>
+      <div class="groot">9,1 uur</div>
+      <div class="muted">86 stops · 3.636 km · dagen tussen 8,8 en 9,6</div>
     </div>
     <div>
       <div class="muted">Frankrijk zuid · 8 dagen</div>
@@ -65,8 +65,8 @@
       <div class="muted">89 stops · 4.007 km · dagen tussen 8,7 en 9,4</div>
     </div>
   </div>
-  <p class="muted" style="margin-top:12px">Samen <b>172 locaties</b>. Met je stand van 707
-  brengt dat je op <b>879</b> — ruim over je doel van 800. Beide routes zitten rond de negen
+  <p class="muted" style="margin-top:12px">Samen <b>175 locaties</b>. Met je stand van 707
+  brengt dat je op <b>882</b> — ruim over je doel van 800. Beide routes zitten rond de negen
   uur per dag op echte wegtijden, met minder dan een uur verschil tussen de dagen.</p>
 </div>
 
@@ -110,13 +110,13 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
   n: { naam: 'Normandie 7 dagen', route: NORM, rijen: [
-    [1, 10, 8.7, 552, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; Saint-Quentin &middot; Amiens &rarr; Beauvais'],
-    [2, 16, 8.9, 385, 'Beauvais &rarr; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &middot; Parijs-west &rarr; Coigni&egrave;res'],
-    [3, 16, 8.9, 436, 'Coigni&egrave;res &rarr; Versailles &middot; Parijs-zuid &middot; Orl&eacute;ans &middot; Blois &rarr; Tours'],
-    [4, 13, 8.6, 488, 'Tours &rarr; Poitiers &middot; Niort &middot; La Roche-sur-Yon &middot; Cholet &rarr; Angers'],
-    [5, 9, 8.5, 549, 'Angers &rarr; Nantes &middot; Vannes &middot; Quimper &middot; Brest &middot; Morlaix &rarr; Saint-Brieuc'],
-    [6, 12, 8.8, 488, 'Saint-Brieuc &rarr; Rennes &middot; Mont-Saint-Michel &middot; Caen &middot; Honfleur &rarr; Rouen'],
-    [7, 7, 9.1, 600, 'Rouen &rarr; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Calais &rarr; Rotterdam']
+    [1, 11, 9.6, 595, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; <b>Mons</b> &middot; Valenciennes &middot; <b>F&eacute;rin</b> &middot; Saint-Quentin &rarr; Amiens'],
+    [2, 16, 8.8, 392, 'Amiens &rarr; Beauvais &middot; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &middot; Parijs-west &rarr; Dreux'],
+    [3, 16, 9, 426, 'Dreux &rarr; Coigni&egrave;res &middot; Versailles &middot; Parijs-zuid &middot; Orl&eacute;ans &rarr; Blois'],
+    [4, 13, 9.2, 544, 'Blois &rarr; Tours &middot; Poitiers &middot; Niort &middot; La Roche-sur-Yon &middot; Cholet &rarr; Angers'],
+    [5, 10, 8.8, 555, 'Angers &rarr; Nantes &middot; Vannes &middot; Quimper &middot; Brest &middot; Morlaix &rarr; Saint-Brieuc'],
+    [6, 12, 8.9, 502, 'Saint-Brieuc &rarr; Rennes &middot; Mont-Saint-Michel &middot; Caen &middot; Honfleur &rarr; <b>Val-de-Reuil</b>'],
+    [7, 8, 9.6, 623, 'Val-de-Reuil &rarr; Rouen &middot; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Calais &rarr; Rotterdam']
   ]},
   z: { naam: 'Frankrijk zuid 8 dagen', route: ZUID, rijen: [
     [1, 6, 9.4, 631, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &middot; Magnant &rarr; Saint-Dizier'],

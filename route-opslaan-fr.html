@@ -46,8 +46,9 @@
   erbij die er nog niet in zaten — Oosterhout, Lexy, Bussigny, Crissier, Geneva, de tweede
   paal in Saint-Julien-en-Genevois, Bardonecchia en Le Cannet-des-Maures. Elk is ingevoegd
   op de plek die de minste extra kilometers kost.</p>
-  <p class="muted">Gerekend met 12 min per stop, 65 km/u en wegfactor 1,3, met een lus terug
-  naar Rotterdam. De zuidroute loopt nu ook door Zwitserland (vignet nodig) en heel even
+  <p class="muted">De dagen zijn verdeeld op echte wegtijden, precies zoals de app ze toont
+  (rijtijd &times; 1,08 + 8 min per stop), met een lus terug naar Rotterdam. Volgorde
+  ongewijzigd. De zuidroute loopt nu ook door Zwitserland (vignet nodig) en heel even
   door Italië.</p>
 </div>
 
@@ -55,18 +56,18 @@
   <div class="kolommen">
     <div>
       <div class="muted">Normandië · 7 dagen</div>
-      <div class="groot">10,1 uur</div>
-      <div class="muted">83 stops · 3.515 km · dagen tussen 9,6 en 10,5</div>
+      <div class="groot">8,8 uur</div>
+      <div class="muted">83 stops · 3.498 km · dagen tussen 8,5 en 9,1</div>
     </div>
     <div>
       <div class="muted">Frankrijk zuid · 8 dagen</div>
-      <div class="groot">9,6 uur</div>
-      <div class="muted">89 stops · 3.827 km · dagen tussen 9,1 en 9,9</div>
+      <div class="groot">9,0 uur</div>
+      <div class="muted">89 stops · 4.007 km · dagen tussen 8,7 en 9,4</div>
     </div>
   </div>
   <p class="muted" style="margin-top:12px">Samen <b>172 locaties</b>. Met je stand van 707
-  brengt dat je op <b>879</b> — ruim over je doel van 800. Beide routes zitten gemiddeld rond
-  de tien uur per dag, net als je ritten door Italië en Engeland.</p>
+  brengt dat je op <b>879</b> — ruim over je doel van 800. Beide routes zitten rond de negen
+  uur per dag op echte wegtijden, met minder dan een uur verschil tussen de dagen.</p>
 </div>
 
 <div class="box">
@@ -109,23 +110,23 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
   n: { naam: 'Normandie 7 dagen', route: NORM, rijen: [
-    [1, 10, 10.5, 551, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; Saint-Quentin &middot; Amiens &rarr; Beauvais'],
-    [2, 20, 10.2, 402, 'Beauvais &rarr; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &middot; Parijs-west &rarr; Rungis'],
-    [3, 15, 10.2, 471, 'Rungis &rarr; Parijs-zuid &middot; Fontainebleau &middot; Orl&eacute;ans &middot; Blois &rarr; Ch&acirc;tellerault'],
-    [4, 11, 10.1, 515, 'Ch&acirc;tellerault &rarr; Poitiers &middot; Niort &middot; La Roche-sur-Yon &rarr; Nantes'],
-    [5, 8, 9.6, 521, 'Nantes &rarr; Vannes &middot; Quimper &middot; Brest &middot; Morlaix &rarr; Saint-Brieuc'],
-    [6, 12, 10, 494, 'Saint-Brieuc &rarr; Rennes &middot; Mont-Saint-Michel &middot; Caen &middot; Honfleur &rarr; Rouen'],
-    [7, 7, 10, 562, 'Rouen &rarr; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Calais &rarr; Rotterdam']
+    [1, 10, 8.7, 552, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; Saint-Quentin &middot; Amiens &rarr; Beauvais'],
+    [2, 16, 8.9, 385, 'Beauvais &rarr; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &middot; Parijs-west &rarr; Coigni&egrave;res'],
+    [3, 16, 8.9, 436, 'Coigni&egrave;res &rarr; Versailles &middot; Parijs-zuid &middot; Orl&eacute;ans &middot; Blois &rarr; Tours'],
+    [4, 13, 8.6, 488, 'Tours &rarr; Poitiers &middot; Niort &middot; La Roche-sur-Yon &middot; Cholet &rarr; Angers'],
+    [5, 9, 8.5, 549, 'Angers &rarr; Nantes &middot; Vannes &middot; Quimper &middot; Brest &middot; Morlaix &rarr; Saint-Brieuc'],
+    [6, 12, 8.8, 488, 'Saint-Brieuc &rarr; Rennes &middot; Mont-Saint-Michel &middot; Caen &middot; Honfleur &rarr; Rouen'],
+    [7, 7, 9.1, 600, 'Rouen &rarr; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Calais &rarr; Rotterdam']
   ]},
   z: { naam: 'Frankrijk zuid 8 dagen', route: ZUID, rijen: [
-    [1, 5, 9.8, 569, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &rarr; Magnant'],
-    [2, 10, 9.5, 486, 'Magnant &rarr; Saint-Dizier &middot; Dijon &middot; Beaune &middot; Chalon &rarr; Aire du Jura'],
-    [3, 17, 9.6, 404, 'Jura &rarr; Bourg-en-Bresse &middot; Lyon &middot; Vienne &rarr; Portes-l&egrave;s-Valence'],
-    [4, 14, 9.6, 440, 'Valence &rarr; Orange &middot; Avignon &middot; Marseille &middot; Aix &middot; Cuers &rarr; Le Muy'],
-    [5, 12, 9.7, 472, 'Le Muy &rarr; Saint-Tropez &middot; Cannes &middot; Nice &middot; Gap &middot; Brian&ccedil;on &middot; <b>Bardonecchia</b> &rarr; Saint-Jean-de-Maurienne'],
-    [6, 17, 9.1, 371, 'Maurienne &rarr; Chamb&eacute;ry &middot; Albertville &middot; Megève &middot; Annecy &middot; <b>Geneva</b> &rarr; Annemasse'],
-    [7, 10, 9.9, 511, 'Annemasse &rarr; <b>Lausanne</b> &middot; Pontarlier &middot; Besan&ccedil;on &middot; Colmar &rarr; &Eacute;pinal'],
-    [8, 4, 9.6, 574, '&Eacute;pinal &rarr; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
+    [1, 6, 9.4, 631, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &middot; Magnant &rarr; Saint-Dizier'],
+    [2, 12, 9.1, 533, 'Saint-Dizier &rarr; Langres &middot; Dijon &middot; Beaune &middot; Chalon &middot; M&acirc;con &rarr; Bourg-en-Bresse'],
+    [3, 17, 8.8, 435, 'Bourg-en-Bresse &rarr; Lyon &middot; Vienne &middot; Valence &middot; Mont&eacute;limar &middot; Orange &rarr; Avignon'],
+    [4, 15, 8.7, 430, 'Avignon &rarr; Marseille &middot; Aix &middot; Toulon &middot; <b>Le Cannet-des-Maures</b> &middot; Saint-Tropez &rarr; Mougins'],
+    [5, 8, 8.8, 425, 'Mougins &rarr; Nice &middot; Sisteron &middot; Gap &middot; Brian&ccedil;on &middot; <b>Bardonecchia</b> &rarr; Saint-Jean-de-Maurienne'],
+    [6, 17, 9.4, 434, 'Maurienne &rarr; Chamb&eacute;ry &middot; Albertville &middot; Meg&egrave;ve &middot; Annecy &middot; <b>Geneva</b> &rarr; Annemasse'],
+    [7, 9, 9, 500, 'Annemasse &rarr; <b>Lausanne</b> &middot; Pontarlier &middot; Besan&ccedil;on &middot; Colmar &rarr; Saint-Di&eacute;'],
+    [8, 5, 9, 619, 'Saint-Di&eacute; &rarr; &Eacute;pinal &middot; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
   ]}
 };
 

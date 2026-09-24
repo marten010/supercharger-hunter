@@ -86,6 +86,7 @@
   }
   /* gasten zien alleen tussenstand + kaart; de rest verschijnt na login */
   body:not(.ingelogd) .authonly { display: none; }
+  body.ingelogd .guestonly { display: none; }
   #nearbylist { font-size: 13px; }
   .nrow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
   .nrow .info { flex: 1; min-width: 0; }
@@ -143,7 +144,14 @@
     <div id="nearbylist"></div>
   </section>
 
-  <section>
+  <section class="guestonly">
+    <p class="muted" style="margin:0;font-size:13px;line-height:1.5">
+      🔒 De tussenstand is privé. De kaart hieronder toont alle Europese
+      Superchargers; welke daarvan al bezocht zijn, is alleen zichtbaar na inloggen.
+    </p>
+  </section>
+
+  <section class="authonly">
     <div class="statgrid">
       <div class="stat"><b id="st-visited">0</b><span>visited</span></div>
       <div class="stat"><b id="st-todo">0</b><span>not yet visited</span></div>
@@ -250,10 +258,12 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<!-- Bewust géén slot.js hier: de startpagina moet gewoon opengaan met de kaart en
-     de bezochte locaties, net als het dashboard. Routes zijn niet zichtbaar voor
-     bezoekers omdat de RLS-policy op de tabel "routes" dat afdwingt — niet omdat
-     er een scherm voor staat. Inloggen (rechtsboven) laat ze verschijnen. -->
+<!-- Bewust géén slot.js hier: de startpagina gaat gewoon open met de kaart van alle
+     Europese Superchargers. Wat een gast NIET ziet: de tussenstand, de voortgang per
+     land, de laatst bezochte paal, de bezocht-kleuren op de kaart en de routes.
+     Let op: dit scherm is de tweede verdediging, niet de eerste. De eerste is de
+     RLS-policy op "visits" en "routes" in Supabase — zonder die policies is alles
+     via de REST-API alsnog anoniem op te halen, hoe de pagina er ook uitziet. -->
 
 <script src="data.js"></script>
 <script src="tarieven.js"></script>
@@ -434,7 +444,9 @@ setTimeout(() => map.invalidateSize(), 400);   // maat corrigeren na eerste layo
 function markerStyle(s) {
   return {
     radius: 7,
-    fillColor: isVisited(s) ? '#2ecc71' : '#e82127',
+    // gasten zien één neutrale kleur: de bezochte status is de stand, en die is privé
+    fillColor: !document.body.classList.contains('ingelogd') ? '#7c8694'
+             : isVisited(s) ? '#2ecc71' : '#e82127',
     color: '#0008', weight: 2, fillOpacity: 0.9
   };
 }
@@ -473,12 +485,12 @@ function tariefRegel(s) {
 
 function popupHtml(s) {
   const v = isVisited(s);
-  const info = `<b>${s.name}</b><br>
+  let info = `<b>${s.name}</b><br>
     <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span>
-    ${tariefRegel(s)}<br>
-    <span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Visited' : '✘ Not yet visited'}</span>`;
-  // guests see info only; actions appear after login
+    ${tariefRegel(s)}`;
+  // gasten krijgen alleen de feiten over de paal zelf, geen bezocht-status
   if (!document.body.classList.contains('ingelogd')) return info;
+  info += `<br><span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Visited' : '✘ Not yet visited'}</span>`;
   return `${info}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
       <button class="small" onclick="toggleVisited(${s.id})">${v ? '↩ Mark as NOT visited' : '✔ Mark as visited'}</button>
@@ -498,9 +510,11 @@ for (const s of SITES) {
 function siteMatchesFilter(s) {
   // status-schakelaar werkt voor iedereen; land/zoek-filters hebben geen UI voor
   // gasten (blijven dus altijd leeg/inert), dus die regels raken gasten niet
+  // de status-schakelaar is voor gasten verborgen; hier ook hard dichtzetten zodat
+  // een bewerkte DOM er niets mee kan
+  if (!document.body.classList.contains('ingelogd')) return true;
   if (statusFilter === 'todo' && isVisited(s)) return false;
   if (statusFilter === 'visited' && !isVisited(s)) return false;
-  if (!document.body.classList.contains('ingelogd')) return true;
   if (activeCountries.size && !activeCountries.has(s.country)) return false;
   if (searchTerm && !(s.name + ' ' + s.city).toLowerCase().includes(searchTerm)) return false;
   return true;
@@ -573,11 +587,8 @@ function renderLastVisit() {
   if (!el) return;
   const lv = computeLastVisit();
   if (!lv) { el.textContent = ''; return; }
-  // de tijdsnotitie is alleen voor de ingelogde gebruiker; gasten zien geen datum/tijd
-  if (!document.body.classList.contains('ingelogd')) {
-    el.textContent = `Last visited: ${lv.name}`;
-    return;
-  }
+  // gasten zien hier niets: ook de laatst bezochte paal is onderdeel van de stand
+  if (!document.body.classList.contains('ingelogd')) { el.textContent = ''; return; }
   const d = new Date(lv.t);
   el.textContent = `Last visited: ${lv.name} · ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 }
@@ -2120,6 +2131,7 @@ function renderAuth() {
     document.body.classList.toggle('ingelogd', !!sessie);
     renderLastVisit();     // tijdsnotitie tonen/verbergen o.b.v. login-status
     renderSavedRoutes();   // routelijst pas tonen zodra de sessie bekend is
+    refreshMarkers();      // bezocht-kleuren verschijnen/verdwijnen met de sessie
     if (sessie) {
       el.innerHTML = `<div>🔓 Logged in as <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Log out</button>`;

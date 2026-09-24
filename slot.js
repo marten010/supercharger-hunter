@@ -5,7 +5,9 @@
 // dit scherm houdt alleen nieuwsgierige bezoekers buiten. Wie de policies kent
 // weet dat er zonder geldig token toch niets op te halen valt.
 //
-// stand.html laadt dit bewust NIET: dat is het publieke dashboard.
+// Ook stand.html laadt dit: de tussenstand is niet langer openbaar. Wat een bezoeker
+// nog wel krijgt is index.html - de kaart van alle Superchargers, zonder stand,
+// zonder bezocht-kleuren en zonder routes.
 (function () {
   const SUPA_URL = 'https://kgnfkuqzmdfstbdryfcy.supabase.co';
   const SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
@@ -18,7 +20,7 @@
     '<div style="width:100%;max-width:340px">' +
       '<div style="font-size:19px;font-weight:600;margin-bottom:6px">🔒 Supercharger Hunter</div>' +
       '<div style="font-size:13px;color:#9aa3af;margin-bottom:16px">Deze pagina is privé. ' +
-        'Het openbare dashboard staat op <a href="stand.html" style="color:#9aa3af">stand.html</a>.</div>' +
+        '<a href="index.html" style="color:#9aa3af">Terug naar de kaart</a>.</div>' +
       '<input id="slot-mail" type="email" placeholder="Email" autocomplete="username" ' +
         'style="width:100%;background:#262c36;color:#e8eaed;border:1px solid #333a45;border-radius:6px;padding:11px;font-size:15px;margin-bottom:8px">' +
       '<input id="slot-pw" type="password" placeholder="Wachtwoord" autocomplete="current-password" ' +
@@ -41,6 +43,18 @@
   }
   function verberg() { const el = document.getElementById('slotscherm'); if (el) el.remove(); }
 
+  // Een overlay bedekt alleen. De pagina heeft op dat moment mogelijk al gegevens in
+  // de DOM gezet, en die zijn met de devtools of een leesscript gewoon op te halen.
+  // Dus: alles behalve het slotscherm weggooien. De renderfuncties van de pagina
+  // vinden hun elementen daarna niet meer en tekenen niets terug.
+  function leegmaken() {
+    if (!document.body) return void setTimeout(leegmaken, 10);
+    for (const kind of [...document.body.children]) {
+      if (kind.id !== 'slotscherm' && kind.tagName !== 'SCRIPT') kind.remove();
+    }
+    document.body.style.background = '#14171c';
+  }
+
   let supa = null;
   async function login() {
     const fout = document.getElementById('slot-fout');
@@ -57,6 +71,14 @@
   (function wacht() {
     if (!window.supabase) { toon(); return void setTimeout(wacht, 30); }
     supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    supa.auth.getSession().then(({ data }) => { if (data.session) verberg(); else toon(); });
+    supa.auth.getSession().then(({ data }) => {
+      if (data.session) return verberg();
+      toon();
+      leegmaken();
+      // de pagina laadt asynchroon door; een paar keer nalopen vangt wat er daarna
+      // alsnog getekend wordt
+      let n = 0;
+      const tik = setInterval(() => { leegmaken(); if (++n > 20) clearInterval(tik); }, 250);
+    });
   })();
 })();

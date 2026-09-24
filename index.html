@@ -2161,6 +2161,12 @@ async function initSync() {
   try {
     supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     renderAuth();
+    // Zonder sessie is er niets te synchroniseren: de RLS-policy op "visits" geeft een
+    // gast een lege lijst terug en weigert elke upsert, en het live-kanaal krijgt 401.
+    // Dus hier stoppen in plaats van vruchteloos verkeer maken en "Live sync active"
+    // beweren tegen iemand die niets synchroniseert.
+    const { data: sess } = await supa.auth.getSession();
+    if (!sess.session) { setSyncStatus('☁️ Log in to sync across devices'); return; }
     // 1. eerst de cloud-status ophalen
     const { data, error } = await supa.from('visits').select('site_key, visited, updated_at');
     if (error) throw error;

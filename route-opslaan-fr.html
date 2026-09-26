@@ -55,25 +55,26 @@
 <div class="box">
   <div class="kolommen">
     <div>
-      <div class="muted">Normandië · 7 dagen</div>
-      <div class="groot">9,1 uur</div>
-      <div class="muted">86 stops · 3.636 km · dagen tussen 8,8 en 9,6</div>
+      <div class="muted">Normandië · 8 dagen</div>
+      <div class="groot">8,0 uur</div>
+      <div class="muted">86 stops · 3.636 km · dagen tussen 7,5 en 8,3</div>
     </div>
     <div>
-      <div class="muted">Frankrijk zuid · 8 dagen</div>
-      <div class="groot">9,0 uur</div>
-      <div class="muted">88 stops · 4.006 km · dagen tussen 8,6 en 9,4</div>
+      <div class="muted">Frankrijk zuid · 9 dagen</div>
+      <div class="groot">8,0 uur</div>
+      <div class="muted">88 stops · 4.006 km · dagen tussen 7,3 en 8,5</div>
     </div>
   </div>
   <p class="muted" style="margin-top:12px">Samen <b>174 locaties</b>. Met je stand van 707
-  brengt dat je op <b>881</b> — ruim over je doel van 800. Beide routes zitten rond de negen
-  uur per dag op echte wegtijden, met minder dan een uur verschil tussen de dagen.</p>
+  brengt dat je op <b>881</b> — ruim over je doel van 800. Beide routes zijn een dag langer
+  gemaakt en zitten nu rond de acht uur per dag op echte wegtijden, de laatste dag
+  inbegrepen.</p>
 </div>
 
 <div class="box">
   <h2>Kies een reis</h2>
-  <button class="kies aan" id="kn">Normandië · 7 dagen</button>
-  <button class="kies" id="kz">Frankrijk zuid · 8 dagen</button>
+  <button class="kies aan" id="kn">Normandië · 8 dagen</button>
+  <button class="kies" id="kz">Frankrijk zuid · 9 dagen</button>
   <table id="dagtabel"></table>
   <div id="map"></div>
 </div>
@@ -89,7 +90,7 @@
 <div class="box" id="savebox" style="display:none">
   <h2>Stap 2: opslaan</h2>
   <label class="muted">Naam voor de gekozen reis</label>
-  <input type="text" id="naam" value="Normandie 7 dagen">
+  <input type="text" id="naam" value="Normandie 8 dagen">
   <div class="muted" style="margin-top:6px">Sla ze allebei op: kies hierboven de andere
   reis en sla die onder zijn eigen naam ook op. Je oude <i>Paris Normandy 1-8</i> en
   <i>FR 7 days</i> blijven staan zolang je die namen niet gebruikt — verwijder ze daarna
@@ -109,24 +110,26 @@ var SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
 var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
-  n: { naam: 'Normandie 7 dagen', route: NORM, rijen: [
-    [1, 11, 9.6, 595, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; <b>Mons</b> &middot; Valenciennes &middot; <b>F&eacute;rin</b> &middot; Saint-Quentin &rarr; Amiens'],
-    [2, 16, 8.8, 392, 'Amiens &rarr; Beauvais &middot; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &middot; Parijs-west &rarr; Dreux'],
-    [3, 16, 9, 426, 'Dreux &rarr; Coigni&egrave;res &middot; Versailles &middot; Parijs-zuid &middot; Orl&eacute;ans &rarr; Blois'],
-    [4, 13, 9.2, 544, 'Blois &rarr; Tours &middot; Poitiers &middot; Niort &middot; La Roche-sur-Yon &middot; Cholet &rarr; Angers'],
-    [5, 10, 8.8, 555, 'Angers &rarr; Nantes &middot; Vannes &middot; Quimper &middot; Brest &middot; Morlaix &rarr; Saint-Brieuc'],
-    [6, 12, 8.9, 502, 'Saint-Brieuc &rarr; Rennes &middot; Mont-Saint-Michel &middot; Caen &middot; Honfleur &rarr; <b>Val-de-Reuil</b>'],
-    [7, 8, 9.6, 623, 'Val-de-Reuil &rarr; Rouen &middot; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Calais &rarr; Rotterdam']
+  n: { naam: 'Normandie 8 dagen', route: NORM, rijen: [
+    [1, 9, 7.9, 488, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; <b>Mons</b> &middot; Valenciennes &middot; <b>F&eacute;rin</b> &middot; Saint-Quentin &rarr; Aire d&#39;Urvillers'],
+    [2, 15, 8.2, 394, 'Urvillers &rarr; Roye &middot; Amiens &middot; Beauvais &middot; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &rarr; Herblay'],
+    [3, 15, 8.3, 321, 'Herblay &rarr; Orgeval &middot; Dreux &middot; Versailles &middot; Rungis &middot; &Eacute;vry &rarr; Ury'],
+    [4, 11, 7.6, 472, 'Ury &rarr; Orl&eacute;ans &middot; Blois &middot; Tours &middot; Ch&acirc;tellerault &middot; Poitiers &rarr; Vouill&eacute;'],
+    [5, 11, 8.3, 504, 'Vouill&eacute; &rarr; Lu&ccedil;on &middot; La Roche-sur-Yon &middot; Cholet &middot; Angers &middot; Nantes &rarr; Vannes'],
+    [6, 8, 7.5, 454, 'Vannes &rarr; Lorient &middot; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; Dinan &rarr; Rennes'],
+    [7, 12, 8.2, 473, 'Rennes &rarr; Mont-Saint-Michel &middot; Caen &middot; Deauville &middot; Honfleur &middot; <b>Val-de-Reuil</b> &middot; Rouen &rarr; Dieppe'],
+    [8, 5, 7.9, 530, 'Dieppe &rarr; Abbeville &middot; Baie de Somme &middot; Le Touquet &middot; Boulogne &middot; Calais &rarr; Rotterdam']
   ]},
-  z: { naam: 'Frankrijk zuid 8 dagen', route: ZUID, rijen: [
-    [1, 6, 9.4, 631, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &middot; Magnant &rarr; Saint-Dizier'],
-    [2, 12, 9.1, 533, 'Saint-Dizier &rarr; Langres &middot; Dijon &middot; Beaune &middot; Chalon &middot; M&acirc;con &rarr; Bourg-en-Bresse'],
-    [3, 17, 8.8, 435, 'Bourg-en-Bresse &rarr; Lyon &middot; Vienne &middot; Valence &middot; Mont&eacute;limar &middot; Orange &rarr; Avignon'],
-    [4, 15, 8.7, 430, 'Avignon &rarr; Marseille &middot; Aix &middot; Toulon &middot; <b>Le Cannet-des-Maures</b> &middot; Saint-Tropez &rarr; Mougins'],
-    [5, 7, 8.6, 425, 'Mougins &rarr; Nice &middot; Sisteron &middot; Gap &middot; Brian&ccedil;on &middot; <b>Galibier</b> &rarr; Saint-Jean-de-Maurienne'],
-    [6, 17, 9.4, 434, 'Maurienne &rarr; Chamb&eacute;ry &middot; Albertville &middot; Meg&egrave;ve &middot; Annecy &middot; <b>Geneva</b> &rarr; Annemasse'],
-    [7, 9, 9, 500, 'Annemasse &rarr; <b>Lausanne</b> &middot; Pontarlier &middot; Besan&ccedil;on &middot; Colmar &rarr; Saint-Di&eacute;'],
-    [8, 5, 9, 619, 'Saint-Di&eacute; &rarr; &Eacute;pinal &middot; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
+  z: { naam: 'Frankrijk zuid 9 dagen', route: ZUID, rijen: [
+    [1, 5, 7.9, 556, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &rarr; Magnant'],
+    [2, 9, 7.3, 403, 'Magnant &rarr; Saint-Dizier &middot; Langres &middot; Dijon &middot; Beaune &middot; Chalon &rarr; Tournus'],
+    [3, 14, 8.4, 435, 'Tournus &rarr; M&acirc;con &middot; Bourg-en-Bresse &middot; Lyon &middot; Vienne &rarr; Salaise-sur-Sanne'],
+    [4, 15, 8.5, 463, 'Salaise &rarr; Valence &middot; Orange &middot; Avignon &middot; Marseille &middot; Aix &middot; Toulon &rarr; Cuers'],
+    [5, 10, 8.1, 374, 'Cuers &rarr; <b>Le Cannet-des-Maures</b> &middot; Saint-Tropez &middot; Cannes &middot; Nice &rarr; Sisteron'],
+    [6, 11, 7.9, 407, 'Sisteron &rarr; Gap &middot; Brian&ccedil;on &middot; <b>Galibier</b> &middot; Maurienne &middot; Chamb&eacute;ry &rarr; Aime-la-Plagne'],
+    [7, 13, 8.5, 383, 'Aime &rarr; Albertville &middot; Meg&egrave;ve &middot; Annecy &middot; <b>Geneva</b> &middot; <b>Lausanne</b> &rarr; Pontarlier'],
+    [8, 7, 7.4, 415, 'Pontarlier &rarr; Besan&ccedil;on &middot; Vesoul &middot; Montb&eacute;liard &middot; Colmar &middot; Saint-Di&eacute; &rarr; &Eacute;pinal'],
+    [9, 4, 8, 570, '&Eacute;pinal &rarr; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
   ]}
 };
 

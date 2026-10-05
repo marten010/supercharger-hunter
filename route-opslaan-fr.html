@@ -39,9 +39,10 @@
 <h1>💾 Frankrijk — twee losse reizen</h1>
 
 <div class="box">
-  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>86 stops</b>: Mons,
-  Férin en Val-de-Reuil zijn erbij gekomen. Abbeville en de Aire de la Baie de Somme
-  stonden op dag 1 met een omweg naar de kust en staan nu op de terugweg, achter Dieppe.</p>
+  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>96 stops</b> in 9 dagen.
+  Eerder kwamen Mons, Férin en Val-de-Reuil erbij; op 6 oktober nog tien: Oosterhout,
+  Nanteuil-lès-Meaux, Paris-Bercy, Chartres, Saintes (2), Royan, La Rochelle, Les
+  Sables-d'Olonne en Falaise. Elk op de plek die de minste extra rijtijd kost.</p>
   <p><b>Frankrijk zuid</b> is gegroeid naar <b>88 stops</b>: Manosque eruit, en zeven palen
   erbij die er nog niet in zaten — Oosterhout, Lexy, Bussigny, Crissier, Geneva, de tweede
   paal in Saint-Julien-en-Genevois en Le Cannet-des-Maures. Bardonecchia is weer geschrapt:
@@ -55,9 +56,9 @@
 <div class="box">
   <div class="kolommen">
     <div>
-      <div class="muted">Normandië · 8 dagen</div>
-      <div class="groot">8,0 uur</div>
-      <div class="muted">86 stops · 3.636 km · dagen tussen 7,5 en 8,3</div>
+      <div class="muted">Normandië · 9 dagen</div>
+      <div class="groot">7,9 uur</div>
+      <div class="muted">96 stops · 4.008 km · dagen tussen 7,8 en 8,4</div>
     </div>
     <div>
       <div class="muted">Frankrijk zuid · 9 dagen</div>
@@ -65,15 +66,14 @@
       <div class="muted">88 stops · 4.006 km · dagen tussen 7,3 en 8,5</div>
     </div>
   </div>
-  <p class="muted" style="margin-top:12px">Samen <b>174 locaties</b>. Met je stand van 707
-  brengt dat je op <b>881</b> — ruim over je doel van 800. Beide routes zijn een dag langer
-  gemaakt en zitten nu rond de acht uur per dag op echte wegtijden, de laatste dag
-  inbegrepen.</p>
+  <p class="muted" style="margin-top:12px">De zuidroute is gereden (27 september – 5 oktober). Normandië
+  brengt je vanaf je stand van 799 op <b>895</b>, ruim over je doel van 800. Alle dagen
+  zitten rond de acht uur op echte wegtijden, de laatste dag inbegrepen.</p>
 </div>
 
 <div class="box">
   <h2>Kies een reis</h2>
-  <button class="kies aan" id="kn">Normandië · 8 dagen</button>
+  <button class="kies aan" id="kn">Normandië · 9 dagen</button>
   <button class="kies" id="kz">Frankrijk zuid · 9 dagen</button>
   <table id="dagtabel"></table>
   <div id="map"></div>
@@ -90,7 +90,7 @@
 <div class="box" id="savebox" style="display:none">
   <h2>Stap 2: opslaan</h2>
   <label class="muted">Naam voor de gekozen reis</label>
-  <input type="text" id="naam" value="Normandie 8 dagen">
+  <input type="text" id="naam" value="Normandie 9 dagen">
   <div class="muted" style="margin-top:6px">Sla ze allebei op: kies hierboven de andere
   reis en sla die onder zijn eigen naam ook op. Je oude <i>Paris Normandy 1-8</i> en
   <i>FR 7 days</i> blijven staan zolang je die namen niet gebruikt — verwijder ze daarna
@@ -110,15 +110,16 @@ var SUPA_KEY = 'sb_publishable_eDeD-C79QQHT_EhLaNuIug_MV2uQ3_v';
 var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
-  n: { naam: 'Normandie 8 dagen', route: NORM, rijen: [
-    [1, 9, 7.9, 488, 'Rotterdam &rarr; Kortrijk &middot; Rijsel &middot; <b>Mons</b> &middot; Valenciennes &middot; <b>F&eacute;rin</b> &middot; Saint-Quentin &rarr; Aire d&#39;Urvillers'],
-    [2, 15, 8.2, 394, 'Urvillers &rarr; Roye &middot; Amiens &middot; Beauvais &middot; Senlis &middot; Marne-la-Vall&eacute;e &middot; Roissy &rarr; Herblay'],
-    [3, 15, 8.3, 321, 'Herblay &rarr; Orgeval &middot; Dreux &middot; Versailles &middot; Rungis &middot; &Eacute;vry &rarr; Ury'],
-    [4, 11, 7.6, 472, 'Ury &rarr; Orl&eacute;ans &middot; Blois &middot; Tours &middot; Ch&acirc;tellerault &middot; Poitiers &rarr; Vouill&eacute;'],
-    [5, 11, 8.3, 504, 'Vouill&eacute; &rarr; Lu&ccedil;on &middot; La Roche-sur-Yon &middot; Cholet &middot; Angers &middot; Nantes &rarr; Vannes'],
-    [6, 8, 7.5, 454, 'Vannes &rarr; Lorient &middot; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; Dinan &rarr; Rennes'],
-    [7, 12, 8.2, 473, 'Rennes &rarr; Mont-Saint-Michel &middot; Caen &middot; Deauville &middot; Honfleur &middot; <b>Val-de-Reuil</b> &middot; Rouen &rarr; Dieppe'],
-    [8, 5, 7.9, 530, 'Dieppe &rarr; Abbeville &middot; Baie de Somme &middot; Le Touquet &middot; Boulogne &middot; Calais &rarr; Rotterdam']
+  n: { naam: 'Normandie 9 dagen', route: NORM, rijen: [
+    [1, 9, 8.1, 496, 'Rotterdam &rarr; <b>Oosterhout</b> &middot; Kortrijk &middot; Rijsel &middot; Mons &middot; Valenciennes &middot; F&eacute;rin &rarr; Saint-Quentin'],
+    [2, 13, 7.8, 371, 'Saint-Quentin &rarr; Amiens &middot; Beauvais &middot; Senlis &middot; <b>Nanteuil-l&egrave;s-Meaux</b> &middot; Marne-la-Vall&eacute;e &middot; <b>Paris-Bercy</b> &rarr; Roissy'],
+    [3, 14, 7.8, 320, 'Roissy &rarr; Taverny &middot; Herblay &middot; Orgeval &middot; Dreux &middot; <b>Chartres</b> &middot; Versailles &rarr; Rungis'],
+    [4, 14, 8, 402, 'Rungis &rarr; &Eacute;vry &middot; Ury &middot; Orl&eacute;ans &middot; Blois &rarr; Tours'],
+    [5, 11, 8.4, 465, 'Tours &rarr; Ch&acirc;tellerault &middot; Poitiers &middot; Niort &middot; <b>Saintes</b> &middot; <b>Royan</b> &middot; <b>La Rochelle</b> &rarr; La Roche-sur-Yon'],
+    [6, 10, 7.8, 485, 'La Roche-sur-Yon &rarr; <b>Les Sables-d&#39;Olonne</b> &middot; Cholet &middot; Angers &middot; Nantes &middot; Vannes &rarr; Lorient'],
+    [7, 8, 8, 489, 'Lorient &rarr; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; Rennes &rarr; Mont-Saint-Michel'],
+    [8, 12, 7.9, 452, 'Mont-Saint-Michel &rarr; Caen &middot; <b>Falaise</b> &middot; Deauville &middot; Honfleur &middot; Rouen &rarr; Dieppe'],
+    [9, 5, 7.9, 530, 'Dieppe &rarr; Abbeville &middot; Le Touquet &middot; Boulogne &middot; Calais &rarr; Rotterdam']
   ]},
   z: { naam: 'Frankrijk zuid 9 dagen', route: ZUID, rijen: [
     [1, 5, 7.9, 556, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &rarr; Magnant'],

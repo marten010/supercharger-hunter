@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Route opslaan — Frankrijk, twee reizen</title>
+<title>Route opslaan — Frankrijk, drie reizen</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
@@ -36,7 +36,7 @@
 </style>
 </head>
 <body>
-<h1>💾 Frankrijk — twee losse reizen</h1>
+<h1>💾 Frankrijk — drie losse reizen</h1>
 
 <div class="box">
   <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>96 stops</b> in 9 dagen.
@@ -48,6 +48,11 @@
   paal in Saint-Julien-en-Genevois en Le Cannet-des-Maures. Bardonecchia is weer geschrapt:
   vanaf daar moest je door de Fréjus-tunnel (~€55). Dag 5 gaat nu over de Lautaret en
   de <b>Galibier</b> naar de Maurienne.</p>
+  <p><b>Frankrijk zuidwest</b> is nieuw: een lus van <b>62 stops</b> door het midden en
+  zuidwesten, puur op palen waar je nog niet bent geweest. Via de gratis A75 door het Massif
+  Central naar Montpellier, dan westwaarts via Toulouse en Pau naar Bayonne, noordwaarts
+  langs Bordeaux, Périgueux en Limoges, en via Bourges en Le Mans terug. Let op dag 3: de A75
+  komt tot ruim 1.100 m. Vanaf 1 november moet je daar sneeuwsokken of kettingen bij je hebben.</p>
   <p class="muted">De dagen zijn verdeeld op echte wegtijden, precies zoals de app ze toont
   (rijtijd &times; 1,08 + 8 min per stop), met een lus terug naar Rotterdam. Volgorde
   ongewijzigd. De zuidroute loopt nu ook door Zwitserland (vignet nodig).</p>
@@ -65,9 +70,15 @@
       <div class="groot">8,0 uur</div>
       <div class="muted">88 stops · 4.006 km · dagen tussen 7,3 en 8,5</div>
     </div>
+    <div>
+      <div class="muted">Frankrijk zuidwest · 8 dagen</div>
+      <div class="groot">8,2 uur</div>
+      <div class="muted">62 stops · 4.335 km · dagen tussen 7,8 en 8,6</div>
+    </div>
   </div>
   <p class="muted" style="margin-top:12px">De zuidroute is gereden (27 september – 5 oktober). Normandië
-  brengt je vanaf je stand van 799 op <b>895</b>, ruim over je doel van 800. Alle dagen
+  brengt je vanaf je stand van 799 op <b>895</b>, ruim over je doel van 800. Met de
+  zuidwest-lus erbij kom je op <b>957</b>. Alle dagen
   zitten rond de acht uur op echte wegtijden, de laatste dag inbegrepen.</p>
 </div>
 
@@ -75,6 +86,7 @@
   <h2>Kies een reis</h2>
   <button class="kies aan" id="kn">Normandië · 9 dagen</button>
   <button class="kies" id="kz">Frankrijk zuid · 9 dagen</button>
+  <button class="kies" id="kw">Frankrijk zuidwest · 8 dagen</button>
   <table id="dagtabel"></table>
   <div id="map"></div>
 </div>
@@ -91,8 +103,8 @@
   <h2>Stap 2: opslaan</h2>
   <label class="muted">Naam voor de gekozen reis</label>
   <input type="text" id="naam" value="Normandie 9 dagen">
-  <div class="muted" style="margin-top:6px">Sla ze allebei op: kies hierboven de andere
-  reis en sla die onder zijn eigen naam ook op. Je oude <i>Paris Normandy 1-8</i> en
+  <div class="muted" style="margin-top:6px">Kies hierboven een reis en sla hem onder
+  zijn eigen naam op; doe daarna hetzelfde met de volgende. Je oude <i>Paris Normandy 1-8</i> en
   <i>FR 7 days</i> blijven staan zolang je die namen niet gebruikt — verwijder ze daarna
   gerust, dat is sinds kort omkeerbaar via de prullenbak.</div>
   <button id="opslaan">💾 Opslaan</button>
@@ -131,6 +143,16 @@ var INFO = {
     [7, 13, 8.5, 383, 'Aime &rarr; Albertville &middot; Meg&egrave;ve &middot; Annecy &middot; <b>Geneva</b> &middot; <b>Lausanne</b> &rarr; Pontarlier'],
     [8, 7, 7.4, 415, 'Pontarlier &rarr; Besan&ccedil;on &middot; Vesoul &middot; Montb&eacute;liard &middot; Colmar &middot; Saint-Di&eacute; &rarr; &Eacute;pinal'],
     [9, 4, 8, 570, '&Eacute;pinal &rarr; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
+  ]},
+  w: { naam: 'Frankrijk zuidwest 8 dagen', route: ZW, rijen: [
+    [1, 2, 8.4, 683, 'Rotterdam &rarr; Cosne-Cours-sur-Loire &rarr; Nevers'],
+    [2, 8, 8, 496, 'Nevers &rarr; Moulins &middot; Charolles &middot; Roanne &middot; Vichy &middot; Montlu&ccedil;on &rarr; Clermont-Ferrand'],
+    [3, 9, 7.8, 511, 'Clermont-Ferrand &rarr; <b>A75</b>: Albaret-Sainte-Marie &middot; S&eacute;v&eacute;rac &middot; Le Caylar &rarr; Montpellier &middot; N&icirc;mes &rarr; Agde'],
+    [4, 12, 8.1, 444, 'Agde &rarr; B&eacute;ziers &middot; Narbonne &middot; Carcassonne &middot; Toulouse &middot; Montauban &middot; Agen &rarr; Auch'],
+    [5, 10, 8.5, 466, 'Auch &rarr; Tarbes &middot; Pau &middot; Bayonne &middot; Landes &middot; Arcachon &rarr; Bordeaux'],
+    [6, 12, 8.6, 488, 'Bordeaux &rarr; Bergerac &middot; P&eacute;rigueux &middot; Brive &middot; Limoges &rarr; Angoul&ecirc;me'],
+    [7, 7, 8.5, 595, 'Angoul&ecirc;me &rarr; Ruffec &middot; Ch&acirc;teauroux &middot; Vierzon &middot; Bourges &rarr; Le Mans'],
+    [8, 2, 8.1, 652, 'Le Mans (2 palen) &rarr; Rotterdam']
   ]}
 };
 
@@ -173,11 +195,13 @@ function zet(k) {
   keuze = k;
   document.getElementById('kn').className = 'kies' + (k === 'n' ? ' aan' : '');
   document.getElementById('kz').className = 'kies' + (k === 'z' ? ' aan' : '');
+  document.getElementById('kw').className = 'kies' + (k === 'w' ? ' aan' : '');
   document.getElementById('naam').value = INFO[k].naam;
   tabel(); teken();
 }
 document.getElementById('kn').onclick = function () { zet('n'); };
 document.getElementById('kz').onclick = function () { zet('z'); };
+document.getElementById('kw').onclick = function () { zet('w'); };
 zet('n');
 setTimeout(function () { map.invalidateSize(); }, 300);
 

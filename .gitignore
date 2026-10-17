@@ -8,3 +8,6 @@ loops.js
 reconcile.js
 trips.js
 convert.js
+
+# routes en opslagpagina's: alleen lokaal, niet publiceren (routes staan privé in Supabase)
+_prive/

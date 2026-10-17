@@ -39,20 +39,21 @@
 <h1>💾 Frankrijk — drie losse reizen</h1>
 
 <div class="box">
-  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>95 stops</b> in 9 dagen.
+  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>99 stops</b> in 9 dagen.
   Eerder kwamen Mons, Férin en Val-de-Reuil erbij; op 6 oktober nog tien: Oosterhout,
   Nanteuil-lès-Meaux, Chartres, Saintes (2), Royan, La Rochelle, Les Sables-d'Olonne en
-  Falaise (Paris-Bercy zat er ook bij, maar is er op 17 oktober weer uit). Elk op de plek
-  die de minste extra rijtijd kost.</p>
+  Falaise (Paris-Bercy zat er ook bij, maar is er op 17 oktober weer uit). Op 17 oktober
+  kwamen de drie palen rond <b>Le Mans</b> erbij (uit de zuidwest-lus, als lusje Blois – Le Mans
+  – Tours op dag 4) en <b>Loudéac</b> (Saint-Brieuc – Loudéac – Rennes – Dinan op dag 7).</p>
   <p><b>Frankrijk zuid</b> is gegroeid naar <b>88 stops</b>: Manosque eruit, en zeven palen
   erbij die er nog niet in zaten — Oosterhout, Lexy, Bussigny, Crissier, Geneva, de tweede
   paal in Saint-Julien-en-Genevois en Le Cannet-des-Maures. Bardonecchia is weer geschrapt:
   vanaf daar moest je door de Fréjus-tunnel (~€55). Dag 5 gaat nu over de Lautaret en
   de <b>Galibier</b> naar de Maurienne.</p>
-  <p><b>Frankrijk zuidwest</b> is nieuw: een lus van <b>62 stops</b> door het midden en
+  <p><b>Frankrijk zuidwest</b> is nieuw: een lus van <b>59 stops</b> door het midden en
   zuidwesten, puur op palen waar je nog niet bent geweest. Via de gratis A75 door het Massif
   Central naar Montpellier, dan westwaarts via Toulouse en Pau naar Bayonne, noordwaarts
-  langs Bordeaux, Périgueux en Limoges, en via Bourges en Le Mans terug. Let op dag 3: de A75
+  langs Bordeaux, Périgueux en Limoges, en via Bourges terug (Le Mans is naar Normandië verhuisd). Let op dag 3: de A75
   komt tot ruim 1.100 m. Vanaf 1 november moet je daar sneeuwsokken of kettingen bij je hebben.</p>
   <p class="muted">De dagen zijn verdeeld op echte wegtijden, precies zoals de app ze toont
   (rijtijd &times; 1,08 + 8 min per stop), met een lus terug naar Rotterdam. Volgorde
@@ -63,8 +64,8 @@
   <div class="kolommen">
     <div>
       <div class="muted">Normandië · 9 dagen</div>
-      <div class="groot">7,9 uur</div>
-      <div class="muted">95 stops · 3.993 km · dagen tussen 7,4 en 8,2</div>
+      <div class="groot">8,3 uur</div>
+      <div class="muted">99 stops · 4.239 km · dagen tussen 8,1 en 8,5</div>
     </div>
     <div>
       <div class="muted">Frankrijk zuid · 9 dagen</div>
@@ -73,13 +74,13 @@
     </div>
     <div>
       <div class="muted">Frankrijk zuidwest · 8 dagen</div>
-      <div class="groot">8,2 uur</div>
-      <div class="muted">62 stops · 4.335 km · dagen tussen 7,8 en 8,6</div>
+      <div class="groot">7,8 uur</div>
+      <div class="muted">59 stops · 4.103 km · dagen tussen 7,2 en 8,3</div>
     </div>
   </div>
   <p class="muted" style="margin-top:12px">De zuidroute is gereden (27 september – 5 oktober). Normandië
-  brengt je vanaf je stand van 799 op <b>894</b>, ruim over je doel van 800. Met de
-  zuidwest-lus erbij kom je op <b>956</b>. Alle dagen
+  brengt je vanaf je stand van 799 op <b>898</b>; met Uden, Duiven en Venray erbij op
+  <b>901</b>. Met de zuidwest-lus daarna kom je op <b>960</b>. Alle dagen
   zitten rond de acht uur op echte wegtijden, de laatste dag inbegrepen.</p>
 </div>
 
@@ -124,15 +125,15 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 var INFO = {
   n: { naam: 'Normandie 9 dagen', route: NORM, rijen: [
-    [1, 9, 8.1, 496, 'Rotterdam &rarr; <b>Oosterhout</b> &middot; Kortrijk &middot; Rijsel &middot; Mons &middot; Valenciennes &middot; F&eacute;rin &rarr; Saint-Quentin'],
-    [2, 14, 7.8, 371, 'Saint-Quentin &rarr; Amiens &middot; Beauvais &middot; Senlis &middot; <b>Nanteuil-l&egrave;s-Meaux</b> &middot; Marne-la-Vall&eacute;e &middot; Roissy &rarr; Moisselles'],
-    [3, 14, 7.7, 319, 'Moisselles &rarr; Taverny &middot; Herblay &middot; Orgeval &middot; Dreux &middot; <b>Chartres</b> &middot; Versailles &middot; Rungis &rarr; Chilly-Mazarin'],
-    [4, 13, 8.2, 451, 'Chilly-Mazarin &rarr; &Eacute;vry &middot; Ury &middot; Montargis &middot; Orl&eacute;ans &middot; Blois &middot; Tours &rarr; Ch&acirc;tellerault'],
-    [5, 10, 7.4, 401, 'Ch&acirc;tellerault &rarr; Poitiers &middot; Niort &middot; <b>Saintes</b> &middot; <b>Royan</b> &middot; <b>La Rochelle</b> &rarr; La Roche-sur-Yon'],
-    [6, 10, 7.8, 485, 'La Roche-sur-Yon &rarr; <b>Les Sables-d&#39;Olonne</b> &middot; Cholet &middot; Angers &middot; Nantes &middot; Vannes &rarr; Lorient'],
-    [7, 8, 8, 489, 'Lorient &rarr; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; Rennes &rarr; Mont-Saint-Michel'],
-    [8, 12, 7.9, 452, 'Mont-Saint-Michel &rarr; Caen &middot; <b>Falaise</b> &middot; Deauville &middot; Honfleur &middot; Rouen &rarr; Dieppe'],
-    [9, 5, 7.9, 530, 'Dieppe &rarr; Abbeville &middot; Le Touquet &middot; Boulogne &middot; Calais &rarr; Rotterdam']
+    [1, 10, 8.5, 510, 'Rotterdam &rarr; <b>Oosterhout</b> &middot; Kortrijk &middot; Rijsel &middot; Mons &middot; Valenciennes &middot; F&eacute;rin &middot; Saint-Quentin &rarr; Aire d&#39;Urvillers'],
+    [2, 15, 8.2, 382, 'Urvillers &rarr; Roye &middot; Amiens &middot; Beauvais &middot; Senlis &middot; <b>Nanteuil-l&egrave;s-Meaux</b> &middot; Marne-la-Vall&eacute;e &middot; Roissy &rarr; Franconville'],
+    [3, 15, 8.2, 334, 'Franconville &rarr; Herblay &middot; Orgeval &middot; Dreux &middot; <b>Chartres</b> &middot; Versailles &middot; Rungis &middot; &Eacute;vry &rarr; Villab&eacute;'],
+    [4, 11, 8.3, 533, 'Villab&eacute; &rarr; Ury &middot; Montargis &middot; Orl&eacute;ans &middot; Blois &middot; <b>Le Mans (3 palen)</b> &rarr; Tours'],
+    [5, 11, 8.1, 444, 'Tours &rarr; Ch&acirc;tellerault &middot; Poitiers &middot; Niort &middot; <b>Saintes</b> &middot; <b>Royan</b> &middot; <b>La Rochelle</b> &rarr; Aire de la Vend&eacute;e'],
+    [6, 11, 8.4, 518, 'Vend&eacute;e &rarr; La Roche-sur-Yon &middot; <b>Les Sables-d&#39;Olonne</b> &middot; Cholet &middot; Angers &middot; Nantes &middot; Vannes &rarr; Lorient'],
+    [7, 8, 8.1, 484, 'Lorient &rarr; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; <b>Loud&eacute;ac</b> &middot; Rennes &rarr; Dinan'],
+    [8, 12, 8.2, 471, 'Dinan &rarr; Mont-Saint-Michel &middot; Caen &middot; <b>Falaise</b> &middot; Deauville &middot; Honfleur &middot; Rouen &rarr; Varneville'],
+    [9, 6, 8.5, 564, 'Varneville &rarr; Dieppe &middot; Abbeville &middot; Le Touquet &middot; Boulogne &middot; Calais &rarr; Rotterdam']
   ]},
   z: { naam: 'Frankrijk zuid 9 dagen', route: ZUID, rijen: [
     [1, 5, 7.9, 556, 'Rotterdam &rarr; Reims &middot; Ch&acirc;lons &middot; Troyes &rarr; Magnant'],
@@ -146,14 +147,14 @@ var INFO = {
     [9, 4, 8, 570, '&Eacute;pinal &rarr; Nancy &middot; <b>Lexy</b> &middot; <b>Oosterhout</b> &rarr; Rotterdam']
   ]},
   w: { naam: 'Frankrijk zuidwest 8 dagen', route: ZW, rijen: [
-    [1, 2, 8.4, 683, 'Rotterdam &rarr; Cosne-Cours-sur-Loire &rarr; Nevers'],
-    [2, 8, 8, 496, 'Nevers &rarr; Moulins &middot; Charolles &middot; Roanne &middot; Vichy &middot; Montlu&ccedil;on &rarr; Clermont-Ferrand'],
-    [3, 9, 7.8, 511, 'Clermont-Ferrand &rarr; <b>A75</b>: Albaret-Sainte-Marie &middot; S&eacute;v&eacute;rac &middot; Le Caylar &rarr; Montpellier &middot; N&icirc;mes &rarr; Agde'],
+    [1, 1, 7.6, 636, 'Rotterdam &rarr; Cosne-Cours-sur-Loire'],
+    [2, 8, 8.3, 530, 'Cosne &rarr; Nevers &middot; Moulins &middot; Charolles &middot; Roanne &middot; Vichy &middot; Montlu&ccedil;on &rarr; Riom'],
+    [3, 10, 8.2, 525, 'Riom &rarr; Clermont-Ferrand &middot; <b>A75</b>: Albaret-Sainte-Marie &middot; S&eacute;v&eacute;rac &middot; Le Caylar &rarr; Montpellier &middot; N&icirc;mes &rarr; Agde'],
     [4, 12, 8.1, 444, 'Agde &rarr; B&eacute;ziers &middot; Narbonne &middot; Carcassonne &middot; Toulouse &middot; Montauban &middot; Agen &rarr; Auch'],
-    [5, 10, 8.5, 466, 'Auch &rarr; Tarbes &middot; Pau &middot; Bayonne &middot; Landes &middot; Arcachon &rarr; Bordeaux'],
-    [6, 12, 8.6, 488, 'Bordeaux &rarr; Bergerac &middot; P&eacute;rigueux &middot; Brive &middot; Limoges &rarr; Angoul&ecirc;me'],
-    [7, 7, 8.5, 595, 'Angoul&ecirc;me &rarr; Ruffec &middot; Ch&acirc;teauroux &middot; Vierzon &middot; Bourges &rarr; Le Mans'],
-    [8, 2, 8.1, 652, 'Le Mans (2 palen) &rarr; Rotterdam']
+    [5, 9, 7.2, 425, 'Auch &rarr; Tarbes &middot; Pau &middot; Bayonne &middot; Landes &rarr; Ar&egrave;s (Arcachon)'],
+    [6, 10, 7.2, 415, 'Ar&egrave;s &rarr; Bordeaux &middot; Bergerac &middot; P&eacute;rigueux &middot; Brive &rarr; Limoges'],
+    [7, 8, 7.5, 443, 'Limoges &rarr; Angoul&ecirc;me &middot; Ruffec &middot; Ch&acirc;teauroux &middot; Vierzon &rarr; Bourges'],
+    [8, 1, 8.3, 685, 'Bourges (2e paal) &rarr; Rotterdam']
   ]}
 };
 

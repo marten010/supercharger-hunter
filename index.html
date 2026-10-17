@@ -360,7 +360,9 @@ function undoRoute() {
 }
 
 // ---------- kaart ----------
-const map = L.map('map', { preferCanvas: true }).setView([51.92, 4.48], 6);
+// Neutraal overzicht van Europa: gasten zien niet waar de route begint. Na het inloggen
+// springt de kaart naar het eigen startpunt (zie renderAuth).
+const map = L.map('map', { preferCanvas: true }).setView([48.5, 7.5], 5);
 // CARTO vereist sinds september 2026 een API-sleutel: hun tegels komen nog binnen
 // met status 200 en een geldige PNG, maar met "API KEY REQUIRED" er dwars overheen.
 // Dat is niet aan de statuscode te zien, alleen aan de pixels — op een oceaantegel,
@@ -557,10 +559,18 @@ map.on('click', e => {
 });
 
 let startMarker = null;
+// Het startpunt is in de praktijk "thuis": alleen tonen aan de ingelogde gebruiker.
+function toonStartMarker() {
+  if (!startMarker) return;
+  const ingelogd = document.body.classList.contains('ingelogd');
+  if (ingelogd && !map.hasLayer(startMarker)) startMarker.addTo(map);
+  if (!ingelogd && map.hasLayer(startMarker)) map.removeLayer(startMarker);
+}
 function setStart(lat, lng, label) {
   startPoint = { lat, lng, label };
   if (startMarker) map.removeLayer(startMarker);
-  startMarker = L.marker([lat, lng]).addTo(map).bindTooltip('Start: ' + label);
+  startMarker = L.marker([lat, lng]).bindTooltip('Start: ' + label);
+  toonStartMarker();
   document.getElementById('startinfo').textContent = '📍 Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 }
 setStart(51.9225, 4.4792, 'Rotterdam (home)');
@@ -2123,6 +2133,7 @@ async function pushVisit(s) {
 
 // login: kijken mag altijd, schrijven (afvinken/routes) alleen ingelogd
 // — afgedwongen door de database-regels, niet alleen door de pagina
+let kaartOpThuis = false;   // één keer naar het startpunt springen na inloggen
 function renderAuth() {
   const el = document.getElementById('authbox');
   if (!el || !supa) return;
@@ -2132,6 +2143,8 @@ function renderAuth() {
     renderLastVisit();     // tijdsnotitie tonen/verbergen o.b.v. login-status
     renderSavedRoutes();   // routelijst pas tonen zodra de sessie bekend is
     refreshMarkers();      // bezocht-kleuren verschijnen/verdwijnen met de sessie
+    toonStartMarker();     // startpunt (thuis) alleen voor de ingelogde gebruiker
+    if (sessie && !kaartOpThuis) { kaartOpThuis = true; map.setView([startPoint.lat, startPoint.lng], 6); }
     if (sessie) {
       el.innerHTML = `<div>🔓 Logged in as <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Log out</button>`;

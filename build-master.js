@@ -1,7 +1,10 @@
 // Bouwt een verse masterlijst vanaf supercharge.info (publieke community-database):
 //   - data.js voor de app (alle OPEN locaties in Europa)
 //   - "Hunter masterlist NIEUW.xlsx" als nieuwe Excel-masterlijst
-// Bezocht-status wordt overgenomen uit de bestaande data.js (match op naam, anders op GPS < 700 m).
+// data.js is openbaar en bevat sinds 18-10-2026 GEEN bezocht-status meer (de stand is privé, in
+// Supabase). Welke palen bezocht zijn, leest dit script uit _prive/bezocht.json (gitignored; maken
+// met: node _prive/sync-naar-bezocht.js "<sync-link>"). Alleen gebruikt om gesloten maar bezochte
+// palen in de lijst te houden (anders verdwijnt hun vinkje uit de stand) en voor de Excel.
 // Gebruik: node build-master.js
 const path = require('path');
 const fs = require('fs');
@@ -24,14 +27,15 @@ const hav = (a, b) => {
 };
 
 (async () => {
-  // 1. bezochte locaties uit de huidige data.js bewaren
+  // 1. bezochte locaties uit de privélijst (niet uit data.js: dat is openbaar)
   let oldVisited = [];
   try {
-    const raw = fs.readFileSync(path.join(__dirname, 'data.js'), 'utf8');
-    const old = JSON.parse(raw.slice(raw.indexOf('['), raw.lastIndexOf(']') + 1));
-    oldVisited = old.filter(s => s.visited);
-    console.log('Bezocht in huidige data.js:', oldVisited.length);
-  } catch (e) { console.log('Geen bestaande data.js gevonden — start zonder bezocht-status.'); }
+    oldVisited = JSON.parse(fs.readFileSync(path.join(__dirname, '_prive', 'bezocht.json'), 'utf8'));
+    console.log('Bezocht volgens _prive/bezocht.json:', oldVisited.length);
+  } catch (e) {
+    console.log('LET OP: geen _prive/bezocht.json. Gesloten maar bezochte palen kunnen nu uit de lijst vallen');
+    console.log('en daarmee uit je stand. Maak hem eerst: node _prive/sync-naar-bezocht.js "<sync-link>"');
+  }
   const visitedNames = new Set(oldVisited.map(s => norm(s.name)));
   // Let op: Tesla gebruikt soms andere namen dan de community-database
   // (bijv. Tesla "Poitiers Sud" = database "Croutelle, France";
@@ -81,9 +85,9 @@ const hav = (a, b) => {
   if (gpsMatched) console.log('Via GPS alsnog gematcht:', gpsMatched);
   if (stillMissing.length) console.log('NIET teruggevonden in nieuwe lijst:\n  ' + stillMissing.join('\n  '));
 
-  // 4. wegschrijven: data.js
-  fs.writeFileSync(path.join(__dirname, 'data.js'), 'const SITES = ' + JSON.stringify(sites) + ';\n');
-  console.log(`data.js geschreven: ${sites.length} locaties, ${sites.filter(s => s.visited).length} bezocht`);
+  // 4. wegschrijven: data.js (openbaar bestand: bezocht-status er altijd uit)
+  fs.writeFileSync(path.join(__dirname, 'data.js'), 'const SITES = ' + JSON.stringify(sites.map(s => ({ ...s, visited: false }))) + ';\n');
+  console.log(`data.js geschreven: ${sites.length} locaties, zonder bezocht-status (${sites.filter(s => s.visited).length} bezocht, alleen privé bekend)`);
 
   // 5. wegschrijven: nieuwe Excel-masterlijst (optioneel — app draait op data.js)
   if (!XLSX) {

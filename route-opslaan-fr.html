@@ -39,10 +39,11 @@
 <h1>💾 Frankrijk — drie losse reizen</h1>
 
 <div class="box">
-  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>96 stops</b> in 9 dagen.
+  <p>De al bezochte locaties zijn eruit. <b>Normandië</b> heeft nu <b>95 stops</b> in 9 dagen.
   Eerder kwamen Mons, Férin en Val-de-Reuil erbij; op 6 oktober nog tien: Oosterhout,
-  Nanteuil-lès-Meaux, Paris-Bercy, Chartres, Saintes (2), Royan, La Rochelle, Les
-  Sables-d'Olonne en Falaise. Elk op de plek die de minste extra rijtijd kost.</p>
+  Nanteuil-lès-Meaux, Chartres, Saintes (2), Royan, La Rochelle, Les Sables-d'Olonne en
+  Falaise (Paris-Bercy zat er ook bij, maar is er op 17 oktober weer uit). Elk op de plek
+  die de minste extra rijtijd kost.</p>
   <p><b>Frankrijk zuid</b> is gegroeid naar <b>88 stops</b>: Manosque eruit, en zeven palen
   erbij die er nog niet in zaten — Oosterhout, Lexy, Bussigny, Crissier, Geneva, de tweede
   paal in Saint-Julien-en-Genevois en Le Cannet-des-Maures. Bardonecchia is weer geschrapt:
@@ -63,7 +64,7 @@
     <div>
       <div class="muted">Normandië · 9 dagen</div>
       <div class="groot">7,9 uur</div>
-      <div class="muted">96 stops · 4.008 km · dagen tussen 7,8 en 8,4</div>
+      <div class="muted">95 stops · 3.993 km · dagen tussen 7,4 en 8,2</div>
     </div>
     <div>
       <div class="muted">Frankrijk zuid · 9 dagen</div>
@@ -77,8 +78,8 @@
     </div>
   </div>
   <p class="muted" style="margin-top:12px">De zuidroute is gereden (27 september – 5 oktober). Normandië
-  brengt je vanaf je stand van 799 op <b>895</b>, ruim over je doel van 800. Met de
-  zuidwest-lus erbij kom je op <b>957</b>. Alle dagen
+  brengt je vanaf je stand van 799 op <b>894</b>, ruim over je doel van 800. Met de
+  zuidwest-lus erbij kom je op <b>956</b>. Alle dagen
   zitten rond de acht uur op echte wegtijden, de laatste dag inbegrepen.</p>
 </div>
 
@@ -124,10 +125,10 @@ var supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 var INFO = {
   n: { naam: 'Normandie 9 dagen', route: NORM, rijen: [
     [1, 9, 8.1, 496, 'Rotterdam &rarr; <b>Oosterhout</b> &middot; Kortrijk &middot; Rijsel &middot; Mons &middot; Valenciennes &middot; F&eacute;rin &rarr; Saint-Quentin'],
-    [2, 13, 7.8, 371, 'Saint-Quentin &rarr; Amiens &middot; Beauvais &middot; Senlis &middot; <b>Nanteuil-l&egrave;s-Meaux</b> &middot; Marne-la-Vall&eacute;e &middot; <b>Paris-Bercy</b> &rarr; Roissy'],
-    [3, 14, 7.8, 320, 'Roissy &rarr; Taverny &middot; Herblay &middot; Orgeval &middot; Dreux &middot; <b>Chartres</b> &middot; Versailles &rarr; Rungis'],
-    [4, 14, 8, 402, 'Rungis &rarr; &Eacute;vry &middot; Ury &middot; Orl&eacute;ans &middot; Blois &rarr; Tours'],
-    [5, 11, 8.4, 465, 'Tours &rarr; Ch&acirc;tellerault &middot; Poitiers &middot; Niort &middot; <b>Saintes</b> &middot; <b>Royan</b> &middot; <b>La Rochelle</b> &rarr; La Roche-sur-Yon'],
+    [2, 14, 7.8, 371, 'Saint-Quentin &rarr; Amiens &middot; Beauvais &middot; Senlis &middot; <b>Nanteuil-l&egrave;s-Meaux</b> &middot; Marne-la-Vall&eacute;e &middot; Roissy &rarr; Moisselles'],
+    [3, 14, 7.7, 319, 'Moisselles &rarr; Taverny &middot; Herblay &middot; Orgeval &middot; Dreux &middot; <b>Chartres</b> &middot; Versailles &middot; Rungis &rarr; Chilly-Mazarin'],
+    [4, 13, 8.2, 451, 'Chilly-Mazarin &rarr; &Eacute;vry &middot; Ury &middot; Montargis &middot; Orl&eacute;ans &middot; Blois &middot; Tours &rarr; Ch&acirc;tellerault'],
+    [5, 10, 7.4, 401, 'Ch&acirc;tellerault &rarr; Poitiers &middot; Niort &middot; <b>Saintes</b> &middot; <b>Royan</b> &middot; <b>La Rochelle</b> &rarr; La Roche-sur-Yon'],
     [6, 10, 7.8, 485, 'La Roche-sur-Yon &rarr; <b>Les Sables-d&#39;Olonne</b> &middot; Cholet &middot; Angers &middot; Nantes &middot; Vannes &rarr; Lorient'],
     [7, 8, 8, 489, 'Lorient &rarr; Quimper &middot; Brest &middot; Morlaix &middot; Saint-Brieuc &middot; Rennes &rarr; Mont-Saint-Michel'],
     [8, 12, 7.9, 452, 'Mont-Saint-Michel &rarr; Caen &middot; <b>Falaise</b> &middot; Deauville &middot; Honfleur &middot; Rouen &rarr; Dieppe'],

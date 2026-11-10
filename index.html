@@ -7,53 +7,80 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14171c">
 <title>Supercharger Hunter 2026</title>
+<meta name="description" content="A map of every open Tesla Supercharger in Europe, with a tracker and day-route planner for the 2026 Supercharger challenge.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
+  /* Hallmark · checked: 2026-11-10 · genre: modern-minimal (inferred) · shape: app screen
+   * floor: 0 FAIL · reflex: 0 · fixed: 10a, 19, 26a, 26b, 30a, 34, 38iii, 39b, 40, 48, 50, 67 · structural: none printed
+   * built: the project · redesign: polish · v2.0.0 */
+  /* Hallmark · reworded "Supercharger Hunter 2026 Tesla Supercharger Challenge · Europe" to the h1 "Supercharger Hunter 2026" with the subtitle as its own line · 38iii names the muted subtitle inside the heading */
+  /* Hallmark · dismissed 49 · the sync link button spans the full sidebar width, so its label wraps inside the button by design */
+  /* Hallmark · answered F7 · every form field in this planner shares one recipe on purpose, the sidebar is one dense form */
   :root {
-    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --text: #e8eaed;
-    --muted: #9aa3af; --accent: #e82127; --green: #2ecc71; --blue: #3b82f6;
-    --border: #333a45;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --hover: #303845; --text: #e8eaed;
+    --muted: #9aa3af; --accent: #e82127; --accent-2: #ff6b6b; --on-accent: #fff;
+    --green: #2ecc71; --row-active: #33240f; --border: #333a45; --field-edge: #747e8c; --map-bg: #0e1116;
+    /* blauw zelf gemengd i.p.v. het standaard Tailwind-blauw: vlak voor knoppen met witte tekst,
+       licht voor links op het donkere paneel */
+    --blue: oklch(0.52 0.17 258); --link: oklch(0.78 0.1 250);
+    --on-badge: #000; --shadow: #0008;
+    --focus: #ffd166; --focus-on-map: #14171c;
+    --attrib-bg: rgba(255, 255, 255, 0.92); --attrib-text: #2b2f36; --attrib-link: #1a56b8;
+    --dur-micro: 120ms;
   }
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  html { overflow-x: clip; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: clip; }
   #sidebar { width: 380px; min-width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  #map { flex: 1; background: #0e1116; }
-  h1 { font-size: 18px; padding: 14px 16px 4px; }
-  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  #map { flex: 1; background: var(--map-bg); }
+  h1 { font-size: 18px; padding: 16px 16px 0; text-wrap: balance; }
+  .sub { font-size: 12px; color: var(--muted); padding: 4px 16px 12px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 8px; text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+  /* toetsenbordfocus: direct zichtbaar, contrastrijk op het donkere paneel */
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* boven de kaart wisselt de ondergrond (lichte tegels, donkere modus): geel met een donkere rand
+     blijft op beide zichtbaar */
+  .leaflet-container:focus-visible { outline-offset: -4px; box-shadow: inset 0 0 0 6px var(--focus-on-map); }
+  .leaflet-control-attribution a:focus-visible { outline-color: var(--attrib-link); }
+  button:disabled, input:disabled, select:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 36px; height: 36px; line-height: 36px; }
+  .leaflet-control-attribution { background: var(--attrib-bg) !important; color: var(--attrib-text); }
+  .leaflet-control-attribution a { color: var(--attrib-link); }
   section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .stat { background: var(--panel2); border-radius: 8px; padding: 8px 10px; text-align: center; }
-  .stat b { font-size: 20px; display: block; }
+  .stat b { font-size: 20px; display: block; font-variant-numeric: tabular-nums; }
   .stat span { font-size: 11px; color: var(--muted); }
   .progressbar { height: 8px; background: var(--panel2); border-radius: 4px; margin-top: 10px; overflow: hidden; }
-  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b6b); }
+  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
   label { font-size: 12px; color: var(--muted); display: block; margin: 8px 0 3px; }
   input, select, button { font: inherit; }
-  input[type=text], input[type=number], select {
-    width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  input[type=text], input[type=number], input[type=email], input[type=password], select {
+    width: 100%; min-height: 36px; background: var(--panel2); color: var(--text); border: 1px solid var(--field-edge);
     border-radius: 6px; padding: 6px 8px; font-size: 13px;
   }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
   button.primary {
-    width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+    width: 100%; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px;
     padding: 9px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px;
   }
   button.primary:hover { filter: brightness(1.1); }
   button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
-  button.small:hover { background: #303845; }
+  button.small:hover { background: var(--hover); }
   #countrylist { max-height: 180px; overflow-y: auto; font-size: 13px; }
   .crow { display: flex; justify-content: space-between; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
   .crow:hover { background: var(--panel2); }
-  .crow.active { background: #33240f; }
+  .crow.active { background: var(--row-active); }
   .crow .pct { color: var(--muted); font-size: 12px; }
   #daylist { font-size: 13px; }
   .day { background: var(--panel2); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
   .day h3 { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
   .day .meta { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
   .day ol { padding-left: 18px; color: var(--muted); font-size: 12px; max-height: 130px; overflow-y: auto; }
-  .day a { color: var(--blue); font-size: 12px; text-decoration: none; margin-right: 10px; }
+  .day a { color: var(--link); font-size: 12px; text-decoration: none; margin-right: 10px; }
   .exbtn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 3px; }
   .exbtn:hover { color: var(--accent); }
   .day ol li.done { text-decoration: line-through; color: var(--green); opacity: 0.7; }
@@ -65,7 +92,7 @@
   .leaflet-popup-content b { font-size: 14px; }
   .leaflet-popup-content button { margin-top: 6px; }
   .gmapslink {
-    display: block; margin-top: 8px; background: var(--blue); color: #fff !important;
+    display: block; margin-top: 8px; background: var(--blue); color: var(--on-accent) !important;
     text-align: center; padding: 8px 10px; border-radius: 6px;
     text-decoration: none; font-weight: 600; font-size: 13px;
   }
@@ -75,14 +102,16 @@
   #reloadbtn {
     width: 40px; height: 40px; border-radius: 50%;
     background: var(--panel); color: var(--text); border: 1px solid var(--border);
-    font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px #0008;
+    font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px var(--shadow);
+    transition: transform var(--dur-micro) ease-out;
   }
+  @media (prefers-reduced-motion: reduce) { #reloadbtn { transition: none; } #reloadbtn:active { transform: none; } }
   #reloadbtn:active { transform: rotate(180deg); }
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--panel); color: var(--text); border: 1px solid var(--border);
     border-radius: 8px; padding: 12px 18px; font-size: 13px; max-width: min(90vw, 420px);
-    box-shadow: 0 4px 16px #0008; z-index: 3000; text-align: center;
+    box-shadow: 0 4px 16px var(--shadow); z-index: 3000; text-align: center;
   }
   /* gasten zien alleen tussenstand + kaart; de rest verschijnt na login */
   body:not(.ingelogd) .authonly { display: none; }
@@ -97,7 +126,10 @@
     body { flex-direction: column; }
     #map { order: 1; flex: none; height: 50vh; min-height: 220px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
-    h1 { display: none; }
+    /* titel op telefoon compact tonen: anders ziet een bezoeker nergens wat de site is */
+    h1 { font-size: 16px; padding: 12px 16px 0; }
+    .sub { font-size: 13px; padding: 2px 16px 8px; }
+    .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; }
     button.small, button.primary { padding: 11px 13px; font-size: 16px; }
     input[type=text], input[type=number], select { padding: 11px; font-size: 17px; }
     /* grotere letters op telefoonschermen */
@@ -134,19 +166,18 @@
 </head>
 <body>
 <div id="sidebar">
-  <h1>⚡ Supercharger Hunter 2026
-    <span class="sub">Tesla Supercharger Challenge · Europe</span>
-  </h1>
+  <h1>Supercharger Hunter 2026</h1>
+  <p class="sub">Tesla Supercharger Challenge, Europe</p>
 
   <section class="authonly">
     <h2>On the road</h2>
-    <button class="primary" id="nearby-btn" style="margin-top:0">📍 Nearest unvisited</button>
+    <button class="primary" id="nearby-btn" style="margin-top:0">Nearest unvisited</button>
     <div id="nearbylist"></div>
   </section>
 
   <section class="guestonly">
     <p class="muted" style="margin:0;font-size:13px;line-height:1.5">
-      🔒 The standings are private. The map below shows every European Supercharger;
+      The standings are private. The map below shows every European Supercharger;
       which of them have been visited is only visible after logging in.
     </p>
   </section>
@@ -180,7 +211,7 @@
 
   <section class="authonly">
     <h2>Day route planner</h2>
-    <div class="muted">Starting point: click the map while holding <b>Shift</b>, or choose a location popup → "Start here".</div>
+    <div class="muted">Starting point: click the map while holding <b>Shift</b>, or choose “Start here” in a location popup.</div>
     <div id="startinfo"></div>
     <div class="row">
       <div><label>Days</label><input type="number" id="p-days" value="5" min="1" max="25"></div>
@@ -194,7 +225,7 @@
     <div class="row">
       <div><label>Max detour per stop (km, optional)</label><input type="number" id="p-maxdetour" placeholder="off" min="1" step="5"></div>
     </div>
-    <div class="muted" style="margin-top:2px">Skips stops that would pull the route too far off its main path — keeps the core of a dense area instead of criss-crossing the whole region. Leave empty to include everything that fits the time budget.</div>
+    <div class="muted" style="margin-top:2px">Skips stops that would pull the route too far off its main path. It keeps the core of a dense area instead of criss-crossing the whole region. Leave empty to include everything that fits the time budget.</div>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text)">
       <input type="checkbox" id="p-loop"> End back at starting point (loop)
     </label>
@@ -224,7 +255,7 @@
 
   <section class="authonly">
     <h2>Saved routes</h2>
-    <button class="small" id="saveroute">💾 Save current route</button>
+    <button class="small" id="saveroute">Save current route</button>
     <div id="savedlist" style="margin-top:8px"></div>
     <div id="routesyncnote" class="muted" style="margin-top:6px"></div>
   </section>
@@ -241,16 +272,16 @@
       <button class="small" id="exp-json">Backup JSON</button>
       <button class="small" id="imp-json">Restore backup</button>
     </div>
-    <button class="small" id="sync-link" style="margin-top:6px;width:100%">🔄 Sync link for visited locations (for your other device)</button>
+    <button class="small" id="sync-link" style="margin-top:6px;width:100%">Sync link for visited locations (for your other device)</button>
     <input type="file" id="imp-file" accept=".json" style="display:none">
-    <div id="syncstatus" class="muted" style="margin-top:8px">☁️ Sync: connecting…</div>
+    <div id="syncstatus" class="muted" style="margin-top:8px">Sync: connecting…</div>
     <div class="muted" style="margin-top:8px">Visit status syncs live across all your devices. The JSON backup remains as an extra safety net.</div>
   </section>
 
   <section class="authonly">
     <h2>Overzichtskaarten</h2>
-    <a href="routes-overzicht.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">🗺️ Alle opgeslagen routes op één kaart</a>
-    <a href="projectie.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">🔮 Projectie: stand ná alle geplande routes</a>
+    <a href="routes-overzicht.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">Alle opgeslagen routes op één kaart</a>
+    <a href="projectie.html" style="display:block;text-align:center;text-decoration:none;padding:7px 0;background:var(--panel2);border-radius:6px;color:var(--text);margin-bottom:6px">Projectie: stand ná alle geplande routes</a>
   </section>
 </div>
 <div id="map"></div>
@@ -267,6 +298,19 @@
 <script src="data.js"></script>
 <script src="tarieven.js"></script>
 <script>
+// ---------- pictogrammen ----------
+// Kleine eigen SVG-set in plaats van emoji: ziet er op elk toestel hetzelfde uit
+// en schermlezers lezen geen "maansikkel" voor.
+const IC = {
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  link: '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+  nav: '<path d="M3 11l18-8-8 18-2-8z"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  play: '<path d="M7 4l13 8-13 8z"/>',
+};
+const ic = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
 // ---------- state ----------
 // site-key (genormaliseerde naam) i.p.v. numeriek site-id: dat id is alleen een
 // array-index in data.js en verschuift bij elke build-master.js-ververing (nieuwe
@@ -389,7 +433,9 @@ function undoRoute() {
 // ---------- kaart ----------
 // Neutraal overzicht van Europa: gasten zien niet waar de route begint. Na het inloggen
 // springt de kaart naar het eigen startpunt (zie renderAuth).
-const map = L.map('map', { preferCanvas: true }).setView([48.5, 7.5], 5);
+// tolerance: het tikvlak rond een stip is 5px groter dan wat je ziet, zodat de kleinere
+// stippen bij uitzoomen op de telefoon net zo makkelijk te raken blijven
+const map = L.map('map', { preferCanvas: true, renderer: L.canvas({ tolerance: 5 }) }).setView([48.5, 7.5], 5);
 // CARTO vereist sinds september 2026 een API-sleutel: hun tegels komen nog binnen
 // met status 200 en een geldige PNG, maar met "API KEY REQUIRED" er dwars overheen.
 // Dat is niet aan de statuscode te zien, alleen aan de pixels — op een oceaantegel,
@@ -412,13 +458,13 @@ const MapStyleControl = L.Control.extend({
   onAdd: () => {
     const btn = L.DomUtil.create('button', '');
     btn.id = 'mapstylebtn';
-    btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
+    btn.innerHTML = mapStyle === 'dark' ? ic('sun') : ic('moon');
     btn.title = 'Wissel kaartstijl (gedetailleerd/donker)';
     btn.onclick = () => {
       mapStyle = mapStyle === 'dark' ? 'light' : 'dark';
       localStorage.setItem('sc_map_style', mapStyle);
       pasKaartstijlToe();
-      btn.innerHTML = mapStyle === 'dark' ? '☀️' : '🌙';
+      btn.innerHTML = mapStyle === 'dark' ? ic('sun') : ic('moon');
     };
     return btn;
   }
@@ -470,13 +516,20 @@ map.on('popupopen', e => {
 });
 window.addEventListener('resize', () => map.invalidateSize());
 setTimeout(() => map.invalidateSize(), 400);   // maat corrigeren na eerste layout (iPhone)
+// stipgrootte schaalt mee met de zoom: klein over heel Europa (minder overlap),
+// de oude maat van 7 zodra je op stadsniveau inzoomt
+function markerRadius() {
+  const z = map.getZoom();
+  return z <= 4 ? 3.5 : z === 5 ? 4.5 : z === 6 ? 5.5 : z === 7 ? 6.5 : 7;
+}
+const markerWeight = () => (map.getZoom() <= 5 ? 1 : 2);
 function markerStyle(s) {
   return {
-    radius: 7,
+    radius: markerRadius(), weight: markerWeight(),
     // gasten zien één neutrale kleur: de bezochte status is de stand, en die is privé
     fillColor: !document.body.classList.contains('ingelogd') ? '#7c8694'
              : isVisited(s) ? '#2ecc71' : '#e82127',
-    color: '#0008', weight: 2, fillOpacity: 0.9
+    color: '#0008', fillOpacity: 0.9
   };
 }
 // ---------- laadtarieven ----------
@@ -505,36 +558,40 @@ function tariefRegel(s) {
   if (!t) return '';
   const nu = new Date().getHours();
   const p = prijsOp(t, nu);
-  if (t.vast != null) return `<div style="margin-top:4px">⚡ <b>€${t.vast.toFixed(2)}</b>/kWh · vast tarief</div>`;
+  if (t.vast != null) return `<div style="margin-top:4px"><b>€${t.vast.toFixed(2)}</b>/kWh · vast tarief</div>`;
   const dal = ochtenddal(t);
   const kleur = dal && p <= dal.prijs ? '#2ecc71' : '#f59e0b';
-  return `<div style="margin-top:4px">⚡ nu <b style="color:${kleur}">€${p.toFixed(2)}</b>/kWh` +
+  return `<div style="margin-top:4px">nu <b style="color:${kleur}">€${p.toFixed(2)}</b>/kWh` +
     (dal ? ` · dal <b>€${dal.prijs.toFixed(2)}</b> tot <b>${String(dal.tot).padStart(2, '0')}:00</b>` : '') + `</div>`;
 }
 
 function popupHtml(s) {
   const v = isVisited(s);
   let info = `<b>${s.name}</b><br>
-    <span style="color:#9aa3af">${s.address}, ${s.city} · ${s.stalls ?? '?'} stalls ${s.version || ''} · ${s.kw ?? '?'} kW</span>
+    <span style="color:var(--muted)">${s.address}, ${s.city}, ${s.stalls ?? '?'} stalls ${s.version || ''}, ${s.kw ?? '?'} kW</span>
     ${tariefRegel(s)}`;
   // gasten krijgen alleen de feiten over de paal zelf, geen bezocht-status
   if (!document.body.classList.contains('ingelogd')) return info;
-  info += `<br><span style="color:${v ? '#2ecc71' : '#e82127'}">${v ? '✔ Visited' : '✘ Not yet visited'}</span>`;
+  info += `<br><span style="color:${v ? 'var(--green)' : 'var(--accent)'}">${v ? 'Visited' : 'Not yet visited'}</span>`;
   return `${info}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
-      <button class="small" onclick="toggleVisited(${s.id})">${v ? '↩ Mark as NOT visited' : '✔ Mark as visited'}</button>
-      <button class="small" onclick="setStartFromSite(${s.id})">📍 Start</button>
-      <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? '✕ Remove from route' : '➕ Route'}</button>
-      ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? '✕ Remove from day plan' : '➕ Add to day plan'}</button>` : ''}
-      <button class="small" onclick="setOvernight(${s.id})">🌙 Overnight</button>
-      ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? '♻ Include' : '🚫 Skip'}</button>` : ''}
+      <button class="small" onclick="toggleVisited(${s.id})">${v ? 'Mark as not visited' : 'Mark as visited'}</button>
+      <button class="small" onclick="setStartFromSite(${s.id})">Start here</button>
+      <button class="small" onclick="routeAdd(${s.id})">${typeof manualRoute !== 'undefined' && manualRoute.includes(s.id) ? 'Remove from route' : 'Add to route'}</button>
+      ${typeof plannedDays !== 'undefined' && plannedDays.length ? `<button class="small" onclick="routePlanToggle(${s.id})">${plannedDays.some(d => d.stops.some(x => x.id === s.id)) ? 'Remove from day plan' : 'Add to day plan'}</button>` : ''}
+      <button class="small" onclick="setOvernight(${s.id})">Overnight here</button>
+      ${!v ? `<button class="small" onclick="excludeSite(${s.id})">${typeof excluded !== 'undefined' && excluded.has(s.id) ? 'Include again' : 'Skip'}</button>` : ''}
     </div>
-    <a class="gmapslink" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank">🧭 Open in Google Maps</a>`;
+    <a class="gmapslink" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank">Open in Google Maps</a>`;
 }
 for (const s of SITES) {
   const m = L.circleMarker([s.lat, s.lng], markerStyle(s)).bindPopup(() => popupHtml(s), POPUP_OPTS);
   markers.set(s.id, m);
 }
+map.on('zoomend', () => {
+  const r = markerRadius(), w = markerWeight();
+  for (const m of markers.values()) { m.setRadius(r); m.setStyle({ weight: w }); }
+});
 
 function siteMatchesFilter(s) {
   // status-schakelaar werkt voor iedereen; land/zoek-filters hebben geen UI voor
@@ -598,7 +655,7 @@ function setStart(lat, lng, label) {
   if (startMarker) map.removeLayer(startMarker);
   startMarker = L.marker([lat, lng]).bindTooltip('Start: ' + label);
   toonStartMarker();
-  document.getElementById('startinfo').textContent = '📍 Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+  document.getElementById('startinfo').textContent = 'Start: ' + label + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 }
 setStart(51.9225, 4.4792, 'Rotterdam (home)');
 
@@ -694,7 +751,7 @@ window.excludeSite = function(id) {
 function renderOvernights() {
   const el = document.getElementById('overnightlist');
   if (!overnights.length) {
-    el.innerHTML = 'Click a marker and choose "🌙 Overnight here" — the first choice becomes night 1, the second night 2, etc.';
+    el.innerHTML = 'Click a marker and choose “Overnight here”. The first choice becomes night 1, the second night 2, etc.';
     return;
   }
   el.innerHTML = '';
@@ -714,7 +771,7 @@ function renderOvernights() {
 function renderExcluded() {
   const el = document.getElementById('excludedinfo');
   if (!excluded.size) { el.innerHTML = ''; return; }
-  el.innerHTML = `🚫 ${excluded.size} location(s) excluded from planning · <a href="#" id="ex-reset" style="color:var(--blue)">restore all</a>`;
+  el.innerHTML = `${excluded.size} location(s) excluded from planning · <a href="#" id="ex-reset" style="color:var(--link)">restore all</a>`;
   document.getElementById('ex-reset').onclick = e => {
     e.preventDefault();
     excluded.clear();
@@ -1086,7 +1143,7 @@ function drawRoute() {
     routeLayers.push(line);
     day.stops.forEach((s, j) => {
       const badge = L.marker([s.lat, s.lng], {
-        icon: L.divIcon({ className: '', html: `<div style="background:${dayColors[i % dayColors.length]};color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
+        icon: L.divIcon({ className: '', html: `<div style="background:${dayColors[i % dayColors.length]};color:var(--on-badge);font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
       }).bindPopup(() => popupHtml(s), POPUP_OPTS).addTo(map);
       routeLayers.push(badge);
     });
@@ -1267,7 +1324,7 @@ function tolRegel(day) {
   if (!t) return '';
   if (day.avoidTolls) {
     const n = (day._tolStops || []).length;
-    return `<br><span style="color:var(--green)">🚫 Toll-free day${n ? ` · ${n} motorway-only stop${n === 1 ? '' : 's'} removed` : ''} · Maps routes around the tolls</span>`;
+    return `<br><span style="color:var(--green)">Toll-free day${n ? ` · ${n} motorway-only stop${n === 1 ? '' : 's'} removed` : ''} · Maps routes around the tolls</span>`;
   }
   const min = Math.round(t.extraUren * 60);
   const kosten = t.extraUren < 0.05 ? 'costs you nothing'
@@ -1278,10 +1335,10 @@ function tolRegel(day) {
     : '';
   const poorten = ` · ${t.poorten} toll gate${t.poorten === 1 ? '' : 's'}`;
   if (t.extraUren < 0.5)
-    return `<br><span style="color:var(--green)">🚫 Toll-free ${kosten} here — skip the motorway${poorten} avoided${kwijt}</span>`;
+    return `<br><span style="color:var(--green)">Toll-free ${kosten} here: skip the motorway${poorten} avoided${kwijt}</span>`;
   if (t.extraUren < 1.5)
     return `<br><span style="color:var(--text)">≈ Toll-free ${kosten} — your call${poorten}${kwijt}</span>`;
-  return `<br><span style="color:var(--accent)">🛣️ Use the toll road: toll-free ${kosten} (${t.pctLang}% long-haul)${kwijt}</span>`;
+  return `<br><span style="color:var(--accent)">Use the toll road: toll-free ${kosten} (${t.pctLang}% long-haul)${kwijt}</span>`;
 }
 
 function renderDays(chargeMin, speed) {
@@ -1300,14 +1357,14 @@ function renderDays(chargeMin, speed) {
     const tolKnop = tolAdvies(day)
       ? `<button class="small" data-toll="${i}" style="margin-left:8px" title="Switches the Maps links for this day and adds/removes the stops that sit on motorway service areas">${
           day.avoidTolls
-            ? `🛣️ Allow tolls${aires ? ` (restore ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
-            : `🚫 Go toll-free${aires ? ` (drops ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
+            ? `Allow tolls${aires ? ` (restore ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
+            : `Go toll-free${aires ? ` (drops ${aires} stop${aires === 1 ? '' : 's'})` : ''}`
         }</button>`
       : '';
     div.innerHTML = `
       <h3><span style="color:${dayColors[i % dayColors.length]}">● Day ${i+1}</span><span>${day.stops.length} stops</span></h3>
-      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? (day.roadDeels ? ' · 🛣️ real roads (part straight-line)' : ' · 🛣️ real roads') : ' · straight-line'}<br>
-        Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? '🏁 ends back at starting point' : (day.endPoint ? '🌙 overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : '🌙 overnight: ' + day.stops[day.stops.length-1].name)}${tolRegel(day)}</div>
+      <div class="meta">${Math.round(day.km)} km · ${(day.min/60).toFixed(1)} h (driving + charging)${day.road ? (day.roadDeels ? ' · real roads (part straight-line)' : ' · real roads') : ' · straight-line'}<br>
+        Start: ${day.start.name || day.start.label || 'starting point'} · ${day.back ? 'ends back at starting point' : (day.endPoint ? 'overnight: ' + (day.endPoint.name || 'custom point') + ' (custom choice)' : 'overnight: ' + day.stops[day.stops.length-1].name)}${tolRegel(day)}</div>
       <div>${links}${tolKnop}</div>
       <ol>${day.stops.map(s => `<li class="${isVisited(s) ? 'done' : ''}">${s.name}
         <button class="exbtn" data-mv="-1:${s.id}" title="Move earlier in the route">↑</button>
@@ -1339,7 +1396,7 @@ function renderDays(chargeMin, speed) {
   const kwhRit = Math.round(totKm * 0.16);
   const kwhReg = totStops * 2;
   const gedaan = plannedDays.flatMap(d => d.stops).filter(isVisited).length;
-  sum.innerHTML = `<b style="color:var(--text)">Total: ${totStops} locations (${gedaan} ✔ checked off), ${Math.round(totKm)} km</b><br>
+  sum.innerHTML = `<b style="color:var(--text)">Total: ${totStops} locations (${gedaan} checked off), ${Math.round(totKm)} km</b><br>
     Registration charging: ${kwhReg} kWh (2 kWh/stop) · driving consumption ±${kwhRit} kWh<br>
     Cost ±€${Math.round(kwhReg * 0.40 + Math.max(0, kwhRit - kwhReg) * 0.35)} (Tesla €0.40 · bulk €0.35/kWh)`;
   el.prepend(sum);
@@ -1349,10 +1406,10 @@ function renderDays(chargeMin, speed) {
   knoppen.className = 'row';
   knoppen.style.marginBottom = '8px';
   knoppen.innerHTML = `
-    <button class="small" id="rd-opt" title="Same stops, only the shortest order — adds nothing">✨ Optimize order</button>
-    <button class="small" id="rd-bal" title="Keeps your visiting order exactly as it is — only moves the day boundaries so each day takes about the same time">⚖️ Balance days</button>
-    <button class="small" id="rd-rev" title="Same stops per day, visited in reverse order — handy when roadworks cause congestion in one direction only">↔️ Reverse order</button>
-    <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">🔁 Fill with new stops</button>`;
+    <button class="small" id="rd-opt" title="Same stops, only the shortest order — adds nothing">Optimize order</button>
+    <button class="small" id="rd-bal" title="Keeps your visiting order exactly as it is — only moves the day boundaries so each day takes about the same time">Balance days</button>
+    <button class="small" id="rd-rev" title="Same stops per day, visited in reverse order — handy when roadworks cause congestion in one direction only">Reverse order</button>
+    <button class="small" id="rd-fill" title="Re-plans and fills free time with new stops; skipped locations remain excluded">Fill with new stops</button>`;
   el.prepend(knoppen);
   // na een trip: al bezochte stops eruit en de vrijgekomen tijd vullen met nieuwe
   // locaties langs dezelfde route — alleen tonen als er iets te verversen valt
@@ -1363,7 +1420,7 @@ function renderDays(chargeMin, speed) {
     ver.style.width = '100%';
     ver.style.marginBottom = '8px';
     ver.title = 'Removes the stops you have already visited and fills the freed-up time with new unvisited locations along this same route';
-    ver.textContent = `♻️ Refresh route (${alBezocht} visited stop${alBezocht === 1 ? '' : 's'} to drop)`;
+    ver.textContent = `Refresh route (${alBezocht} visited stop${alBezocht === 1 ? '' : 's'} to drop)`;
     ver.onclick = refreshRoute;
     el.prepend(ver);
   }
@@ -1383,7 +1440,7 @@ function renderDays(chargeMin, speed) {
     undoBtn.style.width = '100%';
     undoBtn.style.marginBottom = '8px';
     undoBtn.title = 'Revert the last route change (optimize, reverse, fill, add/remove stop, plan, overnight change)';
-    undoBtn.textContent = `↩ Undo last change (${routeHistory.length})`;
+    undoBtn.textContent = `Undo last change (${routeHistory.length})`;
     undoBtn.onclick = undoRoute;
     el.prepend(undoBtn);
   }
@@ -1394,13 +1451,13 @@ function renderDays(chargeMin, speed) {
   nav.style.marginTop = '0';
   nav.style.marginBottom = '8px';
   if (next) {
-    nav.textContent = `🧭 Next stop: ${next.name}`;
+    nav.textContent = `Next stop: ${next.name}`;
     // dezelfde tolkeuze aanhouden als de dag waarin deze stop valt
     const dagVanNext = plannedDays.find(d => d.stops.some(s => s.id === next.id));
     const mijdTol = dagVanNext && dagVanNext.avoidTolls ? '&avoid=tolls' : '';
     nav.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${next.lat},${next.lng}&travelmode=driving${mijdTol}`, '_blank');
   } else {
-    nav.textContent = '🎉 All stops on this route checked off!';
+    nav.textContent = 'All stops on this route checked off.';
     nav.disabled = true;
   }
   el.prepend(nav);
@@ -1888,7 +1945,7 @@ async function syncRoutes() {
     saveRoutesStore();
     renderSavedRoutes();
     const note = document.getElementById('routesyncnote');
-    if (note) note.textContent = '☁️ Routes synced across your devices.';
+    if (note) note.textContent = 'Routes synced across your devices.';
   } catch (e) {
     const note = document.getElementById('routesyncnote');
     if (note) note.textContent = 'Routes are stored locally only (cloud table not set up yet).';
@@ -1954,12 +2011,12 @@ function renderSavedRoutes() {
   // dat afdwingt; dit zorgt dat het scherm hetzelfde zegt, óók als die regel er nog
   // niet is of als er nog iets in localStorage van een eerdere sessie staat.
   if (!document.body.classList.contains('ingelogd')) {
-    el.innerHTML = '<span class="muted">🔒 Your saved routes are private. Log in above to see them.</span>';
+    el.innerHTML = '<span class="muted">Your saved routes are private. Log in above to see them.</span>';
     return;
   }
   // ook zónder actieve routes de prullenbak tonen — juist dán heb je hem nodig
   if (!savedRoutes.length) {
-    el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click "Save current route". Use 🔗 to send it to your phone.</span>';
+    el.innerHTML = '<span class="muted">No routes saved yet. Plan a route and click “Save current route”. Use the link button to send it to your phone.</span>';
     renderTrash(el);
     return;
   }
@@ -1969,8 +2026,8 @@ function renderSavedRoutes() {
     row.className = 'nrow';
     row.innerHTML = `
       <div class="info"><b>${r.name}</b><span>${r.days.length} days · ${stops} stops · ${r.created}</span></div>
-      <button class="small" data-a="load" title="Load route">▶</button>
-      <button class="small" data-a="link" title="Copy shareable link">🔗</button>
+      <button class="small" data-a="load" title="Load route" aria-label="Load route">${ic('play')}</button>
+      <button class="small" data-a="link" title="Copy shareable link" aria-label="Copy shareable link">${ic('link')}</button>
       <button class="small" data-a="del" title="Remove">✕</button>`;
     row.querySelector('[data-a=load]').onclick = () => loadRoute(r);
     row.querySelector('[data-a=link]').onclick = () => {
@@ -2016,7 +2073,7 @@ function renderTrash(el) {
     row.style.opacity = '.7';
     row.innerHTML = `
       <div class="info"><b>${t.name}</b><span>${t.route.days.length} days · ${stops} stops · deleted ${String(t.deletedAt).slice(0, 10)}</span></div>
-      <button class="small" data-a="restore" title="Restore this route">↩</button>`;
+      <button class="small" data-a="restore" title="Restore this route" aria-label="Restore this route">${ic('undo')}</button>`;
     row.querySelector('[data-a=restore]').onclick = () => {
       // opnieuw opslaan mét nieuw tijdstip: dat is nieuwer dan de grafsteen, dus de
       // sync ziet hem als bewust teruggezet en gooit hem niet meteen weer weg
@@ -2154,8 +2211,8 @@ async function pushVisit(s) {
   try {
     const o = overrides[siteKey(s)];
     const { error } = await supa.from('visits').upsert({ site_key: siteKey(s), visited: isVisited(s), updated_at: o ? ovTime(o) : new Date().toISOString() });
-    if (error) setSyncStatus('☁️ Not synced — log in to save changes to the cloud');
-  } catch (e) { setSyncStatus('☁️ Sync: offline (change queued locally)'); }
+    if (error) setSyncStatus('Not synced: log in to save changes to the cloud');
+  } catch (e) { setSyncStatus('Sync: offline (change queued locally)'); }
 }
 
 // login: kijken mag altijd, schrijven (afvinken/routes) alleen ingelogd
@@ -2173,7 +2230,7 @@ function renderAuth() {
     toonStartMarker();     // startpunt (thuis) alleen voor de ingelogde gebruiker
     if (sessie && !kaartOpThuis) { kaartOpThuis = true; map.setView([startPoint.lat, startPoint.lng], 6); }
     if (sessie) {
-      el.innerHTML = `<div>🔓 Logged in as <b>${sessie.user.email}</b></div>
+      el.innerHTML = `<div>Logged in as <b>${sessie.user.email}</b></div>
         <button class="small" id="au-uit" style="margin-top:6px">Log out</button>`;
       document.getElementById('au-uit').onclick = async () => {
         await supa.auth.signOut();
@@ -2206,7 +2263,7 @@ async function initSync() {
     // Dus hier stoppen in plaats van vruchteloos verkeer maken en "Live sync active"
     // beweren tegen iemand die niets synchroniseert.
     const { data: sess } = await supa.auth.getSession();
-    if (!sess.session) { setSyncStatus('☁️ Log in to sync across devices'); return; }
+    if (!sess.session) { setSyncStatus('Log in to sync across devices'); return; }
     // 1. eerst de cloud-status ophalen
     const { data, error } = await supa.from('visits').select('site_key, visited, updated_at');
     if (error) throw error;
@@ -2228,7 +2285,7 @@ async function initSync() {
     if (toPush.length) await supa.from('visits').upsert(toPush);
     // 3. cloud toepassen (nieuwste wijziging wint per locatie)
     applyCloud(data);
-    setSyncStatus(`☁️ Sync active · ${(data || []).length} change(s) in the cloud`);
+    setSyncStatus(`Sync active · ${(data || []).length} change(s) in the cloud`);
     syncRoutes();
     // 3. live meeluisteren: vinkje op het andere apparaat verschijnt hier direct
     supa.channel('visits-live')
@@ -2236,8 +2293,8 @@ async function initSync() {
         if (payload.new) applyCloud([payload.new]);
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') setSyncStatus('☁️ Live sync active');
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('☁️ Sync active (live connection recovering…)');
+        if (status === 'SUBSCRIBED') setSyncStatus('Live sync active');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('Sync active (live connection recovering…)');
       });
     // vangnet: bij terugkeer naar de app (telefoon uit slaapstand) opnieuw ophalen
     document.addEventListener('visibilitychange', async () => {
@@ -2247,7 +2304,7 @@ async function initSync() {
       }
     });
   } catch (e) {
-    setSyncStatus('☁️ Sync unavailable — local saving still works');
+    setSyncStatus('Sync unavailable; local saving still works');
     console.warn('Sync-fout:', e);
   }
 }
@@ -2321,8 +2378,8 @@ function renderNearby() {
     row.className = 'nrow';
     row.innerHTML = `
       <div class="info"><b>${s.name}</b><span>${d.toFixed(1)} km straight-line · ${s.stalls ?? '?'} stalls ${s.version || ''}</span></div>
-      <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving')">🧭</button>
-      <button class="small" data-id="${s.id}">✔</button>`;
+      <button class="small" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving')" title="Navigate" aria-label="Navigate">${ic('nav')}</button>
+      <button class="small" data-id="${s.id}" title="Mark as visited" aria-label="Mark as visited">${ic('check')}</button>`;
     row.querySelector('[data-id]').onclick = () => { toggleVisited(s.id); renderNearby(); };
     el.appendChild(row);
   }
@@ -2341,7 +2398,7 @@ function renderManual() {
   const el = document.getElementById('manuallist');
   manualLayers.forEach(l => map.removeLayer(l)); manualLayers = [];
   if (!manualRoute.length) {
-    el.innerHTML = '<span class="muted">Step 1: click markers and choose "➕ Route" to add stops here. Step 2: once you\'re done, press "📅 To day plan" below to turn them into an actual route.</span>';
+    el.innerHTML = '<span class="muted">Step 1: click markers and choose “Add to route” to add stops here. Step 2: once you\'re done, press “To day plan” below to turn them into an actual route.</span>';
     return;
   }
   // Groene stippellijn + nummers zijn een VOORBEELDweergave van de selectie die je
@@ -2354,7 +2411,7 @@ function renderManual() {
     manualLayers.push(L.polyline(pts, { color: '#2ecc71', weight: 3, opacity: 0.9, dashArray: '6 6' }).addTo(map));
     manualRoute.forEach((id, j) => {
       manualLayers.push(L.marker([SITES[id].lat, SITES[id].lng], {
-        icon: L.divIcon({ className: '', html: `<div style="background:#2ecc71;color:#000;font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
+        icon: L.divIcon({ className: '', html: `<div style="background:var(--green);color:var(--on-badge);font-size:10px;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center">${j+1}</div>`, iconSize: [18,18] })
       }).bindPopup(() => popupHtml(SITES[id]), POPUP_OPTS).addTo(map));
     });
   }
@@ -2370,7 +2427,7 @@ function renderManual() {
   planBtnTop.className = 'primary';
   planBtnTop.style.marginTop = '0';
   planBtnTop.style.marginBottom = '8px';
-  planBtnTop.textContent = '📅 To day plan — turn this into a route';
+  planBtnTop.textContent = 'To day plan: turn this into a route';
   planBtnTop.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
   el.appendChild(planBtnTop);
   manualRoute.forEach((id, j) => {
@@ -2395,7 +2452,7 @@ function renderManual() {
   planBtn.className = 'primary';
   planBtn.id = 'mr-plan';
   planBtn.style.marginTop = '6px';
-  planBtn.textContent = '📅 To day plan';
+  planBtn.textContent = 'To day plan';
   planBtn.title = 'Distributes exactly this selection over days according to the planner settings (days, hours, loop, overnight stops)';
   el.appendChild(planBtn);
   const toDayPlan = () => {

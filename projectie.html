@@ -4,22 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Projectie — kaart na alle geplande routes</title>
+<title>Projectie: kaart na alle geplande routes</title>
+<meta name="description" content="Hoe de Supercharger-kaart eruitziet na alle geplande routes, met de makkelijkste aanvullingen.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af;
-          --accent:#e82127; --green:#2ecc71; --blue:#3b82f6; --border:#333a45; }
+  /* Hallmark · checked: 2026-11-10 · genre: modern-minimal (inferred) · shape: app screen
+   * floor: 0 FAIL · reflex: 0 · fixed: 19, 26a, 26b, 30a, 34, 38iii, 48, 63, 67 · structural: none printed
+   * built: the project · redesign: polish · v2.0.0 */
+  :root {
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --hover: #303845; --text: #e8eaed; --muted: #9aa3af;
+    /* kaartkleuren: dezelfde waarden staan in kleurVan() hieronder, want canvas leest geen CSS */
+    --accent: #e82127; --green: #2ecc71; --blue: #4c82e6; --amber: #f0a020; --border: #333a45; --map-bg: #0e1116;
+    --focus: #ffd166; --focus-on-map: #14171c;
+    --attrib-bg: rgba(255, 255, 255, 0.92); --attrib-text: #2b2f36; --attrib-link: #1a56b8;
+  }
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  html { overflow-x: clip; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: clip; }
   #sidebar { width: 330px; min-width: 330px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  #map { flex: 1; background: #0e1116; }
-  h1 { font-size: 17px; padding: 14px 16px 4px; }
-  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  #map { flex: 1; background: var(--map-bg); }
+  h1 { font-size: 17px; padding: 16px 16px 0; text-wrap: balance; }
+  .sub { font-size: 12px; color: var(--muted); padding: 4px 16px 12px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 8px; text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .leaflet-container:focus-visible { outline-offset: -4px; box-shadow: inset 0 0 0 6px var(--focus-on-map); }
+  .leaflet-control-attribution { background: var(--attrib-bg) !important; color: var(--attrib-text); }
+  .leaflet-control-attribution a { color: var(--attrib-link); }
+  .leaflet-control-attribution a:focus-visible { outline-color: var(--attrib-link); }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 36px; height: 36px; line-height: 36px; }
+  input:disabled { opacity: 0.5; cursor: not-allowed; }
+  .crow:active, label.chk:active { background: var(--hover); }
   section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .stat { background: var(--panel2); border-radius: 8px; padding: 10px; text-align: center; }
-  .stat b { font-size: 24px; display: block; }
+  .stat b { font-size: 24px; display: block; font-variant-numeric: tabular-nums; }
   .stat span { font-size: 11px; color: var(--muted); }
   .stat.doel b { color: var(--green); }
   .progressbar { height: 14px; background: var(--panel2); border-radius: 7px; overflow: hidden; margin-top: 10px; display: flex; }
@@ -27,7 +46,8 @@
   .progressbar .straks { height: 100%; background: var(--blue); }
   .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .legend div { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
-  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  /* kaartlegenda: elk rondje is de kleur van een stip op de kaart */
+  .key { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
   .crow { display: flex; justify-content: space-between; padding: 4px 4px; font-size: 13px; border-radius: 4px; }
   .crow:nth-child(odd) { background: var(--panel2); }
   .crow .pct { color: var(--muted); font-size: 12px; }
@@ -42,7 +62,9 @@
     body { flex-direction: column; }
     #map { order: 1; flex: none; height: 50vh; min-height: 240px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
-    h1 { display: none; }
+    h1 { font-size: 16px; padding: 12px 16px 0; }
+    .sub { font-size: 13px; padding: 2px 16px 8px; }
+    .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; }
     section, .crow, .legend, label.chk { font-size: 15px; }
     .stat b { font-size: 27px; }
     .stat span { font-size: 12px; }
@@ -52,9 +74,8 @@
 </head>
 <body>
 <div id="sidebar">
-  <h1>🔮 Projectie
-    <span class="sub">Hoe de kaart eruitziet ná alle geplande routes</span>
-  </h1>
+  <h1>Projectie</h1>
+  <p class="sub">Hoe de kaart eruitziet ná alle geplande routes</p>
   <section>
     <div class="statgrid">
       <div class="stat"><b id="st-nu">…</b><span>nu bezocht</span></div>
@@ -68,10 +89,10 @@
     </div>
     <div class="muted" style="margin-top:6px" id="doeltekst"></div>
     <div class="legend">
-      <div><span class="dot" style="background:var(--green)"></span> nu al bezocht</div>
-      <div><span class="dot" style="background:var(--blue)"></span> komt erbij via een geplande route</div>
-      <div><span class="dot" style="background:#f59e0b"></span> dichtbij een route — makkelijk mee te pikken</div>
-      <div><span class="dot" style="background:var(--accent)"></span> blijft daarna nog over</div>
+      <div><span class="key" style="background:var(--green)"></span> nu al bezocht</div>
+      <div><span class="key" style="background:var(--blue)"></span> komt erbij via een geplande route</div>
+      <div><span class="key" style="background:var(--amber)"></span> dichtbij een route, makkelijk mee te pikken</div>
+      <div><span class="key" style="background:var(--accent)"></span> blijft daarna nog over</div>
     </div>
     <label class="chk"><input type="checkbox" id="verberg-rest"> Toon alleen wat overblijft (nog niet bezocht én niet gepland)</label>
   </section>
@@ -81,7 +102,7 @@
     <div id="aanvullijst"></div>
   </section>
   <section>
-    <h2>Per land — straks</h2>
+    <h2>Per land, straks</h2>
     <div id="countrylist"></div>
   </section>
   <section>
@@ -90,7 +111,7 @@
       meerdere routes voorkomen tellen één keer mee.
     </div>
     <a class="backlink" href="index.html">← Terug naar Supercharger Hunter</a><br>
-    <a class="backlink" href="routes-overzicht.html">🗺️ Routes-overzicht bekijken</a>
+    <a class="backlink" href="routes-overzicht.html">Routes-overzicht bekijken</a>
   </section>
 </div>
 <div id="map"></div>
@@ -171,8 +192,8 @@ function berekenAanvullingen() {
 
 function kleurVan(s) {
   if (bezocht.has(s.id)) return { fill: '#2ecc71', r: 4.5 };
-  if (inRoutes.has(s.id)) return { fill: '#3b82f6', r: 4.5 };
-  if (makkelijkIds.has(s.id)) return { fill: '#f59e0b', r: 5 };
+  if (inRoutes.has(s.id)) return { fill: '#4c82e6', r: 4.5 };
+  if (makkelijkIds.has(s.id)) return { fill: '#f0a020', r: 5 };
   return { fill: '#e82127', r: 3 };
 }
 
@@ -186,9 +207,9 @@ function tekenKaart() {
     if (alleenRest && !isRest) continue;
     const k = kleurVan(s);
     const kand = makkelijkIds.has(s.id) ? aanvulKandidaten.find(x => x.site.id === s.id) : null;
-    const label = bezocht.has(s.id) ? ' ✔ bezocht'
-      : inRoutes.has(s.id) ? ' 🔵 gepland'
-      : kand ? ` 🟠 ${Math.round(kand.km)} km van een route` : '';
+    const label = bezocht.has(s.id) ? ': bezocht'
+      : inRoutes.has(s.id) ? ': gepland'
+      : kand ? `: ${Math.round(kand.km)} km van een route` : '';
     const m = L.circleMarker([s.lat, s.lng], {
       radius: k.r, weight: 1, color: '#0006', fillOpacity: 0.9, fillColor: k.fill
     }).bindTooltip(`${s.name}${label}`).addTo(map);
@@ -204,11 +225,11 @@ function render() {
   document.getElementById('st-nieuw').textContent = '+' + nieuw;
   document.getElementById('st-straks').textContent = straks;
   const tekort = DOEL - straks;
-  document.getElementById('st-tekort').textContent = tekort > 0 ? tekort : '✔ gehaald';
+  document.getElementById('st-tekort').textContent = tekort > 0 ? tekort : 'gehaald';
   document.getElementById('bar-nu').style.width = Math.min(100, nu / DOEL * 100) + '%';
   document.getElementById('bar-straks').style.width = Math.min(100 - nu / DOEL * 100, nieuw / DOEL * 100) + '%';
   document.getElementById('doeltekst').textContent = tekort > 0
-    ? `Na alle ${routes.length} geplande routes zit je op ${straks} van ${DOEL} — nog ${tekort} te gaan.`
+    ? `Na alle ${routes.length} geplande routes zit je op ${straks} van ${DOEL}, nog ${tekort} te gaan.`
     : `Na alle geplande routes haal je het doel van ${DOEL} ruim (${straks}).`;
 
   // makkelijkste aanvullingen: precies zoveel als je nog tekortkomt, plus wat marge
@@ -218,7 +239,7 @@ function render() {
   document.getElementById('aanvul-kop').textContent =
     nodig > 0 ? `Makkelijkste aanvullingen (${nodig} nodig)` : 'Makkelijkste aanvullingen';
   document.getElementById('aanvul-uitleg').textContent = nodig > 0
-    ? `Dichtstbijzijnde nog-open locaties t.o.v. je geplande routes — ${binnenBereik} liggen binnen ${MAKKELIJK_KM} km (oranje op de kaart). De bovenste ${nodig} volstaan om op ${DOEL} te komen.`
+    ? `Dichtstbijzijnde nog-open locaties t.o.v. je geplande routes: ${binnenBereik} liggen binnen ${MAKKELIJK_KM} km (oranje op de kaart). De bovenste ${nodig} volstaan om op ${DOEL} te komen.`
     : `Je haalt het doel al; dit zijn de dichtstbijzijnde extra's mocht je willen doorpakken.`;
   const al = document.getElementById('aanvullijst');
   al.innerHTML = '';

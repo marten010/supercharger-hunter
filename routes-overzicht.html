@@ -4,17 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Routes-overzicht — alle geplande trips</title>
+<title>Routes-overzicht: alle geplande trips</title>
+<meta name="description" content="Alle opgeslagen Supercharger-routes samen op één kaart, per route aan en uit te zetten.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --border:#333a45; }
+  /* Hallmark · checked: 2026-11-10 · genre: modern-minimal (inferred) · shape: app screen
+   * floor: 0 FAIL · reflex: 0 · fixed: 19, 26a, 26b, 30a, 34, 38iii, 48, 67 · structural: none printed
+   * built: the project · redesign: polish · v2.0.0 */
+  :root {
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --hover: #303845; --text: #e8eaed; --muted: #9aa3af;
+    --border: #333a45; --map-bg: #0e1116; --star-shadow: #000;
+    --focus: #ffd166; --focus-on-map: #14171c;
+    --attrib-bg: rgba(255, 255, 255, 0.92); --attrib-text: #2b2f36; --attrib-link: #1a56b8;
+  }
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+  html { overflow-x: clip; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: clip; }
   #sidebar { width: 320px; min-width: 320px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  #map { flex: 1; background: #0e1116; }
-  h1 { font-size: 17px; padding: 14px 16px 4px; }
-  h1 .sub { display:block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  #map { flex: 1; background: var(--map-bg); }
+  h1 { font-size: 17px; padding: 16px 16px 0; text-wrap: balance; }
+  .sub { font-size: 12px; color: var(--muted); padding: 4px 16px 12px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 8px; text-wrap: balance; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .leaflet-container:focus-visible { outline-offset: -4px; box-shadow: inset 0 0 0 6px var(--focus-on-map); }
+  .leaflet-control-attribution { background: var(--attrib-bg) !important; color: var(--attrib-text); }
+  .leaflet-control-attribution a { color: var(--attrib-link); }
+  .leaflet-control-attribution a:focus-visible { outline-color: var(--attrib-link); }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 36px; height: 36px; line-height: 36px; }
+  button:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.small:active, .rrow:active { background: var(--hover); }
+  .ster { font-size: 20px; line-height: 1; text-shadow: 0 0 3px var(--star-shadow); }
   section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .rrow { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 6px; cursor: pointer; user-select: none; }
   .rrow:hover { background: var(--panel2); }
@@ -25,7 +45,7 @@
   .rrow .info span { font-size: 12px; color: var(--muted); }
   .muted { color: var(--muted); font-size: 12px; }
   button.small { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; cursor: pointer; }
-  button.small:hover { background: #303845; }
+  button.small:hover { background: var(--hover); }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
   a.backlink { color: var(--muted); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; }
@@ -37,7 +57,9 @@
     body { flex-direction: column; }
     #map { order: 1; flex: none; height: 55vh; min-height: 240px; }
     #sidebar { order: 2; width: 100%; min-width: 0; flex: 1; min-height: 0; border-right: 0; border-top: 1px solid var(--border); }
-    h1 { display: none; }
+    h1 { font-size: 16px; padding: 12px 16px 0; }
+    .sub { font-size: 13px; padding: 2px 16px 8px; }
+    .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; }
     .rrow .info b { font-size: 16px; }
     .rrow .info span, .muted { font-size: 14px; }
     button.small { padding: 11px 13px; font-size: 15px; }
@@ -47,9 +69,8 @@
 </head>
 <body>
 <div id="sidebar">
-  <h1>🗺️ Routes-overzicht
-    <span class="sub">Alle opgeslagen trips samen op één kaart</span>
-  </h1>
+  <h1>Routes-overzicht</h1>
+  <p class="sub">Alle opgeslagen trips samen op één kaart</p>
   <section>
     <h2>Routes</h2>
     <div id="routelist"></div>
@@ -62,7 +83,7 @@
   </section>
   <section>
     <div class="muted">
-      Elke route heeft één kleur en loopt door als één doorlopende lijn — de dagindeling
+      Elke route heeft één kleur en loopt door als één doorlopende lijn; de dagindeling
       is hier bewust weggelaten. Stippen zijn de geplande stops; de grote ster is het
       startpunt. Klik een route in de lijst om alleen die route te zien (dubbelklik voor
       alles weer aan).
@@ -109,7 +130,7 @@ function tekenRoutes() {
     }).bindTooltip(r.name));
     if (r.start) {
       dots.push(L.marker([r.start.lat, r.start.lng], {
-        icon: L.divIcon({ className: '', html: `<div style="font-size:20px;line-height:1;text-shadow:0 0 3px #000">★</div>`, iconSize: [20,20] })
+        icon: L.divIcon({ className: '', html: `<div class="ster">★</div>`, iconSize: [20,20] })
       }).bindTooltip('Start: ' + (r.start.name || 'startpunt')));
     }
     lagen.push({ line, dots, zichtbaar: true });
@@ -184,11 +205,11 @@ async function verversUitCloud(automatisch) {
     }));
     tekenRoutes();   // ruimt de oude lagen zelf op en bouwt ze opnieuw op
     bouwLijst();
-    st.textContent = `☁️ ${routes.length} route(s) — actueel.`;
+    st.textContent = `${routes.length} route(s), actueel.`;
   } catch (e) {
     st.textContent = automatisch
-      ? 'Kon de cloud niet bereiken — momentopname zichtbaar (kan verouderd zijn).'
-      : 'Ophalen mislukt — de opgeslagen momentopname blijft zichtbaar.';
+      ? 'Kon de cloud niet bereiken; momentopname zichtbaar (kan verouderd zijn).'
+      : 'Ophalen mislukt; de opgeslagen momentopname blijft zichtbaar.';
   }
 }
 document.getElementById('ververs').onclick = () => verversUitCloud(false);

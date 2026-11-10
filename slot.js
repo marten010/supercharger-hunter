@@ -18,7 +18,7 @@
     'font-family:"Segoe UI",system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px';
   scherm.innerHTML =
     '<div style="width:100%;max-width:340px">' +
-      '<div style="font-size:19px;font-weight:600;margin-bottom:6px">🔒 Supercharger Hunter</div>' +
+      '<div style="font-size:19px;font-weight:600;margin-bottom:6px">Supercharger Hunter</div>' +
       '<div style="font-size:13px;color:#9aa3af;margin-bottom:16px">Deze pagina is privé. ' +
         '<a href="index.html" style="color:#9aa3af">Terug naar de kaart</a>.</div>' +
       '<input id="slot-mail" type="email" placeholder="Email" autocomplete="username" ' +

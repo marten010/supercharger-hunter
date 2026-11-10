@@ -4,25 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14171c">
-<title>Supercharger Hunter 2026 — Tussenstand</title>
+<title>Supercharger Hunter 2026: tussenstand</title>
+<meta name="description" content="De tussenstand van de Supercharger Hunter 2026: bezochte Europese Superchargers, op de kaart en per land.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#14171c; --panel:#1d222a; --panel2:#262c36; --text:#e8eaed; --muted:#9aa3af; --accent:#e82127; --green:#2ecc71; --border:#333a45; }
+  /* Hallmark · checked: 2026-11-10 · genre: modern-minimal (inferred) · shape: app screen
+   * floor: 0 FAIL · reflex: 0 · fixed: 19, 26a, 30a, 34, 48, 67 · structural: none printed
+   * built: the project · redesign: polish · v2.0.0 */
+  :root {
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --bg: #14171c; --panel: #1d222a; --panel2: #262c36; --text: #e8eaed; --muted: #9aa3af;
+    --accent: #e82127; --accent-2: #ff6b6b; --green: #2ecc71; --border: #333a45;
+    --link: oklch(0.78 0.1 250); --focus: #ffd166; --focus-on-map: #14171c;
+    --attrib-bg: rgba(255, 255, 255, 0.92); --attrib-text: #2b2f36; --attrib-link: #1a56b8;
+  }
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  html, body { overflow-x: clip; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
   header { padding: 16px; text-align: center; }
-  header h1 { font-size: 20px; }
+  header h1 { font-size: 20px; text-wrap: balance; }
   header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .leaflet-container:focus-visible { outline-offset: -4px; box-shadow: inset 0 0 0 6px var(--focus-on-map); }
+  .leaflet-control-attribution { background: var(--attrib-bg) !important; color: var(--attrib-text); }
+  .leaflet-control-attribution a { color: var(--attrib-link); }
+  .leaflet-control-attribution a:focus-visible { outline-color: var(--attrib-link); }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 36px; height: 36px; line-height: 36px; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 0 14px 30px; }
   .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
   .stat { background: var(--panel); border-radius: 10px; padding: 14px; text-align: center; }
-  .stat b { font-size: 30px; display: block; }
+  .stat b { font-size: 30px; display: block; font-variant-numeric: tabular-nums; }
   .stat span { font-size: 12px; color: var(--muted); }
   .progressbar { height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; }
-  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b6b); }
+  .progressbar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
   #lastvisit { color: var(--muted); font-size: 12px; margin: 8px 0 14px; text-align: center; }
   #map { height: 46vh; min-height: 300px; border-radius: 10px; margin-bottom: 14px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 8px; text-wrap: balance; }
+  footer a { color: var(--link); }
+  footer a:active { opacity: 0.8; }
   .crow { display: flex; align-items: center; gap: 10px; padding: 5px 8px; font-size: 14px; }
   .crow:nth-child(odd) { background: var(--panel); border-radius: 6px; }
   .crow .naam { flex: 0 0 140px; }
@@ -35,8 +54,8 @@
 </head>
 <body>
 <header>
-  <h1>⚡ Supercharger Hunter 2026</h1>
-  <div class="sub">Tesla Supercharger-wedstrijd · tussenstand</div>
+  <h1>Supercharger Hunter 2026</h1>
+  <div class="sub">Tesla Supercharger-wedstrijd, tussenstand</div>
 </header>
 <div class="wrap">
   <div class="statgrid">
@@ -49,7 +68,7 @@
   <div id="map"></div>
   <h2>Voortgang per land</h2>
   <div id="countrylist"></div>
-  <footer>Alleen-kijken-versie · data via supercharge.info · live gekoppeld aan de tracker</footer>
+  <footer>Alleen-kijken-versie, live gekoppeld aan de tracker. Locaties: <a href="https://supercharge.info">supercharge.info</a>.</footer>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

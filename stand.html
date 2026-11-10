@@ -83,18 +83,30 @@ const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').repla
 const keyToSite = new Map(SITES.map(s => [norm(s.name), s]));
 const visited = new Set(SITES.filter(s => s.visited).map(s => s.id));
 
-const map = L.map('map', { preferCanvas: true }).setView([50.5, 8], 5);
+// tolerance: tikvlak 5px groter dan de stip, zodat kleine stippen goed te raken blijven
+const map = L.map('map', { preferCanvas: true, renderer: L.canvas({ tolerance: 5 }) }).setView([50.5, 8], 5);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap-bijdragers', maxZoom: 19
 }).addTo(map);
+// stipgrootte schaalt mee met de zoom, net als op de hoofdkaart: klein over heel Europa,
+// straal 7 vanaf stadsniveau
+function markerRadius() {
+  const z = map.getZoom();
+  return z <= 4 ? 3.5 : z === 5 ? 4.5 : z === 6 ? 5.5 : z === 7 ? 6.5 : 7;
+}
+const markerWeight = () => (map.getZoom() <= 5 ? 1 : 2);
 const markers = new Map();
 for (const s of SITES) {
   const m = L.circleMarker([s.lat, s.lng], {
-    radius: 5, weight: 1, color: '#0008', fillOpacity: 0.9,
+    radius: markerRadius(), weight: markerWeight(), color: '#0008', fillOpacity: 0.9,
     fillColor: visited.has(s.id) ? '#2ecc71' : '#e82127'
   }).bindTooltip(s.name).addTo(map);
   markers.set(s.id, m);
 }
+map.on('zoomend', () => {
+  const r = markerRadius(), w = markerWeight();
+  for (const m of markers.values()) { m.setRadius(r); m.setStyle({ weight: w }); }
+});
 
 function render() {
   document.getElementById('st-visited').textContent = visited.size;
